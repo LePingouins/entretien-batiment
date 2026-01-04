@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AuthResponse, ErrorResponse } from '../types/api';
+import { useLang } from '../context/LangContext';
 
 const schema = z.object({
   email: z.string().email(),
@@ -16,6 +17,7 @@ type LoginForm = z.infer<typeof schema>;
 
 function LoginPage() {
   const { login, role } = useAuth();
+  const { t } = useLang();
   const navigate = useNavigate();
   const [error, setError] = React.useState<string | null>(null);
   const {
@@ -51,37 +53,36 @@ function LoginPage() {
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="bg-white p-8 rounded shadow-md w-full max-w-sm"
+        aria-label={t.loginFormAria || 'Login form'}
       >
-        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center">{t.loginTitle || 'Login'}</h2>
         <div className="mb-4">
-          <label className="block mb-1 font-medium">Email</label>
+          <label className="block mb-1 font-medium">{t.emailLabel || 'Email'}</label>
           <input
             type="email"
             {...register('email')}
-            className="w-full border px-3 py-2 rounded focus:outline-none focus:ring focus:border-blue-300"
+            aria-label={t.emailLabel || 'Email'}
+            className="border rounded px-3 py-2 w-full"
           />
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-          )}
+          {errors.email && <div className="text-red-500 text-sm">{errors.email.message}</div>}
         </div>
         <div className="mb-4">
-          <label className="block mb-1 font-medium">Password</label>
+          <label className="block mb-1 font-medium">{t.passwordLabel || 'Password'}</label>
           <input
             type="password"
             {...register('password')}
-            className="w-full border px-3 py-2 rounded focus:outline-none focus:ring focus:border-blue-300"
+            aria-label={t.passwordLabel || 'Password'}
+            className="border rounded px-3 py-2 w-full"
           />
-          {errors.password && (
-            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-          )}
+          {errors.password && <div className="text-red-500 text-sm">{errors.password.message}</div>}
         </div>
-        {error && <div className="text-red-600 mb-4 text-center">{error}</div>}
+        {error && <div className="text-red-600 mb-4">{error}</div>}
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          className="bg-blue-600 text-white px-4 py-2 rounded w-full font-semibold hover:bg-blue-700"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Logging in...' : 'Login'}
+          {isSubmitting ? t.loggingIn || 'Logging in...' : t.loginButton || 'Login'}
         </button>
       </form>
     </div>

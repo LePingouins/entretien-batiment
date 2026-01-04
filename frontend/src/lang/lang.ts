@@ -47,6 +47,14 @@ export const en = {
   daysShort: [
     'Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'
   ],
+  techDashboardTitle: 'Tech Dashboard',
+  techDashboardWelcome: 'Welcome to the technician dashboard. Work order features coming soon!',
+  loginFormAria: 'Login form',
+  loginTitle: 'Login',
+  emailLabel: 'Email',
+  passwordLabel: 'Password',
+  loggingIn: 'Logging in...',
+  loginButton: 'Login',
 };
 
 export const fr = {
@@ -98,4 +106,12 @@ export const fr = {
   daysShort: [
     'Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'
   ],
+  techDashboardTitle: 'Tableau de bord technicien',
+  techDashboardWelcome: 'Bienvenue sur le tableau de bord du technicien. Les fonctionnalités des ordres de travail arrivent bientôt !',
+  loginFormAria: 'Formulaire de connexion',
+  loginTitle: 'Connexion',
+  emailLabel: 'E-mail',
+  passwordLabel: 'Mot de passe',
+  loggingIn: 'Connexion en cours...',
+  loginButton: 'Connexion',
 };
