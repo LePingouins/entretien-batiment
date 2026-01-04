@@ -1,0 +1,35 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Install react-beautiful-dnd",
+			"type": "shell",
+			"command": "npm install react-beautiful-dnd --save",
+			"group": "build"
+		},
+		{
+			"label": "Install react-beautiful-dnd with legacy-peer-deps",
+			"type": "shell",
+			"command": "npm install react-beautiful-dnd --save --legacy-peer-deps",
+			"group": "build"
+		},
+		{
+			"label": "Run Vite Dev Server",
+			"type": "shell",
+			"command": "npm run dev",
+			"group": "build"
+		},
+		{
+			"label": "Install dnd-kit",
+			"type": "shell",
+			"command": "npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/modifiers",
+			"group": "build"
+		},
+		{
+			"label": "Install dnd-kit with legacy-peer-deps",
+			"type": "shell",
+			"command": "npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/modifiers --legacy-peer-deps",
+			"group": "build"
+		}
+	]
+}

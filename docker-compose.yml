@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: entretien-db
+    environment:
+      POSTGRES_DB: entretien
+      POSTGRES_USER: entretien_user
+      POSTGRES_PASSWORD: entretien_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - entretien_pgdata:/var/lib/postgresql/data
+
+volumes:
+  entretien_pgdata:
