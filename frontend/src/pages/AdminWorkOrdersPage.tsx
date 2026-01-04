@@ -8,9 +8,20 @@ function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, 
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
   const { t } = useLang();
+  const modalRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
+      <div ref={modalRef} className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
         <button
           className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
           onClick={onClose}
@@ -349,13 +360,24 @@ function AdminWorkOrdersPage() {
   function DroppableColumn({ status, children }: { status: string; children: React.ReactNode }) {
     const { setNodeRef, isOver } = useDroppable({ id: status });
     const { t } = useLang();
+    // Modern column style: glassmorphism, gradient, icons, transitions
+    const statusIcons: Record<string, React.ReactElement> = {
+      OPEN: <svg width="20" height="20" fill="currentColor" className="text-gray-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>,
+      ASSIGNED: <svg width="20" height="20" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="3"/></svg>,
+      IN_PROGRESS: <svg width="20" height="20" fill="currentColor" className="text-yellow-400" viewBox="0 0 20 20"><path d="M10 2v8l6 4"/></svg>,
+      COMPLETED: <svg width="20" height="20" fill="currentColor" className="text-green-400" viewBox="0 0 20 20"><path d="M5 10l4 4 6-8"/></svg>,
+      CANCELLED: <svg width="20" height="20" fill="currentColor" className="text-red-400" viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16"/><line x1="16" y1="4" x2="4" y2="16"/></svg>,
+    };
     return (
       <div
         ref={setNodeRef}
-        className={`min-w-[320px] w-80 bg-white rounded-lg shadow-lg p-4 flex flex-col ${isOver ? 'ring-2 ring-blue-400' : ''}`}
-        style={{ minHeight: 400 }}
+        className={`min-w-[320px] w-80 bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-3xl shadow-2xl p-6 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-105' : ''}`}
+        style={{ minHeight: 400, boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
       >
-        <div className="font-bold text-lg mb-2 px-2 py-1 rounded bg-blue-200 text-blue-900">{getStatusLabel(t, status)}</div>
+        <div className="font-bold text-xl mb-3 px-3 py-2 rounded-2xl bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow">
+          {statusIcons[status]}
+          {getStatusLabel(t, status)}
+        </div>
         {children}
       </div>
     );
@@ -378,58 +400,63 @@ function AdminWorkOrdersPage() {
   }, [grouped, startDate, endDate]);
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-purple-100 min-h-screen p-6">
-      <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 md:gap-0">
-        <h1 className="text-3xl font-bold text-center md:text-left">{t.workOrders}</h1>
+    <div className="flex-1 bg-gradient-to-br from-blue-100/80 to-purple-200/60 min-h-screen p-8">
+      {/* Remove extra white container, keep only board and controls */}
+      <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 md:gap-0">
+        <h1 className="text-4xl font-extrabold text-center md:text-left text-blue-900 drop-shadow-lg tracking-tight flex items-center gap-3">
+          <span className="inline-block"><svg width="32" height="32" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg></span>
+          {t.workOrders}
+        </h1>
         <button
-          className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 w-full md:w-auto"
+          className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 w-full md:w-auto font-semibold text-lg"
           onClick={() => setShowModal(true)}
         >
-          + {t.newWorkOrder}
+          <span className="inline-block mr-2 align-middle"><svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M10 5v10m5-5H5"/></svg></span>
+          {t.newWorkOrder}
         </button>
       </div>
       {/* Modal for creating work order */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
+          <div className="bg-white/80 rounded-2xl shadow-2xl p-10 w-full max-w-md relative backdrop-blur-md border border-blue-200">
             <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+              className="absolute top-3 right-3 text-gray-500 hover:text-blue-700 bg-white/60 rounded-full p-2 shadow transition-colors duration-200"
               onClick={() => setShowModal(false)}
-            >✕</button>
-            <h2 className="text-xl font-bold mb-4">{t.newWorkOrder}</h2>
-            <form onSubmit={handleSubmit(onCreate)} className="flex flex-col gap-4">
+            ><svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M6 6l8 8M6 14L14 6"/></svg></button>
+            <h2 className="text-2xl font-bold mb-6 text-blue-900 flex items-center gap-2"><svg width="20" height="20" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>{t.newWorkOrder}</h2>
+            <form onSubmit={handleSubmit(onCreate)} className="flex flex-col gap-5">
               <div>
-                <label className="block font-medium mb-1">{t.title}</label>
-                <input className="border rounded px-3 py-2 w-full" {...register('title')} />
-                {errors.title && <div className="text-red-500 text-sm">{errors.title.message}</div>}
+                <label className="block font-semibold mb-2 text-blue-800">{t.title}</label>
+                <input className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('title')} />
+                {errors.title && <div className="text-red-500 text-sm mt-1">{errors.title.message}</div>}
               </div>
               <div>
-                <label className="block font-medium mb-1">{t.description}</label>
-                <textarea className="border rounded px-3 py-2 w-full" {...register('description')} />
-                {errors.description && <div className="text-red-500 text-sm">{errors.description.message}</div>}
+                <label className="block font-semibold mb-2 text-blue-800">{t.description}</label>
+                <textarea className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('description')} />
+                {errors.description && <div className="text-red-500 text-sm mt-1">{errors.description.message}</div>}
               </div>
               <div>
-                <label className="block font-medium mb-1">{t.location}</label>
-                <input className="border rounded px-3 py-2 w-full" {...register('location')} />
-                {errors.location && <div className="text-red-500 text-sm">{errors.location.message}</div>}
+                <label className="block font-semibold mb-2 text-blue-800">{t.location}</label>
+                <input className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('location')} />
+                {errors.location && <div className="text-red-500 text-sm mt-1">{errors.location.message}</div>}
               </div>
               <div>
-                <label className="block font-medium mb-1">{t.priority}</label>
-                <select className="border rounded px-3 py-2 w-full" {...register('priority')}>
+                <label className="block font-semibold mb-2 text-blue-800">{t.priority}</label>
+                <select className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('priority')}>
                   {priorityOptions.map(p => (
                     <option key={p} value={p}>{getPriorityLabel(t, p)}</option>
                   ))}
                 </select>
-                {errors.priority && <div className="text-red-500 text-sm">{errors.priority.message}</div>}
+                {errors.priority && <div className="text-red-500 text-sm mt-1">{errors.priority.message}</div>}
               </div>
               <div>
-                <label className="block font-medium mb-1">{t.dueDate}</label>
-                <input type="date" className="border rounded px-3 py-2 w-full" {...register('dueDate')} />
-                {errors.dueDate && <div className="text-red-500 text-sm">{errors.dueDate.message}</div>}
+                <label className="block font-semibold mb-2 text-blue-800">{t.dueDate}</label>
+                <input type="date" className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('dueDate')} />
+                {errors.dueDate && <div className="text-red-500 text-sm mt-1">{errors.dueDate.message}</div>}
               </div>
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2 rounded-xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-lg"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? t.create : t.create}
@@ -438,7 +465,7 @@ function AdminWorkOrdersPage() {
           </div>
         </div>
       )}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-6 mb-8">
         {/* Modal for editing work order */}
         {editModal.open && (
           <EditModalWithEscape
@@ -501,7 +528,7 @@ function AdminWorkOrdersPage() {
         <div className="text-red-600">{t.errorLoading}</div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <div className="flex flex-col md:flex-row gap-6 overflow-x-auto pb-8">
+          <div className="flex flex-col md:flex-row gap-8 overflow-x-auto pb-12 px-8 min-w-[1200px] pt-4">
             {statusOptions.map(status => (
               <DroppableColumn status={status} key={status}>
                 <SortableContext

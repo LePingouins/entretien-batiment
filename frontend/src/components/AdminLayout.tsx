@@ -40,9 +40,11 @@ const AdminLayout: React.FC = () => {
           </div>
         </nav>
       </header>
-      <main className="flex-1 bg-gray-50 p-6">
-        <Outlet />
-      </main>
+      <Outlet />
+      <footer className="w-full text-center py-2 text-sm bg-gradient-to-br from-blue-100/60 to-purple-200/30 shadow-sm rounded-b-xl">
+        <div className="font-semibold text-blue-900">&copy; HorizonNature</div>
+        <div className="text-xs text-blue-700 mt-1">{new Date().getFullYear()}</div>
+      </footer>
     </div>
   );
 };

@@ -49,38 +49,49 @@ export function WorkOrderCard({ workOrder }: { workOrder: WorkOrderResponse }) {
   const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
   return (
     <div
-      className="rounded-xl shadow-md bg-gradient-to-br from-white to-blue-50 p-4 flex flex-col gap-2 border border-blue-100"
+      className="rounded-2xl shadow-2xl bg-gradient-to-br from-white/70 to-blue-100/60 p-5 flex flex-col gap-3 border border-blue-200 backdrop-blur-md transition-transform duration-200 hover:scale-105 hover:shadow-blue-400/40 hover:bg-white/80 cursor-pointer"
+      style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
       tabIndex={0}
       role="group"
       aria-label={`Work order ${workOrder.title}`}
     >
-      <div className="flex justify-between items-center mb-1">
-        <h3 className="font-bold text-base truncate">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-bold text-lg truncate flex items-center gap-2">
+          <span className="inline-block text-blue-500"><svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 12H9v-2h2v2zm0-4H9V6h2v4z"/></svg></span>
           <Link to={`./${workOrder.id}`} tabIndex={0} aria-label={`View details for ${workOrder.title}`}>{workOrder.title}</Link>
         </h3>
         <StatusBadge status={workOrder.status} />
       </div>
-      <div className="flex gap-2 items-center mb-1">
+      <div className="flex gap-3 items-center mb-2">
         <PriorityBadge priority={workOrder.priority} />
-        <span className="text-xs text-gray-700" aria-label={`Due date: ${workOrder.dueDate?.slice(0, 10)}`}>Due: {workOrder.dueDate?.slice(0, 10)}</span>
+        <span className="text-xs text-gray-700 flex items-center gap-1" aria-label={`Due date: ${workOrder.dueDate?.slice(0, 10)}`}><svg width="14" height="14" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm10 6v10H4V8h12z"/></svg>Due: {workOrder.dueDate?.slice(0, 10)}</span>
       </div>
-      <div className="text-sm text-gray-800 line-clamp-2 mb-1" aria-label={`Description: ${workOrder.description}`}>{workOrder.description}</div>
-      <div className="text-xs text-gray-700" aria-label={`Location: ${workOrder.location}`}>Location: {workOrder.location}</div>
-      <div className="flex gap-2 mt-2 items-center">
-        <img
-          src={avatarUrl(workOrder.assignedToUserId || 0)}
-          alt="Assignee avatar"
-          className="w-7 h-7 rounded-full border-2 border-white shadow"
-          title="Assignee"
-          tabIndex={0}
-        />
-        <img
-          src={avatarUrl(workOrder.createdByUserId)}
-          alt="Creator avatar"
-          className="w-7 h-7 rounded-full border-2 border-white shadow"
-          title="Creator"
-          tabIndex={0}
-        />
+      <div className="text-sm text-gray-800 line-clamp-2 mb-2 transition-all duration-200" aria-label={`Description: ${workOrder.description}`}>{workOrder.description}</div>
+      <div className="text-xs text-gray-700 flex items-center gap-1 mb-2" aria-label={`Location: ${workOrder.location}`}>
+        <svg width="14" height="14" fill="currentColor" className="text-green-400" viewBox="0 0 20 20"><path d="M10 2a6 6 0 016 6c0 4.418-6 10-6 10S4 12.418 4 8a6 6 0 016-6zm0 8a2 2 0 110-4 2 2 0 010 4z"/></svg>
+        Location: {workOrder.location}
+      </div>
+      <div className="flex gap-3 mt-2 items-center">
+        <div className="flex items-center gap-2">
+          <img
+            src={avatarUrl(workOrder.assignedToUserId || 0)}
+            alt="Assignee avatar"
+            className="w-8 h-8 rounded-full border-2 border-white shadow-lg transition-transform duration-200 hover:scale-110"
+            title="Assignee"
+            tabIndex={0}
+          />
+          <img
+            src={avatarUrl(workOrder.createdByUserId)}
+            alt="Creator avatar"
+            className="w-8 h-8 rounded-full border-2 border-white shadow-lg transition-transform duration-200 hover:scale-110"
+            title="Creator"
+            tabIndex={0}
+          />
+        </div>
+        <span className="ml-auto flex gap-2">
+          <button title="Edit" className="p-2 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors duration-200"><svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 010 2.828l-10 10A2 2 0 016 16H4a1 1 0 01-1-1v-2a2 2 0 01.586-1.414l10-10a2 2 0 012.828 0z"/></svg></button>
+          <button title="Delete" className="p-2 rounded-full bg-red-100 hover:bg-red-200 transition-colors duration-200"><svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm10 6v10H4V8h12z"/></svg></button>
+        </span>
       </div>
     </div>
   );
