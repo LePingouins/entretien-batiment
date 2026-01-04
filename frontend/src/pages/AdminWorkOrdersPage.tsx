@@ -188,7 +188,7 @@ function AdminWorkOrdersPage() {
     // keepPreviousData is not a valid option in v5, so remove it
   });
 
-  // Group work orders by status for Trello-style columns
+  // --- Fix grouped state type ---
   const [grouped, setGrouped] = React.useState<Record<string, WorkOrderResponse[]>>({});
 
   React.useEffect(() => {
@@ -197,7 +197,7 @@ function AdminWorkOrdersPage() {
       groups[status] = [];
     });
     if (data && data.content) {
-      data.content.forEach(wo => {
+      data.content.forEach((wo: WorkOrderResponse) => {
         groups[wo.status]?.push(wo);
       });
     }
@@ -215,10 +215,10 @@ function AdminWorkOrdersPage() {
     if (!over || !active) return;
 
     // Find the source column and index
-    let sourceCol = null;
+    let sourceCol: string | null = null;
     let sourceIdx = -1;
     for (const status of statusOptions) {
-      const idx = grouped[status].findIndex(wo => wo.id.toString() === active.id);
+      const idx = grouped[status]?.findIndex((wo: WorkOrderResponse) => wo.id.toString() === active.id) ?? -1;
       if (idx !== -1) {
         sourceCol = status;
         sourceIdx = idx;
@@ -228,30 +228,25 @@ function AdminWorkOrdersPage() {
     if (!sourceCol || sourceIdx === -1) return;
 
     // Determine if dropped on a column or a card
-    let destCol = null;
+    let destCol: string | null = null;
     let destIdx = 0;
-    // If dropped on a column background, over.id will be the column status
     if (statusOptions.includes(over.id as WorkOrderStatus)) {
-      destCol = over.id;
-      destIdx = grouped[destCol].length;
+      destCol = over.id as string;
+      destIdx = grouped[destCol]?.length ?? 0;
     } else {
-      // Dropped on a card
       for (const status of statusOptions) {
-        const idx = grouped[status].findIndex(wo => wo.id.toString() === over.id);
+        const idx = grouped[status]?.findIndex((wo: WorkOrderResponse) => wo.id.toString() === over.id) ?? -1;
         if (idx !== -1) {
           destCol = status;
           destIdx = idx;
           break;
         }
       }
-      // If dropped on a card in a different column, insert before that card
       if (destCol && destCol !== sourceCol) {
-        // If the card is not the same as the dragged one, insert before that card
-        if (grouped[destCol][destIdx]?.id.toString() !== active.id) {
+        if (grouped[destCol] && grouped[destCol][destIdx]?.id.toString() !== active.id) {
           // insert before destIdx
         } else {
-          // fallback: move to end
-          destIdx = grouped[destCol].length;
+          destIdx = grouped[destCol]?.length ?? 0;
         }
       }
     }
@@ -264,7 +259,7 @@ function AdminWorkOrdersPage() {
     // Remove from source
     if (sourceCol === destCol) {
       // Reorder within the same column
-      const newItems = [...grouped[sourceCol]];
+      const newItems = [...(grouped[sourceCol] ?? [])];
       const [moved] = newItems.splice(sourceIdx, 1);
       // If moving after itself, adjust index
       let insertIdx = destIdx;
@@ -272,19 +267,19 @@ function AdminWorkOrdersPage() {
       newItems.splice(insertIdx, 0, moved);
       setGrouped(prev => ({
         ...prev,
-        [sourceCol]: newItems,
+        [sourceCol!]: newItems,
       }));
     } else {
       // Move to another column
-      const newSource = [...grouped[sourceCol]];
+      const newSource = [...(grouped[sourceCol] ?? [])];
       const [moved] = newSource.splice(sourceIdx, 1);
-      const newDest = [...grouped[destCol]];
+      const newDest = [...(grouped[destCol] ?? [])];
       moved.status = destCol as WorkOrderStatus;
       newDest.splice(destIdx, 0, moved);
       setGrouped(prev => ({
         ...prev,
-        [sourceCol]: newSource,
-        [destCol]: newDest,
+        [sourceCol!]: newSource,
+        [destCol!]: newDest,
       }));
       // Persist status change to backend
       try {
@@ -349,10 +344,10 @@ function AdminWorkOrdersPage() {
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-purple-100 min-h-screen p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">{t.workOrders}</h1>
+      <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 md:gap-0">
+        <h1 className="text-3xl font-bold text-center md:text-left">{t.workOrders}</h1>
         <button
-          className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 w-full md:w-auto"
           onClick={() => setShowModal(true)}
         >
           + {t.newWorkOrder}
@@ -408,7 +403,7 @@ function AdminWorkOrdersPage() {
           </div>
         </div>
       )}
-      <div className="flex gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
         {/* Modal for editing work order */}
         {editModal.open && (
           <EditModalWithEscape
@@ -423,21 +418,23 @@ function AdminWorkOrdersPage() {
             queryClient={queryClient}
           />
         )}
-        <select value={status} onChange={e => setStatus(e.target.value)} className="border rounded px-2 py-1">
-          <option value="">{t.allStatuses}</option>
-          {statusOptions.map(s => <option key={s} value={s}>{getStatusLabel(t, s)}</option>)}
-        </select>
-        <select value={priority} onChange={e => setPriority(e.target.value)} className="border rounded px-2 py-1">
-          <option value="">{t.allPriorities}</option>
-          {priorityOptions.map(p => <option key={p} value={p}>{getPriorityLabel(t, p)}</option>)}
-        </select>
-        <input
-          type="text"
-          placeholder={t.search}
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          className="border rounded px-2 py-1"
-        />
+        <div className="flex flex-col md:flex-row gap-2 w-full">
+          <select value={status} onChange={e => setStatus(e.target.value)} className="border rounded px-2 py-1 w-full md:w-auto">
+            <option value="">{t.allStatuses}</option>
+            {statusOptions.map(s => <option key={s} value={s}>{getStatusLabel(t, s)}</option>)}
+          </select>
+          <select value={priority} onChange={e => setPriority(e.target.value)} className="border rounded px-2 py-1 w-full md:w-auto">
+            <option value="">{t.allPriorities}</option>
+            {priorityOptions.map(p => <option key={p} value={p}>{getPriorityLabel(t, p)}</option>)}
+          </select>
+          <input
+            type="text"
+            placeholder={t.search}
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            className="border rounded px-2 py-1 w-full md:w-auto"
+          />
+        </div>
       </div>
       {isLoading ? (
         <div>{t.loading}</div>
@@ -445,19 +442,19 @@ function AdminWorkOrdersPage() {
         <div className="text-red-600">{t.errorLoading}</div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <div className="flex gap-6 overflow-x-auto pb-8">
+          <div className="flex flex-col md:flex-row gap-6 overflow-x-auto pb-8">
             {statusOptions.map(status => (
               <DroppableColumn status={status} key={status}>
                 <SortableContext
                   id={status}
-                  items={grouped[status]?.map(wo => wo.id.toString()) || []}
+                  items={grouped[status]?.map((wo: WorkOrderResponse) => wo.id.toString()) || []}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="flex-1 flex flex-col gap-4">
-                    {grouped[status]?.length === 0 ? (
+                    {(grouped[status]?.length ?? 0) === 0 ? (
                       <div className="text-gray-400 text-center">{t.noWorkOrders}</div>
                     ) : (
-                      grouped[status].map(wo => (
+                      grouped[status]?.map((wo: WorkOrderResponse) => (
                         <SortableCard key={wo.id} workOrder={wo} />
                       )))
                     }
@@ -468,17 +465,17 @@ function AdminWorkOrdersPage() {
           </div>
         </DndContext>
       )}
-      <div className="flex gap-2 mt-4 items-center">
+      <div className="flex flex-col md:flex-row gap-2 mt-4 items-center justify-center md:justify-start">
         <button
           onClick={() => setPage(p => Math.max(0, p - 1))}
           disabled={page === 0}
-          className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50"
+          className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50 w-full md:w-auto"
         >{t.prev}</button>
-        <span>{t.page} {data ? data.number + 1 : 1} {t.of} {data ? data.totalPages : 1}</span>
+        <span className="text-center md:text-left">{t.page} {data ? data.number + 1 : 1} {t.of} {data ? data.totalPages : 1}</span>
         <button
           onClick={() => setPage(p => (data && p < data.totalPages - 1 ? p + 1 : p))}
           disabled={data ? page >= data.totalPages - 1 : true}
-          className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50"
+          className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50 w-full md:w-auto"
         >{t.next}</button>
       </div>
     </div>
