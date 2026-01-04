@@ -174,14 +174,38 @@ function AdminWorkOrdersPage() {
   const [status, setStatus] = React.useState<string>('');
   const [priority, setPriority] = React.useState<string>('');
   const [q, setQ] = React.useState('');
+  // Add technician and location filter dropdowns
+  const [technician, setTechnician] = React.useState('');
+  const [locationFilter, setLocationFilter] = React.useState('');
+  // Add date filters
+  const [startDate, setStartDate] = React.useState('');
+  const [endDate, setEndDate] = React.useState('');
+
+  // Example: technician list and location list (replace with API data if available)
+  const technicianOptions = [
+    { id: '', name: t.allTechnicians || 'All Technicians' },
+    { id: '1', name: 'Tech 1' },
+    { id: '2', name: 'Tech 2' },
+    // ...add more or fetch from API
+  ];
+  const locationOptions = [
+    { id: '', name: t.allLocations || 'All Locations' },
+    { id: 'A', name: 'Building A' },
+    { id: 'B', name: 'Building B' },
+    // ...add more or fetch from API
+  ];
 
   const { data, isLoading, error } = useQuery<PageResponse<WorkOrderResponse>, Error>({
-    queryKey: ['adminWorkOrders', { page, size, status, priority, q }],
+    queryKey: ['adminWorkOrders', { page, size, status, priority, q, technician, location: locationFilter, startDate, endDate }],
     queryFn: async () => {
       const params: Record<string, any> = { page, size };
       if (status) params.status = status;
       if (priority) params.priority = priority;
       if (q) params.q = q;
+      if (technician) params.technician = technician;
+      if (locationFilter) params.location = locationFilter;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
       const res = await api.get<PageResponse<WorkOrderResponse>>('/api/admin/work-orders', { params });
       return res.data;
     },
@@ -191,6 +215,7 @@ function AdminWorkOrdersPage() {
   // --- Fix grouped state type ---
   const [grouped, setGrouped] = React.useState<Record<string, WorkOrderResponse[]>>({});
 
+  // --- Fix useEffect grouping logic ---
   React.useEffect(() => {
     const groups: Record<string, WorkOrderResponse[]> = {};
     statusOptions.forEach(status => {
@@ -252,16 +277,11 @@ function AdminWorkOrdersPage() {
     }
     if (!destCol) return;
 
-    // If same column and same position, do nothing
-
     if (sourceCol === destCol && sourceIdx === destIdx) return;
 
-    // Remove from source
     if (sourceCol === destCol) {
-      // Reorder within the same column
       const newItems = [...(grouped[sourceCol] ?? [])];
       const [moved] = newItems.splice(sourceIdx, 1);
-      // If moving after itself, adjust index
       let insertIdx = destIdx;
       if (sourceIdx < destIdx) insertIdx--;
       newItems.splice(insertIdx, 0, moved);
@@ -270,7 +290,6 @@ function AdminWorkOrdersPage() {
         [sourceCol!]: newItems,
       }));
     } else {
-      // Move to another column
       const newSource = [...(grouped[sourceCol] ?? [])];
       const [moved] = newSource.splice(sourceIdx, 1);
       const newDest = [...(grouped[destCol] ?? [])];
@@ -341,6 +360,22 @@ function AdminWorkOrdersPage() {
       </div>
     );
   }
+
+  // Filter work orders by date range on frontend
+  const filteredGrouped = React.useMemo(() => {
+    if (!startDate && !endDate) return grouped;
+    const filterFn = (wo: WorkOrderResponse) => {
+      const due = wo.dueDate?.slice(0, 10);
+      if (startDate && due < startDate) return false;
+      if (endDate && due > endDate) return false;
+      return true;
+    };
+    const result: Record<string, WorkOrderResponse[]> = {};
+    for (const status of statusOptions) {
+      result[status] = (grouped[status] ?? []).filter(filterFn);
+    }
+    return result;
+  }, [grouped, startDate, endDate]);
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-purple-100 min-h-screen p-6">
@@ -427,6 +462,30 @@ function AdminWorkOrdersPage() {
             <option value="">{t.allPriorities}</option>
             {priorityOptions.map(p => <option key={p} value={p}>{getPriorityLabel(t, p)}</option>)}
           </select>
+          <select value={technician} onChange={e => setTechnician(e.target.value)} className="border rounded px-2 py-1 w-full md:w-auto">
+            {technicianOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
+          </select>
+          <select value={locationFilter} onChange={e => setLocationFilter(e.target.value)} className="border rounded px-2 py-1 w-full md:w-auto">
+            {locationOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
+          </select>
+          <div className="flex gap-2 items-center">
+            <label className="font-medium mr-1">{t.startDate || 'Start Date'}:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="border rounded px-2 py-1 w-full md:w-auto"
+            />
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="font-medium mr-1">{t.endDate || 'End Date'}:</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="border rounded px-2 py-1 w-full md:w-auto"
+            />
+          </div>
           <input
             type="text"
             placeholder={t.search}
@@ -447,14 +506,14 @@ function AdminWorkOrdersPage() {
               <DroppableColumn status={status} key={status}>
                 <SortableContext
                   id={status}
-                  items={grouped[status]?.map((wo: WorkOrderResponse) => wo.id.toString()) || []}
+                  items={filteredGrouped[status]?.map((wo: WorkOrderResponse) => wo.id.toString()) || []}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="flex-1 flex flex-col gap-4">
-                    {(grouped[status]?.length ?? 0) === 0 ? (
+                    {(filteredGrouped[status]?.length ?? 0) === 0 ? (
                       <div className="text-gray-400 text-center">{t.noWorkOrders}</div>
                     ) : (
-                      grouped[status]?.map((wo: WorkOrderResponse) => (
+                      filteredGrouped[status]?.map((wo: WorkOrderResponse) => (
                         <SortableCard key={wo.id} workOrder={wo} />
                       )))
                     }

@@ -55,6 +55,10 @@ export const en = {
   passwordLabel: 'Password',
   loggingIn: 'Logging in...',
   loginButton: 'Login',
+  allTechnicians: 'All Technicians',
+  allLocations: 'All Locations',
+  startDate: 'Start Date',
+  endDate: 'End Date',
 };
 
 export const fr = {
@@ -114,4 +118,8 @@ export const fr = {
   passwordLabel: 'Mot de passe',
   loggingIn: 'Connexion en cours...',
   loginButton: 'Connexion',
+  allTechnicians: 'Tous les techniciens',
+  allLocations: 'Tous les emplacements',
+  startDate: 'Date de début',
+  endDate: 'Date de fin',
 };
