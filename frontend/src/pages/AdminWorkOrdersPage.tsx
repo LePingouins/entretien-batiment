@@ -114,12 +114,21 @@ const priorityOptions = Object.values(WorkOrderPriority);
 
 
 function AdminWorkOrdersPage() {
+  // Modal state for creating work order
+  const [showModal, setShowModal] = React.useState(false);
+  // Close modal on Escape key
+  React.useEffect(() => {
+    if (!showModal) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowModal(false);
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [showModal]);
   const { t } = useLang();
   // Get color scheme from context
   const outlet = useOutletContext<{ colorScheme: 'current' | 'simple' | 'default' }>();
   const colorScheme = outlet?.colorScheme || 'current';
-  // Modal state for creating work order
-  const [showModal, setShowModal] = React.useState(false);
   // Modal state for editing work order
   const [editModal, setEditModal] = React.useState<{ open: boolean; workOrder: WorkOrderResponse | null }>({ open: false, workOrder: null });
   const queryClient = useQueryClient();
@@ -483,12 +492,42 @@ function AdminWorkOrdersPage() {
       </div>
       {/* Modal for creating work order */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+          onClick={e => {
+            if (e.target === e.currentTarget) setShowModal(false);
+          }}
+        >
           <div className="bg-white/80 rounded-2xl shadow-2xl p-10 w-full max-w-md relative backdrop-blur-md border border-blue-200">
             <button
-              className="absolute top-3 right-3 text-gray-500 hover:text-blue-700 bg-white/60 rounded-full p-2 shadow transition-colors duration-200"
+              className="absolute"
+              style={{
+                top: '10px',
+                right: '14px',
+                background: 'white',
+                color: '#ef4444',
+                border: '1.5px solid #fecaca',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px', // reduce height to move X higher
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'flex-start',
+                fontWeight: 'bold',
+                fontSize: '20px', // slightly larger for better centering
+                cursor: 'pointer',
+                transition: 'background 0.2s',
+                paddingTop: '0px',
+                paddingLeft: '8px',
+              }}
+              aria-label="Close"
               onClick={() => setShowModal(false)}
-            ><svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M6 6l8 8M6 14L14 6"/></svg></button>
+              onMouseOver={e => (e.currentTarget.style.background = '#fee2e2')}
+              onMouseOut={e => (e.currentTarget.style.background = 'white')}
+            >
+              ×
+            </button>
             <h2 className="text-2xl font-bold mb-6 text-blue-900 flex items-center gap-2"><svg width="20" height="20" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>{t.newWorkOrder}</h2>
             <form onSubmit={handleSubmit(onCreate)} className="flex flex-col gap-5">
               <div>
@@ -517,7 +556,15 @@ function AdminWorkOrdersPage() {
               </div>
               <div>
                 <label className="block font-semibold mb-2 text-blue-800">{t.dueDate}</label>
-                <input type="date" className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('dueDate')} />
+                <input
+                  type="date"
+                  className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200 cursor-pointer"
+                  {...register('dueDate')}
+                  onClick={e => {
+                    const input = e.target as HTMLInputElement;
+                    if (typeof input.showPicker === 'function') input.showPicker();
+                  }}
+                />
                 {errors.dueDate && <div className="text-red-500 text-sm mt-1">{errors.dueDate.message}</div>}
               </div>
                 <button
