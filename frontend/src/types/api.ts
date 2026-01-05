@@ -26,6 +26,9 @@ export interface WorkOrderResponse {
   dueDate: string;
   createdAt: string;
   updatedAt: string;
+  attachmentFilename?: string;
+  attachmentContentType?: string;
+  attachmentDownloadUrl?: string;
 }
 
 export interface PageResponse<T> {

@@ -3,25 +3,38 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 
+export const ColorSchemeContext = React.createContext<{ colorScheme: 'current' | 'simple' | 'default', setColorScheme: (s: 'current' | 'simple' | 'default') => void }>({ colorScheme: 'current', setColorScheme: () => {} });
+
 const AdminLayout: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [showSettings, setShowSettings] = React.useState(false);
+  const [colorScheme, setColorScheme] = React.useState<'current' | 'simple' | 'default'>('current');
 
   const handleLogout = async () => {
-    // Optionally call /api/auth/logout here
     logout();
     navigate('/login');
   };
 
   const { lang, setLang, t } = useLang();
   return (
+    <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
     <div className="min-h-screen flex flex-col">
       <header className="bg-blue-800 text-white p-4 flex justify-between items-center">
         <div className="font-bold text-xl">Entretien-Bâtiment Admin</div>
         <nav className="space-x-4 flex items-center">
           <Link to="/admin/work-orders" className="hover:underline">{t.workOrders}</Link>
-          {/* Add more admin links here if needed */}
           <button onClick={handleLogout} className="ml-4 bg-blue-600 px-3 py-1 rounded hover:bg-blue-700">{t.logout}</button>
+          <button
+            aria-label="Settings"
+            className="ml-4 p-2 rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            onClick={() => setShowSettings(true)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+              <circle cx="12" cy="12" r="3.5" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.14.31.21.65.21 1v.09A1.65 1.65 0 0 0 21 12c0 .35-.07.69-.21 1v.09A1.65 1.65 0 0 0 19.4 15z" />
+            </svg>
+          </button>
           <div className="ml-4 flex items-center">
             <span className="mr-2">{lang === 'en' ? 'English' : 'Français'}</span>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -40,12 +53,59 @@ const AdminLayout: React.FC = () => {
           </div>
         </nav>
       </header>
-      <Outlet />
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-xs relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+              onClick={() => setShowSettings(false)}
+            >✕</button>
+            <h2 className="text-lg font-bold mb-4 text-blue-900">Color Scheme</h2>
+            <div className="flex flex-col gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="colorScheme"
+                  value="current"
+                  checked={colorScheme === 'current'}
+                  onChange={() => setColorScheme('current')}
+                />
+                <span>Current UI</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="colorScheme"
+                  value="default"
+                  checked={colorScheme === 'default'}
+                  onChange={() => setColorScheme('default')}
+                />
+                <span>Default UI</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="colorScheme"
+                  value="simple"
+                  checked={colorScheme === 'simple'}
+                  onChange={() => setColorScheme('simple')}
+                />
+                <span>Simple Business</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Outlet context={{ colorScheme }} />
       <footer className="w-full text-center py-2 text-sm bg-gradient-to-br from-blue-100/60 to-purple-200/30 shadow-sm rounded-b-xl">
         <div className="font-semibold text-blue-900">&copy; HorizonNature</div>
         <div className="text-xs text-blue-700 mt-1">{new Date().getFullYear()}</div>
       </footer>
     </div>
+    </ColorSchemeContext.Provider>
   );
 };
 

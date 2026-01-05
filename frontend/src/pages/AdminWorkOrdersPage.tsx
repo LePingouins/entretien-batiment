@@ -98,6 +98,7 @@ import {
   useSensors,
   DragEndEvent,
   useDroppable,
+  DragOverlay,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -106,6 +107,7 @@ import api from '../lib/api';
 import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority } from '../types/api';
 import { WorkOrderCard, StatusBadge, PriorityBadge } from '../components/WorkOrderCard';
 import { useLang } from '../context/LangContext';
+import { useOutletContext } from 'react-router-dom';
 
 const statusOptions = Object.values(WorkOrderStatus);
 const priorityOptions = Object.values(WorkOrderPriority);
@@ -113,6 +115,9 @@ const priorityOptions = Object.values(WorkOrderPriority);
 
 function AdminWorkOrdersPage() {
   const { t } = useLang();
+  // Get color scheme from context
+  const outlet = useOutletContext<{ colorScheme: 'current' | 'simple' | 'default' }>();
+  const colorScheme = outlet?.colorScheme || 'current';
   // Modal state for creating work order
   const [showModal, setShowModal] = React.useState(false);
   // Modal state for editing work order
@@ -245,9 +250,26 @@ function AdminWorkOrdersPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  // Drag state for DragOverlay
+  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const activeWorkOrder = React.useMemo(() => {
+    if (!activeId) return null;
+    for (const status of statusOptions) {
+      const found = grouped[status]?.find((wo: WorkOrderResponse) => wo.id.toString() === activeId);
+      if (found) return found;
+    }
+    return null;
+  }, [activeId, grouped]);
+
+  // Handle drag start
+  const onDragStart = (event: any) => {
+    setActiveId(event.active.id);
+  };
+
   // Handle drag end
   const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
     if (!over || !active) return;
 
     // Find the source column and index
@@ -329,7 +351,7 @@ function AdminWorkOrdersPage() {
   };
 
   // Sortable card wrapper for dnd-kit
-  function SortableCard({ workOrder }: { workOrder: WorkOrderResponse }) {
+  function SortableCard({ workOrder, colorScheme }: { workOrder: WorkOrderResponse, colorScheme?: string }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
       id: workOrder.id.toString(),
     });
@@ -357,26 +379,57 @@ function AdminWorkOrdersPage() {
   }
 
   // Droppable column wrapper
-  function DroppableColumn({ status, children }: { status: string; children: React.ReactNode }) {
+  function DroppableColumn({ status, children, colorScheme }: { status: string; children: React.ReactNode; colorScheme?: string }) {
     const { setNodeRef, isOver } = useDroppable({ id: status });
     const { t } = useLang();
-    // Modern column style: glassmorphism, gradient, icons, transitions
     const statusIcons: Record<string, React.ReactElement> = {
-      OPEN: <svg width="20" height="20" fill="currentColor" className="text-gray-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>,
-      ASSIGNED: <svg width="20" height="20" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="3"/></svg>,
-      IN_PROGRESS: <svg width="20" height="20" fill="currentColor" className="text-yellow-400" viewBox="0 0 20 20"><path d="M10 2v8l6 4"/></svg>,
-      COMPLETED: <svg width="20" height="20" fill="currentColor" className="text-green-400" viewBox="0 0 20 20"><path d="M5 10l4 4 6-8"/></svg>,
-      CANCELLED: <svg width="20" height="20" fill="currentColor" className="text-red-400" viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16"/><line x1="16" y1="4" x2="4" y2="16"/></svg>,
+      OPEN: <svg width="20" height="20" fill="currentColor" className="text-teal-500" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>,
+      ASSIGNED: (
+        <svg width="24" height="24" fill="none" className="text-blue-500" viewBox="0 0 24 24">
+          {/* Paper */}
+          <rect x="4" y="4" width="14" height="16" rx="2" stroke="currentColor" strokeWidth="2" fill="white"/>
+          {/* Pen */}
+          <path d="M16 18l2-2c.4-.4.4-1 0-1.4l-1.6-1.6c-.4-.4-1-.4-1.4 0l-2 2" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <path d="M14.5 17.5l-2-2" stroke="currentColor" strokeWidth="2" fill="none"/>
+          {/* Pen tip */}
+          <circle cx="18" cy="18" r="0.7" fill="currentColor" />
+        </svg>
+      ),
+      IN_PROGRESS: (
+        <svg width="24" height="24" fill="none" className="text-yellow-500" viewBox="0 0 24 24">
+          <path d="M6 4h12M6 20h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M8 4c0 4 4 4 4 8s-4 4-4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M16 4c0 4-4 4-4 8s4 4 4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+      COMPLETED: <svg width="28" height="28" fill="none" className="text-green-500" viewBox="0 0 28 28"><path d="M7 15l6 6 8-12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+      CANCELLED: <svg width="24" height="24" fill="currentColor" className="text-red-600 font-bold" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>,
     };
     return (
       <div
         ref={setNodeRef}
-        className={`min-w-[320px] w-80 bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-3xl shadow-2xl p-6 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-105' : ''}`}
-        style={{ minHeight: 400, boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
+        className={
+          (colorScheme === 'default' || colorScheme === 'simple')
+            ? `min-w-[320px] w-80 bg-white rounded-2xl shadow p-6 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400 scale-105' : ''}`
+            : `min-w-[320px] w-80 bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-3xl shadow-2xl p-6 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-105' : ''}`
+        }
+        style={colorScheme === 'simple' ? { minHeight: 400 } : { minHeight: 400, boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
       >
-        <div className="font-bold text-xl mb-3 px-3 py-2 rounded-2xl bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow">
-          {statusIcons[status]}
-          {getStatusLabel(t, status)}
+        <div className={
+          colorScheme === 'default'
+            ? 'font-bold text-lg mb-3 px-3 py-2 rounded-xl bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
+            : colorScheme === 'simple'
+              ? 'font-bold text-lg mb-3 px-3 py-2 rounded-xl bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
+              : 'font-bold text-xl mb-3 px-3 py-2 rounded-2xl bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow'
+        }>
+          {/* Only show the X icon on the left for Cancelled */}
+          {status === 'CANCELLED'
+            ? <svg width="24" height="24" fill="currentColor" className="text-red-600 font-bold mr-2" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>
+            : statusIcons[status]
+          }
+          <span className="flex items-center gap-2">
+            {getStatusLabel(t, status)}
+          </span>
         </div>
         {children}
       </div>
@@ -400,19 +453,32 @@ function AdminWorkOrdersPage() {
   }, [grouped, startDate, endDate]);
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-blue-100/80 to-purple-200/60 min-h-screen p-8">
+    <div className={
+      colorScheme === 'simple'
+        ? 'flex-1 bg-gray-100 min-h-screen p-8'
+        : colorScheme === 'default'
+          ? 'flex-1 bg-gradient-to-br from-blue-100/80 to-purple-200/60 min-h-screen p-8'
+          : 'flex-1 bg-gradient-to-br from-blue-100/80 to-purple-200/60 min-h-screen p-8'
+    }>
       {/* Remove extra white container, keep only board and controls */}
       <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 md:gap-0">
-        <h1 className="text-4xl font-extrabold text-center md:text-left text-blue-900 drop-shadow-lg tracking-tight flex items-center gap-3">
-          <span className="inline-block"><svg width="32" height="32" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg></span>
+        <h1 className={
+          colorScheme === 'simple' || colorScheme === 'default'
+            ? 'text-3xl font-bold text-center md:text-left text-gray-800 tracking-tight flex items-center gap-3'
+            : 'text-4xl font-extrabold text-center md:text-left text-blue-900 drop-shadow-lg tracking-tight flex items-center gap-3'
+        }>
+          <span className="inline-block"><svg width="32" height="32" fill="currentColor" className="text-blue-600" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg></span>
           {t.workOrders}
         </h1>
         <button
-          className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 w-full md:w-auto font-semibold text-lg"
+          className={
+            (colorScheme === 'simple' || colorScheme === 'default')
+              ? 'bg-white text-gray-800 border border-gray-300 px-6 py-3 rounded-2xl shadow hover:bg-gray-100 transition-all duration-200 w-full md:w-auto font-semibold text-lg flex items-center text-left'
+              : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 w-full md:w-auto font-semibold text-lg flex items-center text-left'
+          }
           onClick={() => setShowModal(true)}
         >
-          <span className="inline-block mr-2 align-middle"><svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M10 5v10m5-5H5"/></svg></span>
-          {t.newWorkOrder}
+          <span className="align-middle">{t.newWorkOrder}</span>
         </button>
       </div>
       {/* Modal for creating work order */}
@@ -480,46 +546,57 @@ function AdminWorkOrdersPage() {
             queryClient={queryClient}
           />
         )}
-        <div className="flex flex-col md:flex-row gap-2 w-full">
-          <select value={status} onChange={e => setStatus(e.target.value)} className="border rounded px-2 py-1 w-full md:w-auto">
+        <div className="w-full">
+          <div
+            className={
+              `flex flex-wrap items-center gap-20 p-4 mb-6 rounded-xl shadow-sm border justify-center ` +
+              (colorScheme === 'current'
+                ? 'bg-gradient-to-r from-blue-100 via-blue-200 to-purple-100 border-gray-100'
+                : colorScheme === 'simple'
+                  ? 'bg-gray-50 border-gray-200'
+                  : 'bg-blue-50 border-blue-200')
+            }
+          >
+            <select value={status} onChange={e => setStatus(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition">
             <option value="">{t.allStatuses}</option>
             {statusOptions.map(s => <option key={s} value={s}>{getStatusLabel(t, s)}</option>)}
           </select>
-          <select value={priority} onChange={e => setPriority(e.target.value)} className="border rounded px-2 py-1 w-full md:w-auto">
+            <select value={priority} onChange={e => setPriority(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition">
             <option value="">{t.allPriorities}</option>
             {priorityOptions.map(p => <option key={p} value={p}>{getPriorityLabel(t, p)}</option>)}
           </select>
-          <select value={technician} onChange={e => setTechnician(e.target.value)} className="border rounded px-2 py-1 w-full md:w-auto">
+            <select value={technician} onChange={e => setTechnician(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition">
             {technicianOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
           </select>
-          <select value={locationFilter} onChange={e => setLocationFilter(e.target.value)} className="border rounded px-2 py-1 w-full md:w-auto">
+            <select value={locationFilter} onChange={e => setLocationFilter(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition">
             {locationOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
           </select>
-          <div className="flex gap-2 items-center">
-            <label className="font-medium mr-1">{t.startDate || 'Start Date'}:</label>
+            <div className="flex items-center gap-2">
+              <label className="font-medium text-gray-700">{t.startDate || 'Start Date'}:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition min-w-[140px]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="font-medium text-gray-700">{t.endDate || 'End Date'}:</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition min-w-[140px]"
+              />
+            </div>
             <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="border rounded px-2 py-1 w-full md:w-auto"
+              type="text"
+              placeholder={t.search}
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition min-w-[180px]"
             />
           </div>
-          <div className="flex gap-2 items-center">
-            <label className="font-medium mr-1">{t.endDate || 'End Date'}:</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="border rounded px-2 py-1 w-full md:w-auto"
-            />
-          </div>
-          <input
-            type="text"
-            placeholder={t.search}
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            className="border rounded px-2 py-1 w-full md:w-auto"
-          />
         </div>
       </div>
       {isLoading ? (
@@ -527,10 +604,15 @@ function AdminWorkOrdersPage() {
       ) : error ? (
         <div className="text-red-600">{t.errorLoading}</div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        >
           <div className="flex flex-col md:flex-row gap-8 overflow-x-auto pb-12 px-8 min-w-[1200px] pt-4">
             {statusOptions.map(status => (
-              <DroppableColumn status={status} key={status}>
+              <DroppableColumn status={status} key={status} colorScheme={colorScheme}>
                 <SortableContext
                   id={status}
                   items={filteredGrouped[status]?.map((wo: WorkOrderResponse) => wo.id.toString()) || []}
@@ -541,14 +623,22 @@ function AdminWorkOrdersPage() {
                       <div className="text-gray-400 text-center">{t.noWorkOrders}</div>
                     ) : (
                       filteredGrouped[status]?.map((wo: WorkOrderResponse) => (
-                        <SortableCard key={wo.id} workOrder={wo} />
-                      )))
-                    }
+                        <SortableCard key={wo.id} workOrder={wo} colorScheme={colorScheme} />
+                      ))
+                    )}
                   </div>
                 </SortableContext>
               </DroppableColumn>
             ))}
           </div>
+          {/* DragOverlay for smoother UX */}
+          <DragOverlay>
+            {activeWorkOrder ? (
+              <div style={{ zIndex: 9999 }}>
+                <WorkOrderCard workOrder={activeWorkOrder} />
+              </div>
+            ) : null}
+          </DragOverlay>
         </DndContext>
       )}
       <div className="flex flex-col md:flex-row gap-2 mt-4 items-center justify-center md:justify-start">

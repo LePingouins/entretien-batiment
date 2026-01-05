@@ -4,7 +4,7 @@ import { WorkOrderStatus, WorkOrderPriority, WorkOrderResponse } from '../types/
 import { useLang } from '../context/LangContext';
 
 const statusColors: Record<WorkOrderStatus, string> = {
-  OPEN: 'bg-gray-200 text-gray-800',
+  OPEN: 'bg-teal-500 text-white',
   ASSIGNED: 'bg-blue-200 text-blue-800',
   IN_PROGRESS: 'bg-yellow-200 text-yellow-800',
   COMPLETED: 'bg-green-200 text-green-800',
@@ -47,6 +47,7 @@ export function PriorityBadge({ priority }: { priority: WorkOrderPriority }) {
 
 export function WorkOrderCard({ workOrder }: { workOrder: WorkOrderResponse }) {
   const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
+  const isImage = workOrder.attachmentContentType?.startsWith('image/');
   return (
     <div
       className="rounded-2xl shadow-2xl bg-gradient-to-br from-white/70 to-blue-100/60 p-5 flex flex-col gap-3 border border-blue-200 backdrop-blur-md transition-transform duration-200 hover:scale-105 hover:shadow-blue-400/40 hover:bg-white/80 cursor-pointer"
@@ -67,10 +68,37 @@ export function WorkOrderCard({ workOrder }: { workOrder: WorkOrderResponse }) {
         <span className="text-xs text-gray-700 flex items-center gap-1" aria-label={`Due date: ${workOrder.dueDate?.slice(0, 10)}`}><svg width="14" height="14" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm10 6v10H4V8h12z"/></svg>Due: {workOrder.dueDate?.slice(0, 10)}</span>
       </div>
       <div className="text-sm text-gray-800 line-clamp-2 mb-2 transition-all duration-200" aria-label={`Description: ${workOrder.description}`}>{workOrder.description}</div>
-      <div className="text-xs text-gray-700 flex items-center gap-1 mb-2" aria-label={`Location: ${workOrder.location}`}>
+      <div className="text-xs text-gray-700 flex items-center gap-1 mb-2" aria-label={`Location: ${workOrder.location}`}> 
         <svg width="14" height="14" fill="currentColor" className="text-green-400" viewBox="0 0 20 20"><path d="M10 2a6 6 0 016 6c0 4.418-6 10-6 10S4 12.418 4 8a6 6 0 016-6zm0 8a2 2 0 110-4 2 2 0 010 4z"/></svg>
         Location: {workOrder.location}
       </div>
+
+      {/* Attachment preview or download */}
+      {workOrder.attachmentDownloadUrl && (
+        <div className="mb-2">
+          {isImage ? (
+            <a href={workOrder.attachmentDownloadUrl} target="_blank" rel="noopener noreferrer">
+              <img
+                src={workOrder.attachmentDownloadUrl}
+                alt={workOrder.attachmentFilename || 'Attachment'}
+                className="max-h-32 rounded shadow border mb-1"
+                style={{ maxWidth: '100%', objectFit: 'contain' }}
+              />
+            </a>
+          ) : (
+            <a
+              href={workOrder.attachmentDownloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-700 underline text-xs"
+              download={workOrder.attachmentFilename}
+            >
+              {workOrder.attachmentFilename || 'Download attachment'}
+            </a>
+          )}
+        </div>
+      )}
+
       <div className="flex gap-3 mt-2 items-center">
         <div className="flex items-center gap-2">
           <img
