@@ -21,5 +21,9 @@ public record WorkOrderResponse(
         LocalDate dueDate,
 
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+
+        String attachmentFilename,
+        String attachmentContentType,
+        String attachmentDownloadUrl
 ) {}

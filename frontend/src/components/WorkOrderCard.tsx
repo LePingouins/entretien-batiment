@@ -45,9 +45,29 @@ export function PriorityBadge({ priority }: { priority: WorkOrderPriority }) {
   );
 }
 
-export function WorkOrderCard({ workOrder }: { workOrder: WorkOrderResponse }) {
+const WorkOrderCardComponent = ({ workOrder }: { workOrder: WorkOrderResponse }) => {
   const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
+  // Always use backend base URL for attachments (now /api/files/workorders/)
+  const backendBaseUrl = 'http://localhost:8080';
+  const attachmentUrl = workOrder.attachmentDownloadUrl
+    ? backendBaseUrl + workOrder.attachmentDownloadUrl
+    : undefined;
+
+  // Robust image fallback logic
+  const [imgSrc, setImgSrc] = React.useState<string | undefined>(
+    isImage && attachmentUrl ? attachmentUrl : undefined
+  );
+  const [triedApi, setTriedApi] = React.useState(false);
+  const [triedPlaceholder, setTriedPlaceholder] = React.useState(false);
+  const placeholderImg = '/placeholder.png'; // You can provide a real placeholder image
+
+  React.useEffect(() => {
+    setImgSrc(isImage && attachmentUrl ? attachmentUrl : undefined);
+    setTriedApi(false);
+    setTriedPlaceholder(false);
+  }, [workOrder.attachmentFilename, workOrder.attachmentDownloadUrl, workOrder.attachmentContentType]);
+
   return (
     <div
       className="rounded-2xl shadow-2xl bg-gradient-to-br from-white/70 to-blue-100/60 p-5 flex flex-col gap-3 border border-blue-200 backdrop-blur-md transition-transform duration-200 hover:scale-105 hover:shadow-blue-400/40 hover:bg-white/80 cursor-pointer"
@@ -74,20 +94,32 @@ export function WorkOrderCard({ workOrder }: { workOrder: WorkOrderResponse }) {
       </div>
 
       {/* Attachment preview or download */}
-      {workOrder.attachmentDownloadUrl && (
+      {attachmentUrl && (
         <div className="mb-2">
           {isImage ? (
-            <a href={workOrder.attachmentDownloadUrl} target="_blank" rel="noopener noreferrer">
+            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
               <img
-                src={workOrder.attachmentDownloadUrl}
+                src={imgSrc}
                 alt={workOrder.attachmentFilename || 'Attachment'}
                 className="max-h-32 rounded shadow border mb-1"
                 style={{ maxWidth: '100%', objectFit: 'contain' }}
+                onError={e => {
+                  if (!triedApi && imgSrc !== attachmentUrl) {
+                    setImgSrc(attachmentUrl || '');
+                    setTriedApi(true);
+                  } else if (!triedPlaceholder) {
+                    setImgSrc(placeholderImg);
+                    setTriedPlaceholder(true);
+                  } else {
+                    // Hide image if all fail
+                    setImgSrc(undefined);
+                  }
+                }}
               />
             </a>
           ) : (
             <a
-              href={workOrder.attachmentDownloadUrl}
+              href={attachmentUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-700 underline text-xs"
@@ -124,3 +156,5 @@ export function WorkOrderCard({ workOrder }: { workOrder: WorkOrderResponse }) {
     </div>
   );
 }
+
+export const WorkOrderCard = React.memo(WorkOrderCardComponent);

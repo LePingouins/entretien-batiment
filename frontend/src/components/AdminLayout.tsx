@@ -3,13 +3,20 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 
-export const ColorSchemeContext = React.createContext<{ colorScheme: 'current' | 'simple' | 'default', setColorScheme: (s: 'current' | 'simple' | 'default') => void }>({ colorScheme: 'current', setColorScheme: () => {} });
+export const ColorSchemeContext = React.createContext<{ colorScheme: 'current' | 'performance' | 'default', setColorScheme: (s: 'current' | 'performance' | 'default') => void }>({ colorScheme: 'default', setColorScheme: () => {} });
 
 const AdminLayout: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = React.useState(false);
-  const [colorScheme, setColorScheme] = React.useState<'current' | 'simple' | 'default'>('current');
+  // Persist color scheme in localStorage, default to 'default'
+  const [colorScheme, setColorSchemeState] = React.useState<'current' | 'performance' | 'default'>(() => {
+    return (localStorage.getItem('colorScheme') as 'current' | 'performance' | 'default') || 'default';
+  });
+  const setColorScheme = React.useCallback((scheme: 'current' | 'performance' | 'default') => {
+    setColorSchemeState(scheme);
+    localStorage.setItem('colorScheme', scheme);
+  }, []);
 
   const handleLogout = async () => {
     logout();
@@ -88,11 +95,11 @@ const AdminLayout: React.FC = () => {
                 <input
                   type="radio"
                   name="colorScheme"
-                  value="simple"
-                  checked={colorScheme === 'simple'}
-                  onChange={() => setColorScheme('simple')}
+                  value="performance"
+                  checked={colorScheme === 'performance'}
+                  onChange={() => setColorScheme('performance')}
                 />
-                <span>Simple Business</span>
+                <span>Performance UI</span>
               </label>
             </div>
           </div>

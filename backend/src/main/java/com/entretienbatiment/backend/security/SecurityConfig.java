@@ -73,18 +73,20 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
         return http
-                .cors(cors -> {}) // ✅ IMPORTANT: enables Spring Security CORS handling
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // ✅ allow preflight
-                        .requestMatchers("/api/health").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/tech/**").hasRole("TECH")
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
-                .build();
+            .cors(cors -> {}) // ✅ IMPORTANT: enables Spring Security CORS handling
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // ✅ allow preflight
+                .requestMatchers("/api/health").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
+                // Make files endpoint public
+                .requestMatchers("/api/files/workorders/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/tech/**").hasRole("TECH")
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
+            .build();
     }
 }

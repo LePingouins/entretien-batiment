@@ -53,6 +53,17 @@ public class WorkOrder {
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
 
+        // Attachment fields
+    @Column(name = "attachment_filename")
+    private String attachmentFilename;
+
+    @Column(name = "attachment_content_type")
+    private String attachmentContentType;
+    public String getAttachmentFilename() { return attachmentFilename; }
+    public String getAttachmentContentType() { return attachmentContentType; }
+    public void setAttachmentFilename(String attachmentFilename) { this.attachmentFilename = attachmentFilename; }
+    public void setAttachmentContentType(String attachmentContentType) { this.attachmentContentType = attachmentContentType; }
+
     protected WorkOrder() {}
 
     public WorkOrder(

@@ -1,10 +1,20 @@
 package com.entretienbatiment.backend.workorders.web.admin;
 
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.ResponseEntity;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.net.MalformedURLException;
 import com.entretienbatiment.backend.workorders.web.admin.dto.UpdateWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.service.WorkOrderService;
 import com.entretienbatiment.backend.workorders.web.admin.dto.AssignWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.WorkOrderResponse;
+import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderMultipartRequest;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -24,15 +34,22 @@ public class AdminWorkOrderController {
         this.service = service;
     }
 
-    @PostMapping
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public WorkOrderResponse createMultipart(
+            @ModelAttribute CreateWorkOrderMultipartRequest req,
+            Authentication auth
+    ) {
+        Long userId = extractUserId(auth);
+        return service.createMultipart(req, userId);
+    }
+
+    // Keep the original JSON endpoint for backward compatibility (optional)
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public WorkOrderResponse create(@Valid @RequestBody CreateWorkOrderRequest req, Authentication auth) {
-
-        // ✅ JwtAuthFilter sets:
-        // principal = email
-        // details   = userId (String)
         Long userId = extractUserId(auth);
-
         return service.create(req, userId);
     }
 
@@ -85,6 +102,9 @@ public class AdminWorkOrderController {
     public void delete(@PathVariable Long id) {
         service.delete(id);
     }
+
+        // Serve uploaded files
+    // Moved to FilesController
 
     private Long extractUserId(Authentication auth) {
         if (auth == null) {

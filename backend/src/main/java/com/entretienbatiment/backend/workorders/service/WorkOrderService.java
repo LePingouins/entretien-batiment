@@ -1,5 +1,8 @@
+
 package com.entretienbatiment.backend.workorders.service;
 
+import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderMultipartRequest;
+import org.springframework.web.multipart.MultipartFile;
 import com.entretienbatiment.backend.auth.AppUser;
 import com.entretienbatiment.backend.auth.AppUserRepository;
 import com.entretienbatiment.backend.workorders.data.WorkOrderRepository;
@@ -209,23 +212,107 @@ public class WorkOrderService {
         repo.delete(wo);
     }
 
+    @Transactional
+    public WorkOrderResponse createMultipart(CreateWorkOrderMultipartRequest req, Long createdByUserId) {
+        AppUser creator = users.findById(createdByUserId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "createdBy user not found"));
+
+        String attachmentFilename = null;
+        String attachmentContentType = null;
+        if (req.getFiles() != null && !req.getFiles().isEmpty()) {
+            MultipartFile file = req.getFiles().get(0); // Only handle the first file for now
+            try {
+                String originalFilename = file.getOriginalFilename();
+                String ext = originalFilename != null && originalFilename.contains(".") ? originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
+                String storedFilename = java.util.UUID.randomUUID() + ext;
+                java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+                java.nio.file.Files.createDirectories(uploadDir);
+                java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
+                file.transferTo(filePath);
+                attachmentFilename = storedFilename;
+                attachmentContentType = file.getContentType();
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store file", e);
+            }
+        }
+
+        WorkOrder workOrder = new WorkOrder(
+            req.getTitle(),
+            req.getDescription(),
+            req.getLocation(),
+            req.getPriority(),
+            creator,
+            req.getRequestedDate(),
+            req.getDueDate()
+        );
+        workOrder.setAttachmentFilename(attachmentFilename);
+        workOrder.setAttachmentContentType(attachmentContentType);
+        WorkOrder saved = repo.save(workOrder);
+
+        // Return response with attachment info
+        return toResponseWithAttachment(saved, attachmentFilename, attachmentContentType);
+    }
+    // Helper to build response with attachment info
+    private WorkOrderResponse toResponseWithAttachment(WorkOrder wo, String attachmentFilename, String attachmentContentType) {
+        Long createdById = wo.getCreatedBy() != null ? wo.getCreatedBy().getId() : null;
+        Long assignedToId = wo.getAssignedTo() != null ? wo.getAssignedTo().getId() : null;
+        String downloadUrl = (attachmentFilename != null)
+            ? "/api/files/workorders/" + attachmentFilename
+            : null;
+        return new WorkOrderResponse(
+            wo.getId(),
+            wo.getTitle(),
+            wo.getDescription(),
+            wo.getLocation(),
+            wo.getPriority(),
+            wo.getStatus(),
+            createdById,
+            assignedToId,
+            wo.getRequestedDate(),
+            wo.getDueDate(),
+            wo.getCreatedAt(),
+            wo.getUpdatedAt(),
+            attachmentFilename,
+            attachmentContentType,
+            downloadUrl
+        );
+    }
+    
+
     private WorkOrderResponse toResponse(WorkOrder wo) {
         Long createdById = wo.getCreatedBy() != null ? wo.getCreatedBy().getId() : null;
         Long assignedToId = wo.getAssignedTo() != null ? wo.getAssignedTo().getId() : null;
-
+        String attachmentFilename = null;
+        String attachmentContentType = null;
+        String downloadUrl = null;
+        try {
+            // Use reflection to support legacy DBs if fields are missing
+            java.lang.reflect.Method getAttachmentFilename = wo.getClass().getMethod("getAttachmentFilename");
+            java.lang.reflect.Method getAttachmentContentType = wo.getClass().getMethod("getAttachmentContentType");
+            attachmentFilename = (String) getAttachmentFilename.invoke(wo);
+            attachmentContentType = (String) getAttachmentContentType.invoke(wo);
+            if (attachmentFilename != null) {
+                downloadUrl = "/api/files/workorders/" + attachmentFilename;
+            }
+        } catch (Exception e) {
+            // fallback: leave as null
+        }
         return new WorkOrderResponse(
-                wo.getId(),
-                wo.getTitle(),
-                wo.getDescription(),
-                wo.getLocation(),
-                wo.getPriority(),
-                wo.getStatus(),
-                createdById,
-                assignedToId,
-                wo.getRequestedDate(),
-                wo.getDueDate(),
-                wo.getCreatedAt(),
-                wo.getUpdatedAt()
+            wo.getId(),
+            wo.getTitle(),
+            wo.getDescription(),
+            wo.getLocation(),
+            wo.getPriority(),
+            wo.getStatus(),
+            createdById,
+            assignedToId,
+            wo.getRequestedDate(),
+            wo.getDueDate(),
+            wo.getCreatedAt(),
+            wo.getUpdatedAt(),
+            attachmentFilename,
+            attachmentContentType,
+            downloadUrl
         );
     }
 
