@@ -82,6 +82,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 // Make files endpoint public
                 .requestMatchers("/api/files/workorders/**").permitAll()
+                .requestMatchers("/api/mileage/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/tech/**").hasRole("TECH")
                 .anyRequest().authenticated()

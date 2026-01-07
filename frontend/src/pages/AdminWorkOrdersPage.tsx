@@ -707,25 +707,27 @@ function AdminWorkOrdersPage() {
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
         >
-          <div className="flex flex-col md:flex-row gap-8 overflow-x-auto pb-12 px-8 min-w-[1200px] pt-4">
+          <div className="flex flex-col md:flex-row gap-8 overflow-x-auto pb-12 px-2 md:px-8 pt-4 w-full">
             {statusOptions.map(status => (
-              <DroppableColumn status={status} key={status} colorScheme={colorScheme}>
-                <SortableContext
-                  id={status}
-                  items={filteredGrouped[status]?.map((wo: WorkOrderResponse) => wo.id.toString()) || []}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="flex-1 flex flex-col gap-4">
-                    {(filteredGrouped[status]?.length ?? 0) === 0 ? (
-                      <div className="text-gray-400 text-center">{t.noWorkOrders}</div>
-                    ) : (
-                      filteredGrouped[status]?.map((wo: WorkOrderResponse) => (
-                        <SortableCard key={wo.id} workOrder={wo} colorScheme={colorScheme} />
-                      ))
-                    )}
-                  </div>
-                </SortableContext>
-              </DroppableColumn>
+              <div className="flex-1 min-w-[260px] max-w-full flex flex-col">
+                <DroppableColumn status={status} key={status} colorScheme={colorScheme}>
+                  <SortableContext
+                    id={status}
+                    items={filteredGrouped[status]?.map((wo: WorkOrderResponse) => wo.id.toString()) || []}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="flex-1 flex flex-col gap-4">
+                      {(filteredGrouped[status]?.length ?? 0) === 0 ? (
+                        <div className="text-gray-400 text-center">{t.noWorkOrders}</div>
+                      ) : (
+                        filteredGrouped[status]?.map((wo: WorkOrderResponse) => (
+                          <SortableCard key={wo.id} workOrder={wo} colorScheme={colorScheme} />
+                        ))
+                      )}
+                    </div>
+                  </SortableContext>
+                </DroppableColumn>
+              </div>
             ))}
           </div>
           {/* DragOverlay for smoother UX */}

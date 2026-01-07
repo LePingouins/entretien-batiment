@@ -1,19 +1,11 @@
 package com.entretienbatiment.backend.workorders.web.admin;
 
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.ResponseEntity;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.net.MalformedURLException;
 import com.entretienbatiment.backend.workorders.web.admin.dto.UpdateWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.service.WorkOrderService;
 import com.entretienbatiment.backend.workorders.web.admin.dto.AssignWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.WorkOrderResponse;
 import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderMultipartRequest;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

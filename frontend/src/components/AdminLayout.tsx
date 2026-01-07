@@ -26,11 +26,12 @@ const AdminLayout: React.FC = () => {
   const { lang, setLang, t } = useLang();
   return (
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col justify-between">
       <header className="bg-blue-800 text-white p-4 flex justify-between items-center">
         <div className="font-bold text-xl">Entretien-Bâtiment Admin</div>
         <nav className="space-x-4 flex items-center">
           <Link to="/admin/work-orders" className="hover:underline">{t.workOrders}</Link>
+            <Link to="/admin/mileage" className="hover:underline">{t.mileage}</Link>
           <button onClick={handleLogout} className="ml-4 bg-blue-600 px-3 py-1 rounded hover:bg-blue-700">{t.logout}</button>
           <button
             aria-label="Settings"
@@ -106,7 +107,9 @@ const AdminLayout: React.FC = () => {
         </div>
       )}
 
-      <Outlet context={{ colorScheme }} />
+      <main className="flex-1">
+        <Outlet context={{ colorScheme }} />
+      </main>
       <footer className="w-full text-center py-2 text-sm bg-gradient-to-br from-blue-100/60 to-purple-200/30 shadow-sm rounded-b-xl">
         <div className="font-semibold text-blue-900">&copy; HorizonNature</div>
         <div className="text-xs text-blue-700 mt-1">{new Date().getFullYear()}</div>
