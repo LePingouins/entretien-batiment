@@ -1,5 +1,5 @@
 // Edit modal with Escape key handler
-function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, editErrors, isEditSubmitting, priorityOptions, editModal, queryClient }: any) {
+function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, editErrors, isEditSubmitting, priorityOptions, editModal, queryClient, colorScheme }: any) {
   React.useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -19,59 +19,73 @@ function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
+  // Dark mode classes
+  const overlayClass = colorScheme === 'dark' ? 'bg-black/60' : 'bg-black/40';
+  const containerClass = colorScheme === 'dark' 
+    ? 'bg-[#1a1f2e] border border-[#2d3748] text-[#e2e8f0]' 
+    : 'bg-white';
+  const labelClass = colorScheme === 'dark' ? 'text-[#94a3b8]' : '';
+  const inputClass = colorScheme === 'dark' 
+    ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' 
+    : '';
+  const titleClass = colorScheme === 'dark' ? 'text-[#e2e8f0]' : '';
+  const closeBtnClass = colorScheme === 'dark' 
+    ? 'text-[#94a3b8] hover:text-red-400 bg-transparent' 
+    : '';
+
   return (
-    <div className={styles.modalOverlay}>
-      <div ref={modalRef} className={styles.modalContainer}>
+    <div className={`${styles.modalOverlay} ${overlayClass}`}>
+      <div ref={modalRef} className={`${styles.modalContainer} ${containerClass}`}>
         <button
-          className={styles.modalCloseBtn}
+          className={`${styles.modalCloseBtn} ${closeBtnClass}`}
           onClick={onClose}
         >✕</button>
-        <h2 className={styles.modalTitle}>{t.editWorkOrder}</h2>
+        <h2 className={`${styles.modalTitle} ${titleClass}`}>{t.editWorkOrder}</h2>
         <form onSubmit={handleEditSubmit(onEdit)} className={styles.formEditModal}>
           <div>
-            <label className={styles.label}>{t.title}</label>
-            <input className={styles.input} {...editRegister('title')} />
+            <label className={`${styles.label} ${labelClass}`}>{t.title}</label>
+            <input className={`${styles.input} ${inputClass}`} {...editRegister('title')} />
             {editErrors.title && <div className={styles.errorMsg}>{editErrors.title.message}</div>}
           </div>
           <div>
-            <label className={styles.label}>{t.description}</label>
-            <textarea className={styles.input} {...editRegister('description')} />
+            <label className={`${styles.label} ${labelClass}`}>{t.description}</label>
+            <textarea className={`${styles.input} ${inputClass}`} {...editRegister('description')} />
             {editErrors.description && <div className={styles.errorMsg}>{editErrors.description.message}</div>}
           </div>
           <div>
-            <label className={styles.label}>{t.location}</label>
-            <select className={styles.input} {...editRegister('location')}>
-              <option value="">-- Select Location --</option>
-              <option value="horizon-nature">Horizon Nature</option>
-              <option value="inewa">Inewa</option>
+            <label className={`${styles.label} ${labelClass}`}>{t.location}</label>
+            <select className={`${styles.input} ${inputClass}`} {...editRegister('location')}>
+              <option value="" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>-- Select Location --</option>
+              <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Horizon Nature</option>
+              <option value="inewa" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Inewa</option>
             </select>
             {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
           </div>
           <div>
-            <label className={styles.label}>{t.priority}</label>
-            <select className={styles.input} {...editRegister('priority')}>
+            <label className={`${styles.label} ${labelClass}`}>{t.priority}</label>
+            <select className={`${styles.input} ${inputClass}`} {...editRegister('priority')}>
               {priorityOptions.map((p: string) => (
-                <option key={p} value={p}>{getPriorityLabel(t, p)}</option>
+                <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>{getPriorityLabel(t, p)}</option>
               ))}
             </select>
             {editErrors.priority && <div className={styles.errorMsg}>{editErrors.priority.message}</div>}
           </div>
           <div>
-            <label className={styles.label}>{t.dueDate}</label>
-            <input type="date" className={styles.input} {...editRegister('dueDate')} />
+            <label className={`${styles.label} ${labelClass}`}>{t.dueDate}</label>
+            <input type="date" className={`${styles.input} ${inputClass} ${colorScheme === 'dark' ? '[color-scheme:dark]' : ''}`} {...editRegister('dueDate')} />
             {editErrors.dueDate && <div className={styles.errorMsg}>{editErrors.dueDate.message}</div>}
           </div>
           <div className={styles.modalBtnRow}>
             <button
               type="submit"
-              className={styles.saveBtn}
+              className={colorScheme === 'dark' ? 'bg-[#3b82f6] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#2563eb] transition-colors' : styles.saveBtn}
               disabled={isEditSubmitting}
             >
               {isEditSubmitting ? t.saveChanges : t.saveChanges}
             </button>
             <button
               type="button"
-              className={styles.deleteBtn}
+              className={colorScheme === 'dark' ? 'bg-red-600/20 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg font-medium hover:bg-red-600/30 transition-colors' : styles.deleteBtn}
               onClick={async () => {
                 if (window.confirm(t.confirmDelete)) {
                   try {
@@ -516,7 +530,7 @@ function AdminWorkOrdersPage() {
         ref={setNodeRef}
         className={
           colorScheme === 'dark'
-            ? `w-full h-full bg-gray-800 rounded-2xl shadow p-4 flex flex-col border border-gray-700 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-500 scale-[1.02]' : ''}`
+            ? `w-full h-full bg-[#1a1f2e] rounded-2xl shadow-lg p-4 flex flex-col border border-[#2d3748] transition-all duration-200 ${isOver ? 'ring-2 ring-[#3b82f6] scale-[1.02]' : ''}`
             : (colorScheme === 'default' || colorScheme === 'performance')
               ? `w-full h-full bg-white rounded-2xl shadow p-4 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400 scale-[1.02]' : ''}`
               : `w-full h-full bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-2xl shadow-xl p-4 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-[1.02]' : ''}`
@@ -524,11 +538,13 @@ function AdminWorkOrdersPage() {
         style={{ minHeight: 350 }}
       >
         <div className={
-          colorScheme === 'default'
-            ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
-            : colorScheme === 'performance'
-              ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
-              : 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow'
+          colorScheme === 'dark'
+            ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-[#252d3d] text-[#e2e8f0] flex items-center gap-2 border-b border-[#2d3748] shadow'
+            : colorScheme === 'default'
+              ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
+              : colorScheme === 'performance'
+                ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
+                : 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow'
         }>
           {status === 'CANCELLED'
             ? <svg width="20" height="20" fill="currentColor" className="text-red-600 font-bold" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>
@@ -561,7 +577,7 @@ function AdminWorkOrdersPage() {
 
   return (
     <div className={styles.wrapper + ' ' + getColorSchemeClass(colorScheme, 'wrapper')}>
-      <h1 className="text-3xl md:text-4xl font-extrabold text-blue-900 mb-3 text-center tracking-tight drop-shadow-sm mt-2">Work Order</h1>
+      <h1 className={`text-3xl md:text-4xl font-extrabold mb-3 text-center tracking-tight drop-shadow-sm mt-2 ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : 'text-blue-900'}`}>Work Order</h1>
       {/* Materials Drawer (should be at root, not inside cards) */}
       <MaterialsDrawer
         isOpen={materialsDrawer.open}
@@ -573,56 +589,54 @@ function AdminWorkOrdersPage() {
       {/* Modal for creating work order */}
       {showModal && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4 overflow-y-auto"
+          className={`fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto ${colorScheme === 'dark' ? 'bg-black/60' : 'bg-black/40'}`}
           onClick={e => {
             if (e.target === e.currentTarget) setShowModal(false);
           }}
         >
-          <div className="bg-white/95 rounded-2xl shadow-2xl p-6 w-full max-w-md relative backdrop-blur-md border border-blue-200 my-4 max-h-[90vh] overflow-y-auto">
+          <div className={`rounded-2xl shadow-2xl p-6 w-full max-w-md relative my-4 max-h-[90vh] overflow-y-auto ${colorScheme === 'dark' ? 'bg-[#1a1f2e] border border-[#2d3748]' : 'bg-white/95 backdrop-blur-md border border-blue-200'}`}>
             <button
-              className={styles.modalCloseBtn}
+              className={`absolute top-2.5 right-3.5 rounded-full w-8 h-8 flex items-center justify-center text-xl font-bold transition-colors ${colorScheme === 'dark' ? 'text-[#94a3b8] hover:text-red-400 hover:bg-[#252d3d]' : 'text-red-400 hover:bg-red-50 border border-red-200'}`}
               aria-label="Close"
               onClick={() => setShowModal(false)}
-              onMouseOver={e => (e.currentTarget.style.background = '#fee2e2')}
-              onMouseOut={e => (e.currentTarget.style.background = 'white')}
             >
               ×
             </button>
-            <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2"><svg width="18" height="18" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>{t.newWorkOrder}</h2>
+            <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : 'text-blue-900'}`}><svg width="18" height="18" fill="currentColor" className={colorScheme === 'dark' ? 'text-[#3b82f6]' : 'text-blue-400'} viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>{t.newWorkOrder}</h2>
             <form onSubmit={handleSubmit(onCreate)} className={styles.form + ' flex flex-col gap-4'}>
               <div>
-                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.title}</label>
-                <input className={styles.input} {...register('title')} />
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.title}</label>
+                <input className={`${styles.input} ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : ''}`} {...register('title')} />
                 {errors.title && <div className={styles.errorMsg}>{errors.title.message}</div>}
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.description}</label>
-                <textarea className={styles.input} rows={3} {...register('description')} />
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.description}</label>
+                <textarea className={`${styles.input} ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : ''}`} rows={3} {...register('description')} />
                 {errors.description && <div className={styles.errorMsg}>{errors.description.message}</div>}
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.location}</label>
-                <select className={styles.input} {...register('location')}>
-                  <option value="">-- {t.selectLocation || 'Select Location'} --</option>
-                  <option value="horizon-nature">Horizon Nature</option>
-                  <option value="inewa">Inewa</option>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.location}</label>
+                <select className={`${styles.input} ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : ''}`} {...register('location')}>
+                  <option value="" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>-- {t.selectLocation || 'Select Location'} --</option>
+                  <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Horizon Nature</option>
+                  <option value="inewa" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Inewa</option>
                 </select>
                 {errors.location && <div className={styles.errorMsg}>{errors.location.message}</div>}
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.priority}</label>
-                <select className={styles.input} {...register('priority')}>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.priority}</label>
+                <select className={`${styles.input} ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : ''}`} {...register('priority')}>
                   {priorityOptions.map(p => (
-                    <option key={p} value={p}>{getPriorityLabel(t, p)}</option>
+                    <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>{getPriorityLabel(t, p)}</option>
                   ))}
                 </select>
                 {errors.priority && <div className={styles.errorMsg}>{errors.priority.message}</div>}
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.dueDate}</label>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.dueDate}</label>
                 <input
                   type="date"
-                  className={styles.input + ' cursor-pointer'}
+                  className={`${styles.input} cursor-pointer ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6] [color-scheme:dark]' : ''}`}
                   {...register('dueDate')}
                   onClick={e => {
                     const input = e.target as HTMLInputElement;
@@ -633,16 +647,16 @@ function AdminWorkOrdersPage() {
               </div>
               {/* File/Photo Upload Section */}
               <div>
-                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.attachments}</label>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.attachments}</label>
                 <input
                   type="file"
                   multiple
                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-                  className="border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 focus:ring-blue-400 transition-all duration-200 cursor-pointer"
+                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`}
                   onChange={e => setValue('files', e.target.files)}
                   title={t.chooseFiles}
                 />
-                <div className="text-xs text-gray-500 mt-1">
+                <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-500'}`}>
                   {files && files.length > 0
                     ? Array.from(files as File[]).map(f => f.name).join(', ')
                     : t.noFileChosen}
@@ -655,13 +669,13 @@ function AdminWorkOrdersPage() {
                           <img
                             src={URL.createObjectURL(file)}
                             alt={file.name}
-                            className="w-12 h-12 object-cover rounded border"
+                            className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-[#2d3748]' : 'border'}`}
                             onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
                           />
                         ) : (
-                          <span className="w-12 h-12 flex items-center justify-center bg-gray-100 border rounded text-xs text-gray-500">File</span>
+                          <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#64748b]' : 'bg-gray-100 text-gray-500'}`}>File</span>
                         )}
-                        <span className="truncate text-sm">{file.name}</span>
+                        <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>{file.name}</span>
                       </div>
                     ))}
                   </div>
@@ -669,7 +683,7 @@ function AdminWorkOrdersPage() {
               </div>
               <button
                 type="submit"
-                className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2 rounded-xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-base mt-2"
+                className={`px-6 py-2 rounded-xl shadow-lg transition-all duration-200 font-semibold text-base mt-2 ${colorScheme === 'dark' ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]' : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:scale-105 hover:shadow-blue-400/40'}`}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? t.create : t.create}
@@ -682,7 +696,7 @@ function AdminWorkOrdersPage() {
       <div
         className={styles.boardWrapper + ' ' + (
           colorScheme === 'dark'
-            ? 'bg-gray-800 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-gray-700'
+            ? 'bg-[#1a1f2e] rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-[#2d3748]'
             : colorScheme === 'performance'
               ? 'bg-gray-100 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-gray-200'
               : colorScheme === 'current'
@@ -702,6 +716,7 @@ function AdminWorkOrdersPage() {
             priorityOptions={priorityOptions}
             editModal={editModal}
             queryClient={queryClient}
+            colorScheme={colorScheme}
           />
         )}
         <div className="w-full">
@@ -738,9 +753,11 @@ function AdminWorkOrdersPage() {
             <div className="flex-shrink-0">
               <button
                 className={
-                  (colorScheme === 'performance' || colorScheme === 'default')
-                    ? 'bg-white text-gray-800 border border-gray-300 px-3 sm:px-5 py-2 rounded-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 sm:px-5 py-2 rounded-lg shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
+                  colorScheme === 'dark'
+                    ? 'bg-[#3b82f6] text-white px-3 sm:px-5 py-2 rounded-lg shadow-lg hover:bg-[#2563eb] transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
+                    : (colorScheme === 'performance' || colorScheme === 'default')
+                      ? 'bg-white text-gray-800 border border-gray-300 px-3 sm:px-5 py-2 rounded-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 sm:px-5 py-2 rounded-lg shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
                 }
                 onClick={() => setShowModal(true)}
               >
@@ -772,13 +789,13 @@ function AdminWorkOrdersPage() {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className={styles.paginationBtn}
+              className={colorScheme === 'dark' ? 'px-4 py-1.5 rounded-lg bg-[#252d3d] text-[#e2e8f0] border border-[#2d3748] hover:bg-[#374151] disabled:opacity-50 disabled:cursor-not-allowed transition-colors' : styles.paginationBtn}
             >{t.prev}</button>
-            <span className={styles.paginationText}>{t.page} {data ? data.number + 1 : 1} {t.of} {data ? data.totalPages : 1}</span>
+            <span className={colorScheme === 'dark' ? 'text-[#94a3b8]' : styles.paginationText}>{t.page} {data ? data.number + 1 : 1} {t.of} {data ? data.totalPages : 1}</span>
             <button
               onClick={() => setPage(p => (data && p < data.totalPages - 1 ? p + 1 : p))}
               disabled={data ? page >= data.totalPages - 1 : true}
-              className={styles.paginationBtn}
+              className={colorScheme === 'dark' ? 'px-4 py-1.5 rounded-lg bg-[#252d3d] text-[#e2e8f0] border border-[#2d3748] hover:bg-[#374151] disabled:opacity-50 disabled:cursor-not-allowed transition-colors' : styles.paginationBtn}
             >{t.next}</button>
           </div>
         )}

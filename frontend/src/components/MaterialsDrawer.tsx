@@ -2,6 +2,7 @@ import * as React from 'react';
 import { MaterialResponse, MaterialRequest } from '../types/api';
 import { getMaterials, createMaterial, updateMaterial, setMaterialBought, deleteMaterial } from '../lib/api';
 import { useLang } from '../context/LangContext';
+import { ColorSchemeContext } from './AdminLayout';
 
 interface MaterialsDrawerProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface MaterialsDrawerProps {
 
 export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, onMaterialsChanged }: MaterialsDrawerProps) {
   const { t } = useLang();
+  const { colorScheme } = React.useContext(ColorSchemeContext);
   const [materials, setMaterials] = React.useState<MaterialResponse[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -88,25 +90,42 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
     }
   };
 
+  // Dark mode styles
+  const drawerClass = colorScheme === 'dark'
+    ? 'fixed top-0 right-0 h-full w-full max-w-md bg-[#1a1f2e] shadow-2xl z-50 transition-transform duration-300 flex flex-col border-l border-[#2d3748]'
+    : 'fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transition-transform duration-300 flex flex-col';
+
+  const headerClass = colorScheme === 'dark'
+    ? 'flex items-center justify-between p-4 border-b border-[#2d3748]'
+    : 'flex items-center justify-between p-4 border-b';
+
+  const inputClass = colorScheme === 'dark'
+    ? 'border border-[#2d3748] bg-[#252d3d] text-[#e2e8f0] rounded px-2 py-1 focus:border-[#3b82f6] focus:outline-none'
+    : 'border rounded px-2 py-1';
+
+  const addButtonClass = colorScheme === 'dark'
+    ? 'bg-[#6366f1] text-white px-3 py-1 rounded hover:bg-[#4f46e5]'
+    : 'bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600';
+
   return (
     <div
-      className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}
+      className={`${drawerClass} ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
       tabIndex={-1}
       aria-modal="true"
       role="dialog"
     >
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-bold">{t.materials} — {workOrderTitle || workOrderId}</h2>
-        <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-red-500 text-2xl font-bold">×</button>
+      <div className={headerClass}>
+        <h2 className={`text-lg font-bold ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>{t.materials} — {workOrderTitle || workOrderId}</h2>
+        <button onClick={onClose} aria-label="Close" className={`text-2xl font-bold ${colorScheme === 'dark' ? 'text-[#94a3b8] hover:text-red-400' : 'text-gray-500 hover:text-red-500'}`}>×</button>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
-        {loading ? <div>{t.loading}</div> : error ? <div className="text-red-500">{error}</div> : (
+        {loading ? <div className={colorScheme === 'dark' ? 'text-[#94a3b8]' : ''}>{t.loading}</div> : error ? <div className="text-red-500">{error}</div> : (
           <>
             <form onSubmit={handleAdd} className="flex gap-2 mb-4">
               <input
                 type="text"
-                className="border rounded px-2 py-1 flex-1"
+                className={`${inputClass} flex-1`}
                 placeholder={t.addMaterialPlaceholder}
                 value={addName}
                 onChange={e => setAddName(e.target.value)}
@@ -114,31 +133,31 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
               />
               <input
                 type="number"
-                className="border rounded px-2 py-1 w-20"
+                className={`${inputClass} w-20`}
                 placeholder={t.quantity}
                 value={addQty}
                 onChange={e => setAddQty(e.target.value)}
                 aria-label={t.quantity}
                 min={0}
               />
-              <button type="submit" className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600">{t.add}</button>
+              <button type="submit" className={addButtonClass}>{t.add}</button>
             </form>
             {addError && <div className="text-red-500 mb-2">{addError}</div>}
-            <ul className="divide-y">
+            <ul className={`divide-y ${colorScheme === 'dark' ? 'divide-[#2d3748]' : ''}`}>
               {materials.map(mat => (
                 <li key={mat.id} className="flex items-center gap-2 py-2">
                   <input
                     type="checkbox"
                     checked={mat.bought}
                     onChange={e => handleToggleBought(mat.id, e.target.checked)}
-                    className="accent-indigo-500"
+                    className={colorScheme === 'dark' ? 'accent-[#6366f1]' : 'accent-indigo-500'}
                     aria-label={t.bought}
                   />
                   {editingId === mat.id ? (
                     <>
                       <input
                         type="text"
-                        className="border rounded px-2 py-1 flex-1"
+                        className={`${inputClass} flex-1`}
                         value={editingName}
                         onChange={e => setEditingName(e.target.value)}
                         aria-label={t.edit}
@@ -146,27 +165,27 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
                       />
                       <input
                         type="number"
-                        className="border rounded px-2 py-1 w-16"
+                        className={`${inputClass} w-16`}
                         value={editingQty}
                         onChange={e => setEditingQty(e.target.value)}
                         aria-label={t.edit}
                         min={0}
                       />
-                      <button className="text-green-600 font-bold px-2" onClick={() => handleEdit(mat.id)} type="button">✔</button>
-                      <button className="text-gray-400 px-2" onClick={() => setEditingId(null)} type="button">✕</button>
+                      <button className="text-green-500 font-bold px-2" onClick={() => handleEdit(mat.id)} type="button">✔</button>
+                      <button className={`px-2 ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-400'}`} onClick={() => setEditingId(null)} type="button">✕</button>
                     </>
                   ) : (
                     <>
-                      <span className={`flex-1 truncate ${mat.bought ? 'line-through text-gray-400' : ''}`}>{mat.name}</span>
-                      <span className="w-10 text-center text-gray-600">{mat.quantity ?? ''}</span>
-                      <button className="text-blue-500 px-1" onClick={() => { setEditingId(mat.id); setEditingName(mat.name); setEditingQty(mat.quantity?.toString() || ''); }} aria-label={t.edit} type="button">✎</button>
+                      <span className={`flex-1 truncate ${mat.bought ? 'line-through' : ''} ${colorScheme === 'dark' ? (mat.bought ? 'text-[#64748b]' : 'text-[#e2e8f0]') : (mat.bought ? 'text-gray-400' : '')}`}>{mat.name}</span>
+                      <span className={`w-10 text-center ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-600'}`}>{mat.quantity ?? ''}</span>
+                      <button className={`px-1 ${colorScheme === 'dark' ? 'text-[#60a5fa]' : 'text-blue-500'}`} onClick={() => { setEditingId(mat.id); setEditingName(mat.name); setEditingQty(mat.quantity?.toString() || ''); }} aria-label={t.edit} type="button">✎</button>
                       <button className="text-red-500 px-1" onClick={() => handleDelete(mat.id)} aria-label={t.deleteMaterial} type="button">🗑</button>
                     </>
                   )}
                 </li>
               ))}
             </ul>
-            <div className="mt-4 text-sm text-gray-700">
+            <div className={`mt-4 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`}>
               {t.boughtCount
                 .replace('{bought}', materials.filter(m => m.bought).length.toString())
                 .replace('{total}', materials.length.toString())}

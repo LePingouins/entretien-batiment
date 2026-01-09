@@ -1,47 +1,114 @@
+/* ============================================
+   COHESIVE DARK MODE THEME
+   Background: #0f1419 (darkest), #1a1f2e (cards), #252d3d (elevated)
+   Borders: #2d3748, Hover: #374151
+   Text: #e2e8f0 (primary), #94a3b8 (secondary)
+   Accents: #3b82f6 (blue), #6366f1 (indigo)
+   ============================================ */
+
+/* Badge Styles */
 .badgeDark {
-  background-color: #23272f !important;
-  color: #e0e0e0 !important;
+  background-color: #252d3d !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #2d3748 !important;
 }
 
 .badgeCategoryDark {
-  background-color: #2d3340 !important;
-  color: #f1f5f9 !important;
+  background-color: #1a1f2e !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #2d3748 !important;
 }
+
+/* Main Background */
 .mainBackgroundDark {
-  background-color: #18181b;
+  background-color: #0f1419;
 }
 
+/* Card Wrapper */
 .cardWrapperDark {
-  background-color: #181a20;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  background-color: #1a1f2e;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border: 1px solid #2d3748;
 }
 
-/* Card category/status/priority badges for dark mode */
-.badgeDark {
-  background-color: #23272f;
-  color: #e0e0e0;
-}
-.badgeCategoryDark {
-  background-color: #232c3b;
-  color: #f1f5f9;
-}
-
+/* Filter Bar */
 .filterBarDark {
-  background-color: #22223b;
-  color: #e0e0e0;
-  border-radius: 6px;
+  background-color: #1a1f2e;
+  color: #e2e8f0;
+  border-radius: 12px;
+  border: 1px solid #2d3748;
 }
 
+/* Droppable Column */
 .droppableColumnDark {
-  background-color: #1e293b;
-  border: 1px solid #334155;
+  background-color: #1a1f2e;
+  border: 1px solid #2d3748;
+  border-radius: 12px;
+}
+
+/* Column Header */
+.columnHeaderDark {
+  background-color: #252d3d;
+  color: #e2e8f0;
+  font-weight: bold;
+  border-bottom: 1px solid #2d3748;
   border-radius: 8px;
 }
 
-.columnHeaderDark {
-  background-color: #334155;
-  color: #f1f5f9;
-  font-weight: bold;
-  border-bottom: 1px solid #475569;
+/* Input Fields */
+.inputDark {
+  background-color: #1a1f2e;
+  color: #e2e8f0;
+  border: 1px solid #2d3748;
+}
+
+.inputDark:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* Button Styles */
+.buttonDark {
+  background-color: #252d3d;
+  color: #e2e8f0;
+  border: 1px solid #2d3748;
+}
+
+.buttonDark:hover {
+  background-color: #374151;
+}
+
+/* Primary Button */
+.buttonPrimaryDark {
+  background-color: #3b82f6;
+  color: #ffffff;
+  border: none;
+}
+
+.buttonPrimaryDark:hover {
+  background-color: #2563eb;
+}
+
+/* Modal Styles */
+.modalDark {
+  background-color: #1a1f2e;
+  border: 1px solid #2d3748;
+  color: #e2e8f0;
+}
+
+/* Pagination */
+.paginationDark {
+  background-color: #252d3d;
+  color: #e2e8f0;
+  border: 1px solid #2d3748;
+}
+
+.paginationDark:hover:not(:disabled) {
+  background-color: #374151;
+}
+
+.paginationDark:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

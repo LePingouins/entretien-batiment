@@ -12,9 +12,35 @@ body {
 	overflow-x: hidden;
 }
 
-/* Custom dark mode overrides (optional, for non-Tailwind elements) */
+/* ============================================
+   COHESIVE DARK MODE THEME
+   Background: #0f1419 (darkest), #1a1f2e (cards), #252d3d (elevated)
+   Borders: #2d3748, Hover: #374151
+   Text: #e2e8f0 (primary), #94a3b8 (secondary)
+   Accents: #3b82f6 (blue), #6366f1 (indigo)
+   ============================================ */
+
+/* Custom dark mode overrides */
 body.dark, .dark {
-	/* fallback for dark mode */
-	background-color: #18181b;
-	color: #f3f4f6;
+	background-color: #0f1419;
+	color: #e2e8f0;
+}
+
+/* Dark mode scrollbar styling */
+.dark ::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+	background: #1a1f2e;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+	background: #374151;
+	border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+	background: #4b5563;
 }
