@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom dark mode overrides (optional, for non-Tailwind elements) */
+body.dark, .dark {
+	/* fallback for dark mode */
+	background-color: #18181b;
+	color: #f3f4f6;
+}

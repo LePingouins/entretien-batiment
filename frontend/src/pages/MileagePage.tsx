@@ -209,7 +209,7 @@ const MileagePage: React.FC = () => {
                   <input
                     type="text"
                     className={`border rounded transition-colors h-12 px-3 text-base w-full ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
-                    style={{ minWidth: '140px', maxWidth: '300px', flex: '1 1 180px' }}
+                    style={{ minWidth: '250px', maxWidth: '300px', flex: '1 1 180px' }}
                     value={entry.supplier}
                     onChange={e => handleChange(entry.id, 'supplier', e.target.value)}
                     placeholder={t.supplier || 'Supplier'}
@@ -217,7 +217,7 @@ const MileagePage: React.FC = () => {
                   <input
                     type="number"
                     className={`border rounded transition-colors h-12 px-3 text-base w-full ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
-                    style={{ minWidth: '100px', maxWidth: '180px', flex: '1 1 120px' }}
+                    style={{ minWidth: '160px', maxWidth: '180px', flex: '1 1 120px' }}
                     value={entry.startKm}
                     onChange={e => handleChange(entry.id, 'startKm', e.target.value)}
                     placeholder={t.startKm || 'Start Km'}
@@ -226,19 +226,19 @@ const MileagePage: React.FC = () => {
                   <input
                     type="number"
                     className={`border rounded transition-colors h-12 px-3 text-base w-full ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
-                    style={{ minWidth: '100px', maxWidth: '180px', flex: '1 1 120px' }}
+                    style={{ minWidth: '160px', maxWidth: '180px', flex: '1 1 120px' }}
                     value={entry.endKm}
                     onChange={e => handleChange(entry.id, 'endKm', e.target.value)}
                     placeholder={t.endKm || 'End Km'}
                     min="0"
                   />
                   <div className={`border rounded flex items-center text-base font-semibold w-full sm:w-auto ${colorScheme === 'current' ? 'bg-blue-100 text-blue-900' : 'bg-blue-50 text-blue-700'}`}
-                    style={{ minWidth: '120px', maxWidth: '200px', flex: '1 1 120px', height: '48px', paddingLeft: '12px' }}>
+                    style={{ minWidth: '160px', maxWidth: '200px', flex: '1 1 120px', height: '48px', paddingLeft: '12px' }}>
                     {t.totalKm ? `${t.totalKm}: ` : 'Total Km: '}{computeTotalKm(entry.startKm, entry.endKm)}
                   </div>
                   <button
                     className="ml-0 sm:ml-2 bg-red-500 hover:bg-red-700 text-white rounded shadow font-semibold h-12 px-4 text-base w-full sm:w-auto"
-                    style={{ minWidth: '100px', maxWidth: '180px', flex: '1 1 120px' }}
+                    style={{ minWidth: '130px', maxWidth: '180px', flex: '1 1 120px' }}
                     onClick={() => handleDelete(entry.id)}
                   >{t.delete}</button>
                   {/* Status indicator to fill gap */}

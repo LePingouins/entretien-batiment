@@ -259,7 +259,19 @@ public class WorkOrderService {
         String downloadUrl = (attachmentFilename != null)
             ? "/api/files/workorders/" + attachmentFilename
             : null;
-        return new WorkOrderResponse(
+        // Materials count and preview (first 2 names)
+        Integer materialsCount = null;
+        java.util.List<String> materialsPreview = null;
+        try {
+            java.util.List<com.entretienbatiment.backend.workorders.domain.WorkOrderMaterial> materials = wo.getMaterials();
+            if (materials != null) {
+                materialsCount = materials.size();
+                materialsPreview = materials.stream().limit(2).map(m -> m.getName()).toList();
+            }
+        } catch (Exception e) {
+            // fallback: leave as null
+        }
+        return new com.entretienbatiment.backend.workorders.web.admin.dto.WorkOrderResponse(
             wo.getId(),
             wo.getTitle(),
             wo.getDescription(),
@@ -274,7 +286,9 @@ public class WorkOrderService {
             wo.getUpdatedAt(),
             attachmentFilename,
             attachmentContentType,
-            downloadUrl
+            downloadUrl,
+            materialsCount,
+            materialsPreview
         );
     }
     
@@ -286,13 +300,24 @@ public class WorkOrderService {
         String attachmentContentType = null;
         String downloadUrl = null;
         try {
-            // Use reflection to support legacy DBs if fields are missing
             java.lang.reflect.Method getAttachmentFilename = wo.getClass().getMethod("getAttachmentFilename");
             java.lang.reflect.Method getAttachmentContentType = wo.getClass().getMethod("getAttachmentContentType");
             attachmentFilename = (String) getAttachmentFilename.invoke(wo);
             attachmentContentType = (String) getAttachmentContentType.invoke(wo);
             if (attachmentFilename != null) {
                 downloadUrl = "/api/files/workorders/" + attachmentFilename;
+            }
+        } catch (Exception e) {
+            // fallback: leave as null
+        }
+        // Materials count and preview (first 2 names)
+        Integer materialsCount = null;
+        java.util.List<String> materialsPreview = null;
+        try {
+            java.util.List<com.entretienbatiment.backend.workorders.domain.WorkOrderMaterial> materials = wo.getMaterials();
+            if (materials != null) {
+                materialsCount = materials.size();
+                materialsPreview = materials.stream().limit(2).map(m -> m.getName()).toList();
             }
         } catch (Exception e) {
             // fallback: leave as null
@@ -312,7 +337,9 @@ public class WorkOrderService {
             wo.getUpdatedAt(),
             attachmentFilename,
             attachmentContentType,
-            downloadUrl
+            downloadUrl,
+            materialsCount,
+            materialsPreview
         );
     }
 

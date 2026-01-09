@@ -20,54 +20,54 @@ function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, 
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div ref={modalRef} className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
+    <div className={styles.modalOverlay}>
+      <div ref={modalRef} className={styles.modalContainer}>
         <button
-          className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+          className={styles.modalCloseBtn}
           onClick={onClose}
         >✕</button>
-        <h2 className="text-xl font-bold mb-4">{t.editWorkOrder}</h2>
-        <form onSubmit={handleEditSubmit(onEdit)} className="flex flex-col gap-4">
+        <h2 className={styles.modalTitle}>{t.editWorkOrder}</h2>
+        <form onSubmit={handleEditSubmit(onEdit)} className={styles.formEditModal}>
           <div>
-            <label className="block font-medium mb-1">{t.title}</label>
-            <input className="border rounded px-3 py-2 w-full" {...editRegister('title')} />
-            {editErrors.title && <div className="text-red-500 text-sm">{editErrors.title.message}</div>}
+            <label className={styles.label}>{t.title}</label>
+            <input className={styles.input} {...editRegister('title')} />
+            {editErrors.title && <div className={styles.errorMsg}>{editErrors.title.message}</div>}
           </div>
           <div>
-            <label className="block font-medium mb-1">{t.description}</label>
-            <textarea className="border rounded px-3 py-2 w-full" {...editRegister('description')} />
-            {editErrors.description && <div className="text-red-500 text-sm">{editErrors.description.message}</div>}
+            <label className={styles.label}>{t.description}</label>
+            <textarea className={styles.input} {...editRegister('description')} />
+            {editErrors.description && <div className={styles.errorMsg}>{editErrors.description.message}</div>}
           </div>
           <div>
-            <label className="block font-medium mb-1">{t.location}</label>
-            <input className="border rounded px-3 py-2 w-full" {...editRegister('location')} />
-            {editErrors.location && <div className="text-red-500 text-sm">{editErrors.location.message}</div>}
+            <label className={styles.label}>{t.location}</label>
+            <input className={styles.input} {...editRegister('location')} />
+            {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
           </div>
           <div>
-            <label className="block font-medium mb-1">{t.priority}</label>
-            <select className="border rounded px-3 py-2 w-full" {...editRegister('priority')}>
+            <label className={styles.label}>{t.priority}</label>
+            <select className={styles.input} {...editRegister('priority')}>
               {priorityOptions.map((p: string) => (
                 <option key={p} value={p}>{getPriorityLabel(t, p)}</option>
               ))}
             </select>
-            {editErrors.priority && <div className="text-red-500 text-sm">{editErrors.priority.message}</div>}
+            {editErrors.priority && <div className={styles.errorMsg}>{editErrors.priority.message}</div>}
           </div>
           <div>
-            <label className="block font-medium mb-1">{t.dueDate}</label>
-            <input type="date" className="border rounded px-3 py-2 w-full" {...editRegister('dueDate')} />
-            {editErrors.dueDate && <div className="text-red-500 text-sm">{editErrors.dueDate.message}</div>}
+            <label className={styles.label}>{t.dueDate}</label>
+            <input type="date" className={styles.input} {...editRegister('dueDate')} />
+            {editErrors.dueDate && <div className={styles.errorMsg}>{editErrors.dueDate.message}</div>}
           </div>
-          <div className="flex gap-2 mt-2">
+          <div className={styles.modalBtnRow}>
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              className={styles.saveBtn}
               disabled={isEditSubmitting}
             >
               {isEditSubmitting ? t.saveChanges : t.saveChanges}
             </button>
             <button
               type="button"
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+              className={styles.deleteBtn}
               onClick={async () => {
                 if (window.confirm(t.confirmDelete)) {
                   try {
@@ -86,34 +86,87 @@ function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, 
     </div>
   );
 }
+
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  useDroppable,
-  DragOverlay,
-} from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority } from '../types/api';
-import { WorkOrderCard, StatusBadge, PriorityBadge } from '../components/WorkOrderCard';
+import { WorkOrderCard } from '../components/WorkOrderCard';
+import { MaterialsDrawer } from '../components/MaterialsDrawer';
 import { useLang } from '../context/LangContext';
 import { useOutletContext } from 'react-router-dom';
+import { ColorSchemeType, getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
+import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
+import { workOrderSchema, WorkOrderFormType } from './AdminWorkOrders/schemas';
+import { DndBoard } from './AdminWorkOrders/dndBoard';
+import { FilterBar } from './AdminWorkOrders/FilterBar';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { DragEndEvent } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+
+
+
+// --- Priority and Status translation keys ---
+// Instead of t.priorityLow, t.statusOpen, etc., use t.priority + ' (Low)', etc., or extend lang.ts
+// For now, fallback to English/French labels if not present
+const getPriorityLabel = (t: any, p: string) => {
+  if (t[`priority_${p.toLowerCase()}`]) return t[`priority_${p.toLowerCase()}`];
+  switch (p) {
+    case 'LOW': return t.priorityLow || 'Low';
+    case 'MEDIUM': return t.priorityMedium || 'Medium';
+    case 'HIGH': return t.priorityHigh || 'High';
+    case 'URGENT': return t.priorityUrgent || 'Urgent';
+    default: return p;
+  }
+};
+const getStatusLabel = (t: any, s: string) => {
+  if (t[`status_${s.toLowerCase()}`]) return t[`status_${s.toLowerCase()}`];
+  switch (s) {
+    case 'OPEN': return t.statusOpen || 'Open';
+    case 'ASSIGNED': return t.statusAssigned || 'Assigned';
+    case 'IN_PROGRESS': return t.statusInProgress || 'In Progress';
+    case 'COMPLETED': return t.statusCompleted || 'Completed';
+    case 'CANCELLED': return t.statusCancelled || 'Cancelled';
+    default: return s;
+  }
+};
 
 const statusOptions = Object.values(WorkOrderStatus);
 const priorityOptions = Object.values(WorkOrderPriority);
 
 
 function AdminWorkOrdersPage() {
+    // Add refs for date inputs
+    const startDateInputRef = React.useRef<HTMLInputElement | null>(null);
+    const endDateInputRef = React.useRef<HTMLInputElement | null>(null);
+  // Materials drawer state
+  const [materialsDrawer, setMaterialsDrawer] = React.useState<{ open: boolean; workOrder: WorkOrderResponse | null }>({ open: false, workOrder: null });
+
+  // Handler to open materials drawer
+  const handleOpenMaterials = (wo: WorkOrderResponse) => {
+    setMaterialsDrawer({ open: true, workOrder: wo });
+  };
+
+
+
+  // Update board state for materials count/preview after CRUD
+  const handleMaterialsChanged = (materials: import('../types/api').MaterialResponse[]) => {
+    if (!materialsDrawer.workOrder) return;
+    setGrouped((prev: Record<string, WorkOrderResponse[]>) => {
+      const updated: Record<string, WorkOrderResponse[]> = { ...prev };
+      for (const status of statusOptions) {
+        updated[status] = updated[status]?.map((wo: WorkOrderResponse) =>
+          wo.id === materialsDrawer.workOrder!.id
+            ? { ...wo, materialsCount: materials.length, materialsPreview: materials.slice(0, 2).map((m) => m.name) }
+            : wo
+        );
+      }
+      return updated;
+    });
+  };
   // Modal state for creating work order
   const [showModal, setShowModal] = React.useState(false);
   // Close modal on Escape key
@@ -127,22 +180,15 @@ function AdminWorkOrdersPage() {
   }, [showModal]);
   const { t } = useLang();
   // Get color scheme from context
-  const outlet = useOutletContext<{ colorScheme: 'current' | 'performance' | 'default' }>();
-  const colorScheme = outlet?.colorScheme || 'default';
+  const outlet = useOutletContext<{ colorScheme: ColorSchemeType }>();
+  const colorScheme: ColorSchemeType = outlet?.colorScheme || 'default';
   // Modal state for editing work order
   const [editModal, setEditModal] = React.useState<{ open: boolean; workOrder: WorkOrderResponse | null }>({ open: false, workOrder: null });
   const queryClient = useQueryClient();
 
-    // Zod schema for form validation
-    const schema = z.object({
-      title: z.string().min(1, 'Title is required'),
-      description: z.string().min(1, 'Description is required'),
-      location: z.string().min(1, 'Location is required'),
-      priority: z.nativeEnum(WorkOrderPriority),
-      dueDate: z.string().min(1, 'Due date is required'),
-      files: z.any().optional(), // Accept files, not required
-    });
-    type FormType = z.infer<typeof schema>;
+
+
+    // Zod schema for form validation (from extracted module)
     const {
       register,
       handleSubmit,
@@ -150,12 +196,12 @@ function AdminWorkOrdersPage() {
       setValue,
       watch,
       formState: { errors, isSubmitting },
-    } = useForm<FormType>({ resolver: zodResolver(schema) });
+    } = useForm<WorkOrderFormType>({ resolver: zodResolver(workOrderSchema) });
 
     // Watch files for preview
     const files = watch('files');
 
-    const onCreate = async (data: FormType) => {
+    const onCreate: SubmitHandler<WorkOrderFormType> = async (data) => {
       try {
         // Prepare form data for file upload
         const formData = new FormData();
@@ -181,16 +227,16 @@ function AdminWorkOrdersPage() {
       }
     };
 
-    // Edit form state
-    const editSchema = schema;
-    type EditFormType = z.infer<typeof editSchema>;
+
+
+    // Edit form state (reuse schema from module)
     const {
       register: editRegister,
       handleSubmit: handleEditSubmit,
       reset: editReset,
       formState: { errors: editErrors, isSubmitting: isEditSubmitting },
       setValue: setEditValue,
-    } = useForm<EditFormType>({ resolver: zodResolver(editSchema) });
+    } = useForm<WorkOrderFormType>({ resolver: zodResolver(workOrderSchema) });
 
     // Open edit modal and prefill form
     const openEditModal = (wo: WorkOrderResponse) => {
@@ -205,7 +251,7 @@ function AdminWorkOrdersPage() {
     };
 
     // Edit handler
-    const onEdit = async (data: EditFormType) => {
+    const onEdit: SubmitHandler<WorkOrderFormType> = async (data) => {
       if (!editModal.workOrder) return;
       try {
         await api.put(`/api/admin/work-orders/${editModal.workOrder.id}`, data);
@@ -275,12 +321,11 @@ function AdminWorkOrdersPage() {
     setGrouped(groups);
   }, [data]);
 
-  // dnd-kit sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
+
+  // dnd-kit sensors are now handled in DndBoard module
 
   // Drag state for DragOverlay
+
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const activeWorkOrder = React.useMemo(() => {
     if (!activeId) return null;
@@ -294,12 +339,21 @@ function AdminWorkOrdersPage() {
   // Handle drag start
   const onDragStart = (event: any) => {
     setActiveId(event.active.id);
+    console.log('[DnD] Drag Start:', {
+      activeId: event.active.id,
+      grouped,
+    });
   };
 
   // Handle drag end
   const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+    console.log('[DnD] Drag End:', {
+      activeId: active?.id,
+      overId: over?.id,
+      grouped,
+    });
     if (!over || !active) return;
 
     // Find the source column and index
@@ -388,22 +442,44 @@ function AdminWorkOrdersPage() {
     const style = React.useMemo(() => ({
       transform: CSS.Transform.toString(transform),
       transition,
-      opacity: isDragging ? 0.7 : 1,
+      opacity: isDragging || activeId === workOrder.id.toString() ? 0 : 1,
       cursor: 'pointer',
-    }), [transform, transition, isDragging]);
+    }), [transform, transition, isDragging, activeId, workOrder.id]);
     const handleClick = React.useCallback((e: React.MouseEvent) => {
       if (e.defaultPrevented) return;
       openEditModal(workOrder);
     }, [workOrder]);
+
+    // Dynamic placeholder height logic
+    const cardRef = React.useRef<HTMLDivElement>(null);
+    const [cardHeight, setCardHeight] = React.useState<number | undefined>(undefined);
+
+    React.useLayoutEffect(() => {
+      if (!isDragging && cardRef.current) {
+        setCardHeight(cardRef.current.offsetHeight);
+      }
+    }, [isDragging]);
+
+    if (isDragging || activeId === workOrder.id.toString()) {
+      // Render a placeholder with the measured card height
+      return <div ref={setNodeRef} style={{ height: cardHeight || 160, marginBottom: 16 }} />;
+    }
     return (
       <div
-        ref={setNodeRef}
+        ref={el => {
+          setNodeRef(el);
+          cardRef.current = el;
+        }}
         style={style}
         {...attributes}
         {...listeners}
         onClick={handleClick}
       >
-        <WorkOrderCard workOrder={workOrder} />
+        <WorkOrderCard
+          workOrder={workOrder}
+          onOpenMaterials={handleOpenMaterials}
+          onDeleted={() => queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] })}
+        />
       </div>
     );
   });
@@ -436,9 +512,11 @@ function AdminWorkOrdersPage() {
       <div
         ref={setNodeRef}
         className={
-          (colorScheme === 'default' || colorScheme === 'performance')
-            ? `min-w-[320px] w-80 bg-white rounded-2xl shadow p-6 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400 scale-105' : ''}`
-            : `min-w-[320px] w-80 bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-3xl shadow-2xl p-6 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-105' : ''}`
+          colorScheme === 'dark'
+            ? `min-w-[400px] w-[420px] bg-gray-800 rounded-2xl shadow p-10 flex flex-col border border-gray-700 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-500 scale-105' : ''}`
+            : (colorScheme === 'default' || colorScheme === 'performance')
+              ? `min-w-[400px] w-[420px] bg-white rounded-2xl shadow p-10 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400 scale-105' : ''}`
+              : `min-w-[400px] w-[420px] bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-3xl shadow-2xl p-10 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-105' : ''}`
         }
         style={colorScheme === 'performance' ? { minHeight: 400 } : { minHeight: 400, boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
       >
@@ -479,34 +557,16 @@ function AdminWorkOrdersPage() {
   }, [grouped, startDate, endDate]);
 
   return (
-    <div className={
-      colorScheme === 'performance'
-        ? 'flex-1 bg-gray-100 min-h-screen p-8'
-        : colorScheme === 'default'
-          ? 'flex-1 bg-gradient-to-br from-blue-100/80 to-purple-200/60 min-h-screen p-8'
-          : 'flex-1 bg-gradient-to-br from-blue-100/80 to-purple-200/60 min-h-screen p-8'
-    }>
-      {/* Remove extra white container, keep only board and controls */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 md:gap-0">
-        <h1 className={
-          colorScheme === 'performance' || colorScheme === 'default'
-            ? 'text-3xl font-bold text-center md:text-left text-gray-800 tracking-tight flex items-center gap-3'
-            : 'text-4xl font-extrabold text-center md:text-left text-blue-900 drop-shadow-lg tracking-tight flex items-center gap-3'
-        }>
-          <span className="inline-block"><svg width="32" height="32" fill="currentColor" className="text-blue-600" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg></span>
-          {t.workOrders}
-        </h1>
-        <button
-          className={
-            (colorScheme === 'performance' || colorScheme === 'default')
-              ? 'bg-white text-gray-800 border border-gray-300 px-6 py-3 rounded-2xl shadow hover:bg-gray-100 transition-all duration-200 w-full md:w-auto font-semibold text-lg flex items-center text-left'
-              : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 w-full md:w-auto font-semibold text-lg flex items-center text-left'
-          }
-          onClick={() => setShowModal(true)}
-        >
-          <span className="align-middle">{t.newWorkOrder}</span>
-        </button>
-      </div>
+    <div className={styles.wrapper + ' ' + getColorSchemeClass(colorScheme, 'wrapper')}>
+      <h1 className="text-3xl md:text-4xl font-extrabold text-blue-900 mb-3 text-center tracking-tight drop-shadow-sm mt-2">Work Order</h1>
+      {/* Materials Drawer (should be at root, not inside cards) */}
+      <MaterialsDrawer
+        isOpen={materialsDrawer.open}
+        workOrderId={materialsDrawer.workOrder?.id || 0}
+        workOrderTitle={materialsDrawer.workOrder?.title}
+        onClose={() => setMaterialsDrawer({ open: false, workOrder: null })}
+        onMaterialsChanged={handleMaterialsChanged}
+      />
       {/* Modal for creating work order */}
       {showModal && (
         <div
@@ -517,27 +577,7 @@ function AdminWorkOrdersPage() {
         >
           <div className="bg-white/80 rounded-2xl shadow-2xl p-10 w-full max-w-md relative backdrop-blur-md border border-blue-200">
             <button
-              className="absolute"
-              style={{
-                top: '10px',
-                right: '14px',
-                background: 'white',
-                color: '#ef4444',
-                border: '1.5px solid #fecaca',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                borderRadius: '50%',
-                width: '32px',
-                height: '32px', // reduce height to move X higher
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'flex-start',
-                fontWeight: 'bold',
-                fontSize: '20px', // slightly larger for better centering
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-                paddingTop: '0px',
-                paddingLeft: '8px',
-              }}
+              className={styles.modalCloseBtn}
               aria-label="Close"
               onClick={() => setShowModal(false)}
               onMouseOver={e => (e.currentTarget.style.background = '#fee2e2')}
@@ -546,54 +586,61 @@ function AdminWorkOrdersPage() {
               ×
             </button>
             <h2 className="text-2xl font-bold mb-6 text-blue-900 flex items-center gap-2"><svg width="20" height="20" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>{t.newWorkOrder}</h2>
-            <form onSubmit={handleSubmit(onCreate)} className="flex flex-col gap-5">
+            <form onSubmit={handleSubmit(onCreate)} className={styles.form + ' flex flex-col gap-5'}>
               <div>
                 <label className="block font-semibold mb-2 text-blue-800">{t.title}</label>
-                <input className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('title')} />
-                {errors.title && <div className="text-red-500 text-sm mt-1">{errors.title.message}</div>}
+                <input className={styles.input} {...register('title')} />
+                {errors.title && <div className={styles.errorMsg}>{errors.title.message}</div>}
               </div>
               <div>
                 <label className="block font-semibold mb-2 text-blue-800">{t.description}</label>
-                <textarea className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('description')} />
-                {errors.description && <div className="text-red-500 text-sm mt-1">{errors.description.message}</div>}
+                <textarea className={styles.input} {...register('description')} />
+                {errors.description && <div className={styles.errorMsg}>{errors.description.message}</div>}
               </div>
               <div>
                 <label className="block font-semibold mb-2 text-blue-800">{t.location}</label>
-                <input className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('location')} />
-                {errors.location && <div className="text-red-500 text-sm mt-1">{errors.location.message}</div>}
+                <input className={styles.input} {...register('location')} />
+                {errors.location && <div className={styles.errorMsg}>{errors.location.message}</div>}
               </div>
               <div>
                 <label className="block font-semibold mb-2 text-blue-800">{t.priority}</label>
-                <select className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200" {...register('priority')}>
+                <select className={styles.input} {...register('priority')}>
                   {priorityOptions.map(p => (
                     <option key={p} value={p}>{getPriorityLabel(t, p)}</option>
                   ))}
                 </select>
-                {errors.priority && <div className="text-red-500 text-sm mt-1">{errors.priority.message}</div>}
+                {errors.priority && <div className={styles.errorMsg}>{errors.priority.message}</div>}
               </div>
               <div>
                 <label className="block font-semibold mb-2 text-blue-800">{t.dueDate}</label>
                 <input
                   type="date"
-                  className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200 cursor-pointer"
+                  className={styles.input + ' cursor-pointer'}
                   {...register('dueDate')}
                   onClick={e => {
                     const input = e.target as HTMLInputElement;
                     if (typeof input.showPicker === 'function') input.showPicker();
                   }}
                 />
-                {errors.dueDate && <div className="text-red-500 text-sm mt-1">{errors.dueDate.message}</div>}
+                {errors.dueDate && <div className={styles.errorMsg}>{errors.dueDate.message}</div>}
               </div>
               {/* File/Photo Upload Section */}
               <div>
-                <label className="block font-semibold mb-2 text-blue-800">{'Attachments (files/photos)'}</label>
+                <label className="block font-semibold mb-2 text-blue-800">{t.attachments}</label>
                 <input
                   type="file"
                   multiple
                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
                   className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200 cursor-pointer"
                   onChange={e => setValue('files', e.target.files)}
+                  title={t.chooseFiles}
                 />
+                {/* Custom file input label for translation */}
+                <div className="text-xs text-gray-500 mt-1">
+                  {files && files.length > 0
+                    ? Array.from(files as File[]).map(f => f.name).join(', ')
+                    : t.noFileChosen}
+                </div>
                 {/* Preview selected files */}
                 {files && files.length > 0 && (
                   <div className="mt-2 flex flex-col gap-2">
@@ -628,7 +675,18 @@ function AdminWorkOrdersPage() {
           </div>
         </div>
       )}
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
+      {/* New blue background wrapper starts here */}
+      <div
+        className={styles.boardWrapper + ' ' + (
+          colorScheme === 'dark'
+            ? 'bg-gray-800 rounded-3xl shadow-xl p-8 mb-8 border border-gray-700'
+            : colorScheme === 'performance'
+              ? 'bg-gray-100 rounded-3xl shadow-xl p-8 mb-8 border border-gray-200'
+              : colorScheme === 'current'
+                ? 'bg-blue-50 rounded-3xl shadow-xl p-8 mb-8 border border-blue-100'
+                : 'bg-blue-100/60 rounded-3xl shadow-xl p-8 mb-8 border border-blue-200'
+        )}
+      >
         {/* Modal for editing work order */}
         {editModal.open && (
           <EditModalWithEscape
@@ -644,142 +702,87 @@ function AdminWorkOrdersPage() {
           />
         )}
         <div className="w-full">
-          <div
-            className={
-              `flex flex-wrap items-center gap-20 p-4 mb-6 rounded-xl shadow-sm border justify-center ` +
-              (colorScheme === 'current'
-                ? 'bg-gradient-to-r from-blue-100 via-blue-200 to-purple-100 border-gray-100'
-                : colorScheme === 'performance'
-                  ? 'bg-gray-50 border-gray-200'
-                  : 'bg-blue-50 border-blue-200')
-            }
-          >
-            <select value={status} onChange={e => setStatus(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition">
-            <option value="">{t.allStatuses}</option>
-            {statusOptions.map(s => <option key={s} value={s}>{getStatusLabel(t, s)}</option>)}
-          </select>
-            <select value={priority} onChange={e => setPriority(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition">
-            <option value="">{t.allPriorities}</option>
-            {priorityOptions.map(p => <option key={p} value={p}>{getPriorityLabel(t, p)}</option>)}
-          </select>
-            <select value={technician} onChange={e => setTechnician(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition">
-            {technicianOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
-          </select>
-            <select value={locationFilter} onChange={e => setLocationFilter(e.target.value)} className="min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition">
-            {locationOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
-          </select>
-            <div className="flex items-center gap-2">
-              <label className="font-medium text-gray-700">{t.startDate || 'Start Date'}:</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition min-w-[140px]"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="font-medium text-gray-700">{t.endDate || 'End Date'}:</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition min-w-[140px]"
-              />
-            </div>
-            <input
-              type="text"
-              placeholder={t.search}
-              value={q}
-              onChange={e => setQ(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition min-w-[180px]"
+          <div className="w-full flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative" style={{ minHeight: '90px' }}>
+            {/* Filter bar extracted as a component */}
+            <FilterBar
+              status={status}
+              setStatus={setStatus}
+              statusOptions={statusOptions}
+              priority={priority}
+              setPriority={setPriority}
+              priorityOptions={priorityOptions}
+              technician={technician}
+              setTechnician={setTechnician}
+              technicianOptions={technicianOptions}
+              locationFilter={locationFilter}
+              setLocationFilter={setLocationFilter}
+              locationOptions={locationOptions}
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
+              q={q}
+              setQ={setQ}
+              t={t}
+              colorScheme={colorScheme}
+              startDateInputRef={startDateInputRef}
+              endDateInputRef={endDateInputRef}
+              getStatusLabel={getStatusLabel}
+              getPriorityLabel={getPriorityLabel}
             />
+            <div className="flex justify-end md:justify-end w-full md:w-auto">
+              <button
+                className={
+                  (colorScheme === 'performance' || colorScheme === 'default')
+                    ? 'bg-white text-gray-800 border border-gray-300 px-6 py-3 rounded-2xl shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-lg flex items-center text-left mt-4 md:mt-0'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-lg flex items-center text-left mt-4 md:mt-0'
+                }
+                onClick={() => setShowModal(true)}
+              >
+                <span className="align-middle">{t.newWorkOrder}</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      {isLoading ? (
-        <div>{t.loading}</div>
-      ) : error ? (
-        <div className="text-red-600">{t.errorLoading}</div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-        >
-          <div className="flex flex-col md:flex-row gap-8 overflow-x-auto pb-12 px-2 md:px-8 pt-4 w-full">
-            {statusOptions.map(status => (
-              <div className="flex-1 min-w-[260px] max-w-full flex flex-col">
-                <DroppableColumn status={status} key={status} colorScheme={colorScheme}>
-                  <SortableContext
-                    id={status}
-                    items={filteredGrouped[status]?.map((wo: WorkOrderResponse) => wo.id.toString()) || []}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="flex-1 flex flex-col gap-4">
-                      {(filteredGrouped[status]?.length ?? 0) === 0 ? (
-                        <div className="text-gray-400 text-center">{t.noWorkOrders}</div>
-                      ) : (
-                        filteredGrouped[status]?.map((wo: WorkOrderResponse) => (
-                          <SortableCard key={wo.id} workOrder={wo} colorScheme={colorScheme} />
-                        ))
-                      )}
-                    </div>
-                  </SortableContext>
-                </DroppableColumn>
-              </div>
-            ))}
+        {/* Board and controls inside blue background */}
+        {isLoading ? (
+          <div>{t.loading}</div>
+        ) : error ? (
+          <div className={styles.errorMsg}>{t.errorLoading}</div>
+        ) : (
+          <DndBoard
+            grouped={filteredGrouped}
+            statusOptions={statusOptions}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            activeWorkOrder={activeWorkOrder}
+            colorScheme={colorScheme}
+            DroppableColumn={DroppableColumn}
+            SortableCard={SortableCard}
+          />
+        )}
+        {/* Hide pagination if only one or zero pages */}
+        {(data && data.totalPages > 1) && (
+          <div className={styles.paginationRow}>
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className={styles.paginationBtn}
+            >{t.prev}</button>
+            <span className={styles.paginationText}>{t.page} {data ? data.number + 1 : 1} {t.of} {data ? data.totalPages : 1}</span>
+            <button
+              onClick={() => setPage(p => (data && p < data.totalPages - 1 ? p + 1 : p))}
+              disabled={data ? page >= data.totalPages - 1 : true}
+              className={styles.paginationBtn}
+            >{t.next}</button>
           </div>
-          {/* DragOverlay for smoother UX */}
-          <DragOverlay>
-            {activeWorkOrder ? (
-              <div style={{ zIndex: 9999 }}>
-                <WorkOrderCard workOrder={activeWorkOrder} />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
-      <div className="flex flex-col md:flex-row gap-2 mt-4 items-center justify-center md:justify-start">
-        <button
-          onClick={() => setPage(p => Math.max(0, p - 1))}
-          disabled={page === 0}
-          className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50 w-full md:w-auto"
-        >{t.prev}</button>
-        <span className="text-center md:text-left">{t.page} {data ? data.number + 1 : 1} {t.of} {data ? data.totalPages : 1}</span>
-        <button
-          onClick={() => setPage(p => (data && p < data.totalPages - 1 ? p + 1 : p))}
-          disabled={data ? page >= data.totalPages - 1 : true}
-          className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50 w-full md:w-auto"
-        >{t.next}</button>
+        )}
       </div>
+      {/* End blue background wrapper */}
     </div>
   );
 }
 
 export default AdminWorkOrdersPage;
 
-// --- Priority and Status translation keys ---
-// Instead of t.priorityLow, t.statusOpen, etc., use t.priority + ' (Low)', etc., or extend lang.ts
-// For now, fallback to English/French labels if not present
-const getPriorityLabel = (t: any, p: string) => {
-  if (t[`priority_${p.toLowerCase()}`]) return t[`priority_${p.toLowerCase()}`];
-  switch (p) {
-    case 'LOW': return t.priorityLow || 'Low';
-    case 'MEDIUM': return t.priorityMedium || 'Medium';
-    case 'HIGH': return t.priorityHigh || 'High';
-    case 'URGENT': return t.priorityUrgent || 'Urgent';
-    default: return p;
-  }
-};
-const getStatusLabel = (t: any, s: string) => {
-  if (t[`status_${s.toLowerCase()}`]) return t[`status_${s.toLowerCase()}`];
-  switch (s) {
-    case 'OPEN': return t.statusOpen || 'Open';
-    case 'ASSIGNED': return t.statusAssigned || 'Assigned';
-    case 'IN_PROGRESS': return t.statusInProgress || 'In Progress';
-    case 'COMPLETED': return t.statusCompleted || 'Completed';
-    case 'CANCELLED': return t.statusCancelled || 'Cancelled';
-    default: return s;
-  }
-};
+// (moved above for correct hoisting)

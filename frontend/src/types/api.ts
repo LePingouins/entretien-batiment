@@ -1,3 +1,14 @@
+export interface MaterialResponse {
+  id: number;
+  name: string;
+  quantity?: number;
+  bought: boolean;
+}
+
+export interface MaterialRequest {
+  name: string;
+  quantity?: number;
+}
 export enum WorkOrderStatus {
   OPEN = 'OPEN',
   ASSIGNED = 'ASSIGNED',
@@ -29,6 +40,8 @@ export interface WorkOrderResponse {
   attachmentFilename?: string;
   attachmentContentType?: string;
   attachmentDownloadUrl?: string;
+  materialsCount?: number;
+  materialsPreview?: string[];
 }
 
 export interface PageResponse<T> {

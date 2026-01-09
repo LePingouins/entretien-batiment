@@ -9,6 +9,8 @@ import java.time.LocalDate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.util.List;
+
 @Entity
 @Table(name = "work_orders")
 public class WorkOrder {
@@ -16,6 +18,9 @@ public class WorkOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WorkOrderMaterial> materials;
 
     @Column(nullable = false, length = 140)
     private String title;
@@ -132,4 +137,6 @@ public class WorkOrder {
     public void setPriority(WorkOrderPriority priority) { this.priority = priority; }
     public void setStatus(WorkOrderStatus status) { this.status = status; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+    public List<WorkOrderMaterial> getMaterials() { return materials; }
+    public void setMaterials(List<WorkOrderMaterial> materials) { this.materials = materials; }
 }

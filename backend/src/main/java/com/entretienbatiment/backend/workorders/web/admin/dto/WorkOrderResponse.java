@@ -6,6 +6,8 @@ import com.entretienbatiment.backend.workorders.domain.WorkOrderStatus;
 import java.time.Instant;
 import java.time.LocalDate;
 
+import java.util.List;
+
 public record WorkOrderResponse(
         Long id,
         String title,
@@ -25,5 +27,8 @@ public record WorkOrderResponse(
 
         String attachmentFilename,
         String attachmentContentType,
-        String attachmentDownloadUrl
+        String attachmentDownloadUrl,
+
+        Integer materialsCount,
+        List<String> materialsPreview
 ) {}

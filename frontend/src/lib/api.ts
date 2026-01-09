@@ -68,4 +68,32 @@ api.interceptors.response.use(
   }
 );
 
+
+// --- Materials API ---
+import type { MaterialRequest, MaterialResponse } from '../types/api';
+
+export async function getMaterials(workOrderId: number): Promise<MaterialResponse[]> {
+  const res = await api.get(`/api/work-orders/${workOrderId}/materials`);
+  return res.data;
+}
+
+export async function createMaterial(workOrderId: number, payload: MaterialRequest): Promise<MaterialResponse> {
+  const res = await api.post(`/api/work-orders/${workOrderId}/materials`, payload);
+  return res.data;
+}
+
+export async function updateMaterial(workOrderId: number, materialId: number, payload: Partial<MaterialRequest>): Promise<MaterialResponse> {
+  const res = await api.patch(`/api/work-orders/${workOrderId}/materials/${materialId}`, payload);
+  return res.data;
+}
+
+export async function setMaterialBought(workOrderId: number, materialId: number, bought: boolean): Promise<MaterialResponse> {
+  const res = await api.patch(`/api/work-orders/${workOrderId}/materials/${materialId}/bought`, { bought });
+  return res.data;
+}
+
+export async function deleteMaterial(workOrderId: number, materialId: number): Promise<void> {
+  await api.delete(`/api/work-orders/${workOrderId}/materials/${materialId}`);
+}
+
 export default api;

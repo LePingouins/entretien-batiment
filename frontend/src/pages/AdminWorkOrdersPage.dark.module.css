@@ -1,0 +1,47 @@
+.badgeDark {
+  background-color: #23272f !important;
+  color: #e0e0e0 !important;
+}
+
+.badgeCategoryDark {
+  background-color: #2d3340 !important;
+  color: #f1f5f9 !important;
+}
+.mainBackgroundDark {
+  background-color: #18181b;
+}
+
+.cardWrapperDark {
+  background-color: #181a20;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* Card category/status/priority badges for dark mode */
+.badgeDark {
+  background-color: #23272f;
+  color: #e0e0e0;
+}
+.badgeCategoryDark {
+  background-color: #232c3b;
+  color: #f1f5f9;
+}
+
+.filterBarDark {
+  background-color: #22223b;
+  color: #e0e0e0;
+  border-radius: 6px;
+}
+
+.droppableColumnDark {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
+
+.columnHeaderDark {
+  background-color: #334155;
+  color: #f1f5f9;
+  font-weight: bold;
+  border-bottom: 1px solid #475569;
+}

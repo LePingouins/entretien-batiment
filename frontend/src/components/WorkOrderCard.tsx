@@ -1,21 +1,22 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { WorkOrderStatus, WorkOrderPriority, WorkOrderResponse } from '../types/api';
+import { MaterialsButton } from './MaterialsButton';
 import { useLang } from '../context/LangContext';
 
 const statusColors: Record<WorkOrderStatus, string> = {
-  OPEN: 'bg-teal-500 text-white',
-  ASSIGNED: 'bg-blue-200 text-blue-800',
-  IN_PROGRESS: 'bg-yellow-200 text-yellow-800',
-  COMPLETED: 'bg-green-200 text-green-800',
-  CANCELLED: 'bg-red-200 text-red-800',
+  OPEN: 'bg-teal-500 text-white dark:badgeDark',
+  ASSIGNED: 'bg-blue-200 text-blue-800 dark:badgeCategoryDark',
+  IN_PROGRESS: 'bg-yellow-200 text-yellow-800 dark:badgeCategoryDark',
+  COMPLETED: 'bg-green-200 text-green-800 dark:badgeCategoryDark',
+  CANCELLED: 'bg-red-200 text-red-800 dark:badgeCategoryDark',
 };
 
 const priorityColors: Record<WorkOrderPriority, string> = {
-  LOW: 'bg-green-100 text-green-800',
-  MEDIUM: 'bg-yellow-100 text-yellow-800',
-  HIGH: 'bg-orange-100 text-orange-800',
-  URGENT: 'bg-red-100 text-red-800',
+  LOW: 'bg-green-100 text-green-800 dark:badgeCategoryDark',
+  MEDIUM: 'bg-yellow-100 text-yellow-800 dark:badgeCategoryDark',
+  HIGH: 'bg-orange-100 text-orange-800 dark:badgeCategoryDark',
+  URGENT: 'bg-red-100 text-red-800 dark:badgeCategoryDark',
 };
 
 export function StatusBadge({ status }: { status: WorkOrderStatus }) {
@@ -45,7 +46,13 @@ export function PriorityBadge({ priority }: { priority: WorkOrderPriority }) {
   );
 }
 
-const WorkOrderCardComponent = ({ workOrder }: { workOrder: WorkOrderResponse }) => {
+interface WorkOrderCardComponentProps {
+  workOrder: WorkOrderResponse;
+  onOpenMaterials?: (workOrder: WorkOrderResponse) => void;
+  onDeleted?: (id: number) => void;
+}
+
+const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkOrderCardComponentProps) => {
   const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
   // Always use backend base URL for attachments (now /api/files/workorders/)
@@ -148,10 +155,47 @@ const WorkOrderCardComponent = ({ workOrder }: { workOrder: WorkOrderResponse })
             tabIndex={0}
           />
         </div>
-        <span className="ml-auto flex gap-2">
-          <button title="Edit" className="p-2 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors duration-200"><svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 010 2.828l-10 10A2 2 0 016 16H4a1 1 0 01-1-1v-2a2 2 0 01.586-1.414l10-10a2 2 0 012.828 0z"/></svg></button>
-          <button title="Delete" className="p-2 rounded-full bg-red-100 hover:bg-red-200 transition-colors duration-200"><svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm10 6v10H4V8h12z"/></svg></button>
+        <div className="flex-1" />
+        <span className="flex gap-2">
+          <button
+            title="Edit"
+            className="p-2 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors duration-200"
+            onClick={e => {
+              e.stopPropagation();
+              // Open edit modal by simulating card click
+              const click = new MouseEvent('click', { bubbles: true });
+              (e.currentTarget.closest('[role="group"]') as HTMLElement)?.dispatchEvent(click);
+            }}
+          >
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 010 2.828l-10 10A2 2 0 016 16H4a1 1 0 01-1-1v-2a2 2 0 01.586-1.414l10-10a2 2 0 012.828 0z"/></svg>
+          </button>
+          <button
+            title="Delete"
+            className="p-2 rounded-full bg-red-100 hover:bg-red-200 transition-colors duration-200"
+            onClick={async e => {
+              e.stopPropagation();
+              if (window.confirm('Are you sure you want to delete this work order?')) {
+                try {
+                  const api = (await import('../lib/api')).default;
+                  await api.delete(`/api/admin/work-orders/${workOrder.id}`);
+                  if (onDeleted) onDeleted(workOrder.id);
+                  else window.location.reload();
+                } catch {
+                  alert('Failed to delete work order');
+                }
+              }
+            }}
+          >
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm10 6v10H4V8h12z"/></svg>
+          </button>
         </span>
+      </div>
+      <div className="mt-2 flex justify-center">
+        <MaterialsButton
+          count={workOrder.materialsCount || 0}
+          preview={workOrder.materialsPreview || []}
+          onClick={e => onOpenMaterials?.(workOrder)}
+        />
       </div>
     </div>
   );

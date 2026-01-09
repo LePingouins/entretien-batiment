@@ -39,6 +39,20 @@ export const en = {
   statusCompleted: 'Completed',
   statusCancelled: 'Cancelled',
   logout: 'Logout',
+  // Materials feature
+  materials: 'Materials',
+  addMaterialPlaceholder: 'Add material…',
+  quantity: 'Qty',
+  add: 'Add',
+  bought: 'Bought',
+  edit: 'Edit',
+  deleteMaterial: 'Delete',
+  nameRequired: 'Name required',
+  failedToAdd: 'Failed to add',
+  failedToUpdate: 'Failed to update',
+  failedToDelete: 'Failed to delete',
+  failedToLoadMaterials: 'Failed to load materials',
+  boughtCount: 'Bought {bought} / {total}',
   // Date picker translations
   months: [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -66,6 +80,10 @@ export const en = {
   allLocations: 'All Locations',
   startDate: 'Start Date',
   endDate: 'End Date',
+  attachments: 'Attachments (files/photos)',
+  chooseFiles: 'Choose Files',
+  noFileChosen: 'No file chosen',
+  // ...existing keys
 };
 
 export const fr = {
@@ -109,6 +127,20 @@ export const fr = {
   statusCompleted: 'Terminé',
   statusCancelled: 'Annulé',
   logout: 'Déconnexion',
+  // Materials feature
+  materials: 'Matériaux',
+  addMaterialPlaceholder: 'Ajouter un matériau…',
+  quantity: 'Qté',
+  add: 'Ajouter',
+  bought: 'Acheté',
+  edit: 'Modifier',
+  deleteMaterial: 'Supprimer',
+  nameRequired: 'Nom requis',
+  failedToAdd: 'Échec de l\'ajout',
+  failedToUpdate: 'Échec de la mise à jour',
+  failedToDelete: 'Échec de la suppression',
+  failedToLoadMaterials: 'Échec du chargement des matériaux',
+  boughtCount: 'Acheté {bought} / {total}',
   // Date picker translations
   months: [
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -136,4 +168,7 @@ export const fr = {
   allLocations: 'Tous les emplacements',
   startDate: 'Date de début',
   endDate: 'Date de fin',
+  attachments: 'Pièces jointes (fichiers/photos)',
+  chooseFiles: 'Choisir des fichiers',
+  noFileChosen: 'Aucun fichier choisi',
 };
