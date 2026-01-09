@@ -40,7 +40,11 @@ function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, 
           </div>
           <div>
             <label className={styles.label}>{t.location}</label>
-            <input className={styles.input} {...editRegister('location')} />
+            <select className={styles.input} {...editRegister('location')}>
+              <option value="">-- Select Location --</option>
+              <option value="horizon-nature">Horizon Nature</option>
+              <option value="inewa">Inewa</option>
+            </select>
             {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
           </div>
           <div>
@@ -282,9 +286,8 @@ function AdminWorkOrdersPage() {
   ];
   const locationOptions = [
     { id: '', name: t.allLocations || 'All Locations' },
-    { id: 'A', name: 'Building A' },
-    { id: 'B', name: 'Building B' },
-    // ...add more or fetch from API
+    { id: 'horizon-nature', name: 'Horizon Nature' },
+    { id: 'inewa', name: 'Inewa' },
   ];
 
   const { data, isLoading, error } = useQuery<PageResponse<WorkOrderResponse>, Error>({
@@ -513,25 +516,25 @@ function AdminWorkOrdersPage() {
         ref={setNodeRef}
         className={
           colorScheme === 'dark'
-            ? `min-w-[400px] w-[420px] bg-gray-800 rounded-2xl shadow p-10 flex flex-col border border-gray-700 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-500 scale-105' : ''}`
+            ? `w-full h-full bg-gray-800 rounded-2xl shadow p-4 flex flex-col border border-gray-700 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-500 scale-[1.02]' : ''}`
             : (colorScheme === 'default' || colorScheme === 'performance')
-              ? `min-w-[400px] w-[420px] bg-white rounded-2xl shadow p-10 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400 scale-105' : ''}`
-              : `min-w-[400px] w-[420px] bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-3xl shadow-2xl p-10 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-105' : ''}`
+              ? `w-full h-full bg-white rounded-2xl shadow p-4 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400 scale-[1.02]' : ''}`
+              : `w-full h-full bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-2xl shadow-xl p-4 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-[1.02]' : ''}`
         }
-        style={colorScheme === 'performance' ? { minHeight: 400 } : { minHeight: 400, boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
+        style={{ minHeight: 350 }}
       >
         <div className={
           colorScheme === 'default'
-            ? 'font-bold text-lg mb-3 px-3 py-2 rounded-xl bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
+            ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
             : colorScheme === 'performance'
-              ? 'font-bold text-lg mb-3 px-3 py-2 rounded-xl bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
-              : 'font-bold text-xl mb-3 px-3 py-2 rounded-2xl bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow'
+              ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
+              : 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow'
         }>
           {status === 'CANCELLED'
-            ? <svg width="24" height="24" fill="currentColor" className="text-red-600 font-bold mr-2" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>
+            ? <svg width="20" height="20" fill="currentColor" className="text-red-600 font-bold" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>
             : statusIcons[status]
           }
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-1 truncate">
             {getStatusLabel(t, status)}
           </span>
         </div>
@@ -570,12 +573,12 @@ function AdminWorkOrdersPage() {
       {/* Modal for creating work order */}
       {showModal && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4 overflow-y-auto"
           onClick={e => {
             if (e.target === e.currentTarget) setShowModal(false);
           }}
         >
-          <div className="bg-white/80 rounded-2xl shadow-2xl p-10 w-full max-w-md relative backdrop-blur-md border border-blue-200">
+          <div className="bg-white/95 rounded-2xl shadow-2xl p-6 w-full max-w-md relative backdrop-blur-md border border-blue-200 my-4 max-h-[90vh] overflow-y-auto">
             <button
               className={styles.modalCloseBtn}
               aria-label="Close"
@@ -585,25 +588,29 @@ function AdminWorkOrdersPage() {
             >
               ×
             </button>
-            <h2 className="text-2xl font-bold mb-6 text-blue-900 flex items-center gap-2"><svg width="20" height="20" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>{t.newWorkOrder}</h2>
-            <form onSubmit={handleSubmit(onCreate)} className={styles.form + ' flex flex-col gap-5'}>
+            <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2"><svg width="18" height="18" fill="currentColor" className="text-blue-400" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>{t.newWorkOrder}</h2>
+            <form onSubmit={handleSubmit(onCreate)} className={styles.form + ' flex flex-col gap-4'}>
               <div>
-                <label className="block font-semibold mb-2 text-blue-800">{t.title}</label>
+                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.title}</label>
                 <input className={styles.input} {...register('title')} />
                 {errors.title && <div className={styles.errorMsg}>{errors.title.message}</div>}
               </div>
               <div>
-                <label className="block font-semibold mb-2 text-blue-800">{t.description}</label>
-                <textarea className={styles.input} {...register('description')} />
+                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.description}</label>
+                <textarea className={styles.input} rows={3} {...register('description')} />
                 {errors.description && <div className={styles.errorMsg}>{errors.description.message}</div>}
               </div>
               <div>
-                <label className="block font-semibold mb-2 text-blue-800">{t.location}</label>
-                <input className={styles.input} {...register('location')} />
+                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.location}</label>
+                <select className={styles.input} {...register('location')}>
+                  <option value="">-- {t.selectLocation || 'Select Location'} --</option>
+                  <option value="horizon-nature">Horizon Nature</option>
+                  <option value="inewa">Inewa</option>
+                </select>
                 {errors.location && <div className={styles.errorMsg}>{errors.location.message}</div>}
               </div>
               <div>
-                <label className="block font-semibold mb-2 text-blue-800">{t.priority}</label>
+                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.priority}</label>
                 <select className={styles.input} {...register('priority')}>
                   {priorityOptions.map(p => (
                     <option key={p} value={p}>{getPriorityLabel(t, p)}</option>
@@ -612,7 +619,7 @@ function AdminWorkOrdersPage() {
                 {errors.priority && <div className={styles.errorMsg}>{errors.priority.message}</div>}
               </div>
               <div>
-                <label className="block font-semibold mb-2 text-blue-800">{t.dueDate}</label>
+                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.dueDate}</label>
                 <input
                   type="date"
                   className={styles.input + ' cursor-pointer'}
@@ -626,37 +633,33 @@ function AdminWorkOrdersPage() {
               </div>
               {/* File/Photo Upload Section */}
               <div>
-                <label className="block font-semibold mb-2 text-blue-800">{t.attachments}</label>
+                <label className="block font-semibold mb-1 text-blue-800 text-sm">{t.attachments}</label>
                 <input
                   type="file"
                   multiple
                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-                  className="border rounded-xl px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 transition-all duration-200 cursor-pointer"
+                  className="border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 focus:ring-blue-400 transition-all duration-200 cursor-pointer"
                   onChange={e => setValue('files', e.target.files)}
                   title={t.chooseFiles}
                 />
-                {/* Custom file input label for translation */}
                 <div className="text-xs text-gray-500 mt-1">
                   {files && files.length > 0
                     ? Array.from(files as File[]).map(f => f.name).join(', ')
                     : t.noFileChosen}
                 </div>
-                {/* Preview selected files */}
                 {files && files.length > 0 && (
-                  <div className="mt-2 flex flex-col gap-2">
+                  <div className="mt-2 flex flex-col gap-2 max-h-32 overflow-y-auto">
                     {Array.from(files as File[]).map((file, idx) => (
-                      <div key={idx} className="flex items-center gap-3">
-                        {/* Show image preview if file is an image */}
+                      <div key={idx} className="flex items-center gap-2">
                         {file.type.startsWith('image/') ? (
                           <img
                             src={URL.createObjectURL(file)}
                             alt={file.name}
-                            className="w-16 h-16 object-cover rounded border"
-                            style={{ minWidth: 64, minHeight: 64 }}
+                            className="w-12 h-12 object-cover rounded border"
                             onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
                           />
                         ) : (
-                          <span className="w-16 h-16 flex items-center justify-center bg-gray-100 border rounded text-xs text-gray-500">No preview</span>
+                          <span className="w-12 h-12 flex items-center justify-center bg-gray-100 border rounded text-xs text-gray-500">File</span>
                         )}
                         <span className="truncate text-sm">{file.name}</span>
                       </div>
@@ -664,13 +667,13 @@ function AdminWorkOrdersPage() {
                   </div>
                 )}
               </div>
-                <button
-                  type="submit"
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2 rounded-xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-lg"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? t.create : t.create}
-                </button>
+              <button
+                type="submit"
+                className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2 rounded-xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-base mt-2"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? t.create : t.create}
+              </button>
             </form>
           </div>
         </div>
@@ -679,12 +682,12 @@ function AdminWorkOrdersPage() {
       <div
         className={styles.boardWrapper + ' ' + (
           colorScheme === 'dark'
-            ? 'bg-gray-800 rounded-3xl shadow-xl p-8 mb-8 border border-gray-700'
+            ? 'bg-gray-800 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-gray-700'
             : colorScheme === 'performance'
-              ? 'bg-gray-100 rounded-3xl shadow-xl p-8 mb-8 border border-gray-200'
+              ? 'bg-gray-100 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-gray-200'
               : colorScheme === 'current'
-                ? 'bg-blue-50 rounded-3xl shadow-xl p-8 mb-8 border border-blue-100'
-                : 'bg-blue-100/60 rounded-3xl shadow-xl p-8 mb-8 border border-blue-200'
+                ? 'bg-blue-50 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-blue-100'
+                : 'bg-blue-100/60 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-blue-200'
         )}
       >
         {/* Modal for editing work order */}
@@ -702,40 +705,42 @@ function AdminWorkOrdersPage() {
           />
         )}
         <div className="w-full">
-          <div className="w-full flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative" style={{ minHeight: '90px' }}>
+          <div className="w-full flex items-start gap-3 relative">
             {/* Filter bar extracted as a component */}
-            <FilterBar
-              status={status}
-              setStatus={setStatus}
-              statusOptions={statusOptions}
-              priority={priority}
-              setPriority={setPriority}
-              priorityOptions={priorityOptions}
-              technician={technician}
-              setTechnician={setTechnician}
-              technicianOptions={technicianOptions}
-              locationFilter={locationFilter}
-              setLocationFilter={setLocationFilter}
-              locationOptions={locationOptions}
-              startDate={startDate}
-              setStartDate={setStartDate}
-              endDate={endDate}
-              setEndDate={setEndDate}
-              q={q}
-              setQ={setQ}
-              t={t}
-              colorScheme={colorScheme}
-              startDateInputRef={startDateInputRef}
-              endDateInputRef={endDateInputRef}
-              getStatusLabel={getStatusLabel}
-              getPriorityLabel={getPriorityLabel}
-            />
-            <div className="flex justify-end md:justify-end w-full md:w-auto">
+            <div className="flex-1 min-w-0 overflow-x-auto">
+              <FilterBar
+                status={status}
+                setStatus={setStatus}
+                statusOptions={statusOptions}
+                priority={priority}
+                setPriority={setPriority}
+                priorityOptions={priorityOptions}
+                technician={technician}
+                setTechnician={setTechnician}
+                technicianOptions={technicianOptions}
+                locationFilter={locationFilter}
+                setLocationFilter={setLocationFilter}
+                locationOptions={locationOptions}
+                startDate={startDate}
+                setStartDate={setStartDate}
+                endDate={endDate}
+                setEndDate={setEndDate}
+                q={q}
+                setQ={setQ}
+                t={t}
+                colorScheme={colorScheme}
+                startDateInputRef={startDateInputRef}
+                endDateInputRef={endDateInputRef}
+                getStatusLabel={getStatusLabel}
+                getPriorityLabel={getPriorityLabel}
+              />
+            </div>
+            <div className="flex-shrink-0">
               <button
                 className={
                   (colorScheme === 'performance' || colorScheme === 'default')
-                    ? 'bg-white text-gray-800 border border-gray-300 px-6 py-3 rounded-2xl shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-lg flex items-center text-left mt-4 md:mt-0'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-lg flex items-center text-left mt-4 md:mt-0'
+                    ? 'bg-white text-gray-800 border border-gray-300 px-3 sm:px-5 py-2 rounded-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 sm:px-5 py-2 rounded-lg shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
                 }
                 onClick={() => setShowModal(true)}
               >

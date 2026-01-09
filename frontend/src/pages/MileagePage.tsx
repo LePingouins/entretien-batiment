@@ -99,19 +99,17 @@ const MileagePage: React.FC = () => {
   let bg = '';
   let card = '';
   let button = '';
-  let cardExtra = 'rounded-xl p-4 flex flex-wrap gap-4 items-center shadow-lg hover:shadow-xl transition-shadow duration-150';
   if (colorScheme === 'performance') {
     bg = 'bg-gray-100';
     card = 'bg-white border border-gray-300';
     button = 'bg-green-600 hover:bg-green-700';
   } else if (colorScheme === 'current') {
     bg = 'bg-gradient-to-br from-blue-50 to-purple-100';
-    // Animated gradient background for card
-    card = 'bg-gradient-to-br from-blue-100 via-purple-200 to-blue-200 border border-blue-200 text-blue-900 animate-gradient-move';
+    card = 'bg-gradient-to-br from-blue-100 via-purple-200 to-blue-200 border border-blue-200 text-blue-900';
     button = 'bg-blue-600 hover:bg-blue-700';
   } else {
     bg = 'bg-gradient-to-br from-blue-50 to-purple-100';
-    card = 'bg-white border';
+    card = 'bg-white border border-blue-100';
     button = 'bg-blue-600 hover:bg-blue-700';
   }
   // Helper for supplier avatar
@@ -174,86 +172,83 @@ const MileagePage: React.FC = () => {
               }).map(entry => (
               <div
                 key={entry.id}
-                className={`${cardExtra} ${colorScheme === 'current' ? card : 'border border-blue-100 bg-white'} flex flex-col sm:flex-row justify-between items-center relative overflow-hidden w-full`}
+                className={`${card} rounded-xl p-3 shadow-lg hover:shadow-xl transition-shadow duration-150 relative overflow-x-auto w-full`}
               >
                 {/* Animated gradient shimmer for current mode */}
                 {colorScheme === 'current' && (
                   <div className="absolute inset-0 z-0 animate-gradient-move pointer-events-none" style={{background: 'linear-gradient(120deg, rgba(59,130,246,0.08) 0%, rgba(139,92,246,0.08) 100%)'}}></div>
                 )}
-                <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 flex-grow z-10 w-full max-w-5xl justify-start">
-                  {/* Supplier avatar/icon */}
-                  <div>{getSupplierAvatar(entry.supplier)}</div>
-                  {/* Date input with clickable wrapper */}
-                  <div style={{ minWidth: '140px', maxWidth: '260px', flex: '1 1 180px' }} className="w-full">
-                    {(() => {
-                      const dateInputRef = React.createRef<HTMLInputElement>();
-                      return (
-                        <div
-                          className={`border rounded flex items-center cursor-pointer ${colorScheme === 'current' ? 'bg-gradient-to-br from-blue-100 to-purple-200 text-blue-900' : 'bg-white'} h-12 px-3`}
-                          style={{ width: '100%' }}
-                          onClick={() => dateInputRef.current && dateInputRef.current.showPicker && dateInputRef.current.showPicker()}
-                        >
-                          <input
-                            ref={dateInputRef}
-                            type="date"
-                            className="outline-none w-full bg-transparent h-10 text-base"
-                            value={entry.date}
-                            onChange={e => handleChange(entry.id, 'date', e.target.value)}
-                            placeholder={t.startDate}
-                            style={{ pointerEvents: 'auto' }}
-                          />
-                        </div>
-                      );
-                    })()}
+                <div className="flex items-center justify-between gap-3 z-10 relative min-w-max">
+                  {/* Left side - all inputs and controls */}
+                  <div className="flex items-center gap-3">
+                    {/* Supplier avatar/icon */}
+                    <div className="flex-shrink-0">{getSupplierAvatar(entry.supplier)}</div>
+                    {/* Date input */}
+                    <div className="flex-shrink-0 w-[140px]">
+                      {(() => {
+                        const dateInputRef = React.createRef<HTMLInputElement>();
+                        return (
+                          <div
+                            className={`border rounded flex items-center cursor-pointer ${colorScheme === 'current' ? 'bg-gradient-to-br from-blue-100 to-purple-200 text-blue-900' : 'bg-white'} h-10 px-2`}
+                            onClick={() => dateInputRef.current && dateInputRef.current.showPicker && dateInputRef.current.showPicker()}
+                          >
+                            <input
+                              ref={dateInputRef}
+                              type="date"
+                              className="outline-none w-full bg-transparent h-8 text-sm"
+                              value={entry.date}
+                              onChange={e => handleChange(entry.id, 'date', e.target.value)}
+                              placeholder={t.startDate}
+                            />
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    {/* Supplier */}
+                    <input
+                      type="text"
+                      className={`border rounded transition-colors h-10 px-2 text-sm flex-shrink-0 w-[140px] ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
+                      value={entry.supplier}
+                      onChange={e => handleChange(entry.id, 'supplier', e.target.value)}
+                      placeholder={t.supplier || 'Supplier'}
+                    />
+                    <input
+                      type="number"
+                      className={`border rounded transition-colors h-10 px-2 text-sm flex-shrink-0 w-[100px] ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
+                      value={entry.startKm}
+                      onChange={e => handleChange(entry.id, 'startKm', e.target.value)}
+                      placeholder={t.startKm || 'Start Km'}
+                      min="0"
+                    />
+                    <input
+                      type="number"
+                      className={`border rounded transition-colors h-10 px-2 text-sm flex-shrink-0 w-[100px] ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
+                      value={entry.endKm}
+                      onChange={e => handleChange(entry.id, 'endKm', e.target.value)}
+                      placeholder={t.endKm || 'End Km'}
+                      min="0"
+                    />
+                    <div className={`border rounded flex items-center text-sm font-semibold h-10 px-2 flex-shrink-0 w-[110px] ${colorScheme === 'current' ? 'bg-blue-100 text-blue-900' : 'bg-blue-50 text-blue-700'}`}>
+                      {t.totalKm ? `${t.totalKm}: ` : 'Total: '}{computeTotalKm(entry.startKm, entry.endKm)}
+                    </div>
+                    <button
+                      className="bg-red-500 hover:bg-red-700 text-white rounded shadow font-semibold h-10 px-3 text-sm whitespace-nowrap flex-shrink-0"
+                      onClick={() => handleDelete(entry.id)}
+                    >{t.delete}</button>
+                    {/* Status indicator */}
+                    <div className="flex-shrink-0">
+                      {Number(computeTotalKm(entry.startKm, entry.endKm)) > 0 ? (
+                        <span className="inline-block px-3 py-1.5 bg-green-100 text-green-700 rounded font-semibold text-sm whitespace-nowrap">{t.complete}</span>
+                      ) : (
+                        <span className="inline-block px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded font-semibold text-sm whitespace-nowrap">{t.incomplete}</span>
+                      )}
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    className={`border rounded transition-colors h-12 px-3 text-base w-full ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
-                    style={{ minWidth: '250px', maxWidth: '300px', flex: '1 1 180px' }}
-                    value={entry.supplier}
-                    onChange={e => handleChange(entry.id, 'supplier', e.target.value)}
-                    placeholder={t.supplier || 'Supplier'}
-                  />
-                  <input
-                    type="number"
-                    className={`border rounded transition-colors h-12 px-3 text-base w-full ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
-                    style={{ minWidth: '160px', maxWidth: '180px', flex: '1 1 120px' }}
-                    value={entry.startKm}
-                    onChange={e => handleChange(entry.id, 'startKm', e.target.value)}
-                    placeholder={t.startKm || 'Start Km'}
-                    min="0"
-                  />
-                  <input
-                    type="number"
-                    className={`border rounded transition-colors h-12 px-3 text-base w-full ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
-                    style={{ minWidth: '160px', maxWidth: '180px', flex: '1 1 120px' }}
-                    value={entry.endKm}
-                    onChange={e => handleChange(entry.id, 'endKm', e.target.value)}
-                    placeholder={t.endKm || 'End Km'}
-                    min="0"
-                  />
-                  <div className={`border rounded flex items-center text-base font-semibold w-full sm:w-auto ${colorScheme === 'current' ? 'bg-blue-100 text-blue-900' : 'bg-blue-50 text-blue-700'}`}
-                    style={{ minWidth: '160px', maxWidth: '200px', flex: '1 1 120px', height: '48px', paddingLeft: '12px' }}>
-                    {t.totalKm ? `${t.totalKm}: ` : 'Total Km: '}{computeTotalKm(entry.startKm, entry.endKm)}
+                  {/* Right side - Circular meter pinned to edge */}
+                  <div className="flex flex-col items-center justify-center flex-shrink-0 ml-auto pl-4">
+                    <span className="text-xs text-blue-600 font-semibold">{t.totalKm}</span>
+                    <CircularMeter value={Number(computeTotalKm(entry.startKm, entry.endKm))} max={1000} />
                   </div>
-                  <button
-                    className="ml-0 sm:ml-2 bg-red-500 hover:bg-red-700 text-white rounded shadow font-semibold h-12 px-4 text-base w-full sm:w-auto"
-                    style={{ minWidth: '130px', maxWidth: '180px', flex: '1 1 120px' }}
-                    onClick={() => handleDelete(entry.id)}
-                  >{t.delete}</button>
-                  {/* Status indicator to fill gap */}
-                  <div style={{ flex: '1 1 120px', textAlign: 'center' }} className="w-full sm:w-auto mt-2 sm:mt-0">
-                    {Number(computeTotalKm(entry.startKm, entry.endKm)) > 0 ? (
-                      <span className="inline-block px-6 py-2.5 bg-green-100 text-green-700 rounded font-semibold">{t.complete}</span>
-                    ) : (
-                      <span className="inline-block px-6 py-2.5 bg-yellow-100 text-yellow-700 rounded font-semibold">{t.incomplete}</span>
-                    )}
-                  </div>
-                </div>
-                {/* Right side: circular meter only (car icon removed) */}
-                <div className="flex flex-col items-center justify-center min-w-[80px] z-10 w-full sm:w-auto mt-4 sm:mt-0">
-                  <span className="text-sm text-blue-600 font-semibold mb-1">{t.totalKm}</span>
-                  <CircularMeter value={Number(computeTotalKm(entry.startKm, entry.endKm))} max={1000} />
                 </div>
               </div>
             ))}

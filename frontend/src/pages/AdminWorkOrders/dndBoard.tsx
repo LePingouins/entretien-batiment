@@ -33,9 +33,9 @@ export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activ
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
-      <div className="flex flex-col md:flex-row gap-8 pb-12 px-8 pt-4 w-full justify-between">
+      <div className="flex gap-4 pb-12 px-2 sm:px-4 pt-4 w-full overflow-x-auto">
         {statusOptions.map((status: string) => (
-          <div className="flex-1 min-w-[260px] max-w-full flex flex-col" key={status}>
+          <div className="flex-shrink-0 w-[260px] sm:w-[280px] flex flex-col" key={status}>
             <DroppableColumn status={status} colorScheme={colorScheme}>
               <SortableContext
                 id={status}
@@ -44,7 +44,7 @@ export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activ
               >
                 <div className="flex-1 flex flex-col gap-4 min-h-[180px]">
                   {(grouped[status]?.length ?? 0) === 0 ? (
-                    <div className="text-gray-400 text-center">No work orders</div>
+                    <div className="text-gray-400 text-center py-4">No work orders</div>
                   ) : (
                     grouped[status]?.map((wo: WorkOrderResponse) => (
                       <SortableCard key={wo.id} workOrder={wo} colorScheme={colorScheme} />

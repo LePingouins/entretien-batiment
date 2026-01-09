@@ -1,0 +1,85 @@
+# =========================
+# IDE & Editor
+# =========================
+.idea/
+.vscode/
+*.iws
+*.iml
+*.ipr
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+*~
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Backend (Java/Gradle)
+# =========================
+backend/build/
+backend/.gradle/
+backend/out/
+backend/bin/
+!backend/gradle/wrapper/gradle-wrapper.jar
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+
+# =========================
+# Frontend (Node/Vite/React)
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/.cache/
+frontend/.vite/
+frontend/*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# =========================
+# Environment & Secrets
+# =========================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+
+# =========================
+# Logs & Temp Files
+# =========================
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# =========================
+# Test & Coverage
+# =========================
+coverage/
+*.lcov
+.nyc_output/
+
+# =========================
+# Uploads (if you don't want to track user uploads)
+# =========================
+# backend/uploads/
+
+# =========================
+# Docker (optional)
+# =========================
+# Uncomment if you don't want to track docker volumes
+# docker-data/

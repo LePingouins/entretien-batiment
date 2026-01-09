@@ -38,16 +38,19 @@ const AdminLayout: React.FC = () => {
 
   return (
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
-    <div className={`min-h-screen flex flex-col justify-between bg-white transition-colors ${colorScheme === 'dark' ? 'dark' : ''}`}>  {/* dark mode root only if dark */}
-      <header className={`bg-blue-800 text-white p-4 flex justify-between items-center ${colorScheme === 'dark' ? 'dark:bg-[#1a2233] dark:text-gray-100' : ''}`}>
-        <div className={`font-bold text-xl ${colorScheme === 'dark' ? 'dark:text-white' : ''}`}>Entretien-Bâtiment Admin</div>
-        <nav className="space-x-4 flex items-center">
-          <Link to="/admin/work-orders" className={`hover:underline ${colorScheme === 'dark' ? 'dark:text-gray-100' : ''}`}>{t.workOrders}</Link>
-            <Link to="/admin/mileage" className={`hover:underline ${colorScheme === 'dark' ? 'dark:text-gray-100' : ''}`}>{t.mileage}</Link>
-          <button onClick={handleLogout} className={`ml-4 bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 ${colorScheme === 'dark' ? 'dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white' : ''}`}>{t.logout}</button>
+    <div className={`min-h-screen flex flex-col justify-between bg-white transition-colors overflow-x-hidden ${colorScheme === 'dark' ? 'dark' : ''}`}>  {/* dark mode root only if dark */}
+      <header className={`bg-blue-800 text-white p-2 sm:p-4 flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 ${colorScheme === 'dark' ? 'dark:bg-[#1a2233] dark:text-gray-100' : ''}`}>
+        <div className={`flex items-center gap-2 ${colorScheme === 'dark' ? 'dark:text-white' : ''}`}>
+          <img src="/logo.png" alt="Horizon Nature" className="h-8 sm:h-10 w-auto" />
+          <span className="font-bold text-base sm:text-xl whitespace-nowrap">Entretien-Bâtiment</span>
+        </div>
+        <nav className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm sm:text-base">
+          <Link to="/admin/work-orders" className={`hover:underline whitespace-nowrap ${colorScheme === 'dark' ? 'dark:text-gray-100' : ''}`}>{t.workOrders}</Link>
+          <Link to="/admin/mileage" className={`hover:underline whitespace-nowrap ${colorScheme === 'dark' ? 'dark:text-gray-100' : ''}`}>{t.mileage}</Link>
+          <button onClick={handleLogout} className={`bg-blue-600 px-2 sm:px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap ${colorScheme === 'dark' ? 'dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white' : ''}`}>{t.logout}</button>
           <button
             aria-label="Settings"
-            className={`ml-4 p-2 rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 ${colorScheme === 'dark' ? 'dark:hover:bg-gray-700 dark:focus:ring-gray-400' : ''}`}
+            className={`p-1.5 sm:p-2 rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 ${colorScheme === 'dark' ? 'dark:hover:bg-gray-700 dark:focus:ring-gray-400' : ''}`}
             onClick={() => setShowSettings(true)}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
@@ -55,8 +58,8 @@ const AdminLayout: React.FC = () => {
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.14.31.21.65.21 1v.09A1.65 1.65 0 0 0 21 12c0 .35-.07.69-.21 1v.09A1.65 1.65 0 0 0 19.4 15z" />
             </svg>
           </button>
-          <div className="ml-4 flex items-center">
-            <span className={`mr-2 ${colorScheme === 'dark' ? 'dark:text-gray-200' : ''}`}>{lang === 'en' ? 'English' : 'Français'}</span>
+          <div className="flex items-center">
+            <span className={`mr-1 sm:mr-2 text-xs sm:text-sm ${colorScheme === 'dark' ? 'dark:text-gray-200' : ''}`}>{lang === 'en' ? 'EN' : 'FR'}</span>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -64,9 +67,9 @@ const AdminLayout: React.FC = () => {
                 onChange={e => setLang(e.target.checked ? 'fr' : 'en')}
                 className="sr-only peer"
               />
-              <div className={`w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500 transition-all ${colorScheme === 'dark' ? 'dark:bg-gray-700 dark:peer-focus:ring-blue-800' : ''}`}> 
+              <div className={`w-9 sm:w-11 h-5 sm:h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500 transition-all ${colorScheme === 'dark' ? 'dark:bg-gray-700 dark:peer-focus:ring-blue-800' : ''}`}> 
                 <div
-                  className={`absolute left-1 top-1 w-4 h-4 bg-blue-600 rounded-full transition-transform ${colorScheme === 'dark' ? 'dark:bg-gray-400' : ''} ${lang === 'fr' ? 'translate-x-5' : ''}`}
+                  className={`absolute left-0.5 sm:left-1 top-0.5 sm:top-1 w-4 h-4 bg-blue-600 rounded-full transition-transform ${colorScheme === 'dark' ? 'dark:bg-gray-400' : ''} ${lang === 'fr' ? 'translate-x-4 sm:translate-x-5' : ''}`}
                 ></div>
               </div>
             </label>

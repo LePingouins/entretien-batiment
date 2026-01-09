@@ -55,6 +55,9 @@ function LoginPage() {
         className="bg-white p-8 rounded shadow-md w-full max-w-sm"
         aria-label={t.loginFormAria || 'Login form'}
       >
+        <div className="flex justify-center mb-4">
+          <img src="/logo.png" alt="Horizon Nature" className="h-20 w-auto" />
+        </div>
         <h2 className="text-2xl font-bold mb-6 text-center">{t.loginTitle || 'Login'}</h2>
         <div className="mb-4">
           <label className="block mb-1 font-medium">{t.emailLabel || 'Email'}</label>

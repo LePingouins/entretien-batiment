@@ -15,7 +15,10 @@ const TechLayout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-green-800 text-white p-4 flex justify-between items-center">
-        <div className="font-bold text-xl">Entretien-Bâtiment Tech</div>
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="Horizon Nature" className="h-8 sm:h-10 w-auto" />
+          <span className="font-bold text-xl">Entretien-Bâtiment</span>
+        </div>
         <nav className="space-x-4">
           <Link to="/tech" className="hover:underline">Dashboard</Link>
           {/* Add more tech links here if needed */}
