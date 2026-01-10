@@ -30,5 +30,8 @@ public record WorkOrderResponse(
         String attachmentDownloadUrl,
 
         Integer materialsCount,
-        List<String> materialsPreview
+        List<String> materialsPreview,
+
+        /** Manual ordering index within the status column. NULL means priority-based ordering. */
+        Integer sortIndex
 ) {}

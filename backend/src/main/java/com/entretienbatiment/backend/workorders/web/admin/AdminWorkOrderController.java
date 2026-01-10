@@ -6,6 +6,8 @@ import com.entretienbatiment.backend.workorders.web.admin.dto.AssignWorkOrderReq
 import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.WorkOrderResponse;
 import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderMultipartRequest;
+import com.entretienbatiment.backend.workorders.web.admin.dto.MoveWorkOrderRequest;
+import com.entretienbatiment.backend.workorders.web.admin.dto.ReorderWorkOrdersRequest;
 import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -95,6 +97,50 @@ public class AdminWorkOrderController {
     public void delete(@PathVariable Long id) {
         service.delete(id);
     }
+
+    // ==================== KANBAN ORDERING ENDPOINTS ====================
+
+    /**
+     * Get work orders for a specific status column, ordered for Kanban display.
+     * 
+     * ORDERING RULES:
+     * 1. Items with non-null sortIndex come first, ordered by sortIndex ASC
+     * 2. Items with null sortIndex come after, ordered by priority DESC, then createdAt DESC
+     */
+    @GetMapping("/kanban/{status}")
+    public java.util.List<WorkOrderResponse> listByStatusForKanban(
+            @PathVariable WorkOrderStatus status
+    ) {
+        return service.listByStatusForKanban(status);
+    }
+
+    /**
+     * Move a work order to a different status column at a specific index.
+     * Used when dragging a card from one column to another.
+     * 
+     * Updates the status and sortIndex, re-compacts both source and destination columns.
+     */
+    @PatchMapping("/{id}/move")
+    public WorkOrderResponse move(
+            @PathVariable Long id,
+            @Valid @RequestBody MoveWorkOrderRequest req
+    ) {
+        return service.moveWorkOrder(id, req.newStatus(), req.newIndex());
+    }
+
+    /**
+     * Reorder work orders within a single status column.
+     * Used when dragging a card within the same column.
+     * 
+     * Sets sortIndex = array index for each id in orderedIds.
+     */
+    @PatchMapping("/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorder(@Valid @RequestBody ReorderWorkOrdersRequest req) {
+        service.reorderWorkOrdersInColumn(req.status(), req.orderedIds());
+    }
+
+    // ==================== END KANBAN ORDERING ENDPOINTS ====================
 
         // Serve uploaded files
     // Moved to FilesController

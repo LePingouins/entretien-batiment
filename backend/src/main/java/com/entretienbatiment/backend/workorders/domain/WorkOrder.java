@@ -64,10 +64,21 @@ public class WorkOrder {
 
     @Column(name = "attachment_content_type")
     private String attachmentContentType;
+
+    /**
+     * Manual ordering index within the status column.
+     * NULL means the item should be ordered by priority.
+     * When user manually reorders via drag-and-drop, this gets a value (0..N-1).
+     */
+    @Column(name = "sort_index")
+    private Integer sortIndex;
     public String getAttachmentFilename() { return attachmentFilename; }
     public String getAttachmentContentType() { return attachmentContentType; }
     public void setAttachmentFilename(String attachmentFilename) { this.attachmentFilename = attachmentFilename; }
     public void setAttachmentContentType(String attachmentContentType) { this.attachmentContentType = attachmentContentType; }
+
+    public Integer getSortIndex() { return sortIndex; }
+    public void setSortIndex(Integer sortIndex) { this.sortIndex = sortIndex; }
 
     protected WorkOrder() {}
 

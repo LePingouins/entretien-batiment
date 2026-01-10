@@ -42,6 +42,8 @@ export interface WorkOrderResponse {
   attachmentDownloadUrl?: string;
   materialsCount?: number;
   materialsPreview?: string[];
+  /** Manual ordering index within the status column. NULL means priority-based ordering. */
+  sortIndex?: number;
 }
 
 export interface PageResponse<T> {

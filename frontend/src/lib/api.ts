@@ -96,4 +96,33 @@ export async function deleteMaterial(workOrderId: number, materialId: number): P
   await api.delete(`/api/work-orders/${workOrderId}/materials/${materialId}`);
 }
 
+// --- Work Order Kanban Ordering API ---
+import type { WorkOrderResponse, WorkOrderStatus } from '../types/api';
+
+/**
+ * Reorder work orders within a single status column.
+ * Sets sortIndex = array index for each id in orderedIds.
+ * Used when dragging a card within the same column.
+ */
+export async function reorderWorkOrders(status: WorkOrderStatus, orderedIds: number[]): Promise<void> {
+  await api.patch('/api/admin/work-orders/reorder', { status, orderedIds });
+}
+
+/**
+ * Move a work order to a different status column at a specific index.
+ * Used when dragging a card from one column to another.
+ */
+export async function moveWorkOrder(workOrderId: number, newStatus: WorkOrderStatus, newIndex: number): Promise<WorkOrderResponse> {
+  const res = await api.patch<WorkOrderResponse>(`/api/admin/work-orders/${workOrderId}/move`, { newStatus, newIndex });
+  return res.data;
+}
+
+/**
+ * Get work orders for a specific status column, ordered for Kanban display.
+ */
+export async function getWorkOrdersByStatusForKanban(status: WorkOrderStatus): Promise<WorkOrderResponse[]> {
+  const res = await api.get<WorkOrderResponse[]>(`/api/admin/work-orders/kanban/${status}`);
+  return res.data;
+}
+
 export default api;

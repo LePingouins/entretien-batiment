@@ -50,6 +50,9 @@ public class WorkOrderService {
                 req.dueDate()
         ));
 
+        // Assign sortIndex for proper Kanban positioning based on priority
+        assignSortIndexForNewWorkOrder(saved);
+
         return toResponse(saved);
     }
 
@@ -102,6 +105,189 @@ public class WorkOrderService {
         WorkOrder saved = repo.save(wo);
         return toResponse(saved);
     }
+
+    // ==================== KANBAN ORDERING METHODS ====================
+
+    /**
+     * Get all work orders for a specific status column, ordered for Kanban display.
+     * 
+     * ORDERING RULES:
+     * 1. Items with non-null sortIndex come first, ordered by sortIndex ASC
+     * 2. Items with null sortIndex come after, ordered by priority DESC, then createdAt DESC
+     */
+    @Transactional(readOnly = true)
+    public List<WorkOrderResponse> listByStatusForKanban(WorkOrderStatus status) {
+        return repo.findByStatusOrderedForKanban(status.name()).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /**
+     * Reorder work orders within a single status column.
+     * Sets sortIndex = array index for each id in orderedIds.
+     * 
+     * Used when dragging a card within the same column.
+     */
+    @Transactional
+    public void reorderWorkOrdersInColumn(WorkOrderStatus status, List<Long> orderedIds) {
+        // Fetch all work orders by IDs
+        List<WorkOrder> workOrders = repo.findByIdIn(orderedIds);
+
+        // Validate: all IDs must belong to the specified status
+        for (WorkOrder wo : workOrders) {
+            if (wo.getStatus() != status) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Work order " + wo.getId() + " does not belong to status " + status
+                );
+            }
+        }
+
+        // Validate: all orderedIds must be found
+        if (workOrders.size() != orderedIds.size()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Some work order IDs were not found"
+            );
+        }
+
+        // Create a map for quick lookup
+        java.util.Map<Long, WorkOrder> woMap = workOrders.stream()
+                .collect(java.util.stream.Collectors.toMap(WorkOrder::getId, wo -> wo));
+
+        // Set sortIndex = array index
+        for (int i = 0; i < orderedIds.size(); i++) {
+            WorkOrder wo = woMap.get(orderedIds.get(i));
+            if (wo != null) {
+                wo.setSortIndex(i);
+            }
+        }
+
+        repo.saveAll(workOrders);
+    }
+
+    /**
+     * Move a work order to a different status column at a specific index.
+     * Updates the status and assigns sortIndex at the new position.
+     * Re-compacts sortIndex in both source and destination columns.
+     * 
+     * Used when dragging a card from one column to another.
+     */
+    @Transactional
+    public WorkOrderResponse moveWorkOrder(Long workOrderId, WorkOrderStatus newStatus, int newIndex) {
+        WorkOrder wo = repo.findById(workOrderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "work order not found"));
+
+        WorkOrderStatus oldStatus = wo.getStatus();
+
+        // Update status
+        wo.setStatus(newStatus);
+
+        // Get all items in the destination column (ordered for Kanban)
+        List<WorkOrder> destColumnItems = repo.findByStatusOrderedForKanban(newStatus.name());
+
+        // Remove the moved item if it's already in the list (same column move edge case)
+        destColumnItems.removeIf(w -> w.getId().equals(workOrderId));
+
+        // Clamp newIndex to valid range
+        int insertIndex = Math.min(Math.max(0, newIndex), destColumnItems.size());
+
+        // Insert the moved item at the new position
+        destColumnItems.add(insertIndex, wo);
+
+        // Re-compact sortIndex for destination column (0..N-1)
+        for (int i = 0; i < destColumnItems.size(); i++) {
+            destColumnItems.get(i).setSortIndex(i);
+        }
+
+        repo.saveAll(destColumnItems);
+
+        // If moving across columns, re-compact the source column
+        if (oldStatus != newStatus) {
+            List<WorkOrder> sourceColumnItems = repo.findByStatusOrderedForKanban(oldStatus.name());
+            for (int i = 0; i < sourceColumnItems.size(); i++) {
+                sourceColumnItems.get(i).setSortIndex(i);
+            }
+            repo.saveAll(sourceColumnItems);
+        }
+
+        return toResponse(wo);
+    }
+
+    /**
+     * Calculate the appropriate sortIndex for a new work order based on priority.
+     * Inserts the new item at the correct position without reshuffling existing manually-ordered cards.
+     * 
+     * ALGORITHM:
+     * 1. Get all items in the column (including the newly created one)
+     * 2. Remove the new item from the list (it was already saved with sortIndex = null)
+     * 3. Find the correct position based on priority
+     * 4. Insert the new item at that position
+     * 5. Re-compact all sortIndex values (0..N-1)
+     */
+    @Transactional
+    public void assignSortIndexForNewWorkOrder(WorkOrder wo) {
+        List<WorkOrder> columnItems = new java.util.ArrayList<>(
+            repo.findByStatusOrderedForKanban(wo.getStatus().name())
+        );
+
+        // Remove the new work order from the list if it's already there
+        // (it was just saved with sortIndex = null)
+        columnItems.removeIf(item -> item.getId().equals(wo.getId()));
+
+        // If the column is empty (no other items), assign sortIndex = 0
+        if (columnItems.isEmpty()) {
+            wo.setSortIndex(0);
+            repo.save(wo);
+            return;
+        }
+
+        // Find the position where this work order should be inserted based on priority
+        // Priority order: URGENT (0) > HIGH (1) > MEDIUM (2) > LOW (3)
+        int priorityRank = getPriorityRank(wo.getPriority());
+        int insertIndex = columnItems.size(); // default: end of list
+
+        for (int i = 0; i < columnItems.size(); i++) {
+            WorkOrder existing = columnItems.get(i);
+            int existingRank = getPriorityRank(existing.getPriority());
+
+            // If existing item has lower priority, insert before it
+            if (existingRank > priorityRank) {
+                insertIndex = i;
+                break;
+            }
+            // If same priority, insert after items created before this one (newer items first)
+            if (existingRank == priorityRank && existing.getCreatedAt().isBefore(wo.getCreatedAt())) {
+                // Continue looking - we want to insert after older items with same priority
+                continue;
+            }
+            if (existingRank == priorityRank && existing.getCreatedAt().isAfter(wo.getCreatedAt())) {
+                insertIndex = i;
+                break;
+            }
+        }
+
+        // Insert at the calculated position and re-compact all sortIndex values
+        columnItems.add(insertIndex, wo);
+        for (int i = 0; i < columnItems.size(); i++) {
+            columnItems.get(i).setSortIndex(i);
+        }
+        repo.saveAll(columnItems);
+    }
+
+    /**
+     * Get priority rank for ordering (lower = higher priority).
+     */
+    private int getPriorityRank(WorkOrderPriority priority) {
+        return switch (priority) {
+            case URGENT -> 0;
+            case HIGH -> 1;
+            case MEDIUM -> 2;
+            case LOW -> 3;
+        };
+    }
+
+    // ==================== END KANBAN ORDERING METHODS ====================
 
     @Transactional
     public WorkOrderResponse updateStatusForTech(
@@ -251,6 +437,9 @@ public class WorkOrderService {
         workOrder.setAttachmentContentType(attachmentContentType);
         WorkOrder saved = repo.save(workOrder);
 
+        // Assign sortIndex for proper Kanban positioning based on priority
+        assignSortIndexForNewWorkOrder(saved);
+
         // Return response with attachment info
         return toResponseWithAttachment(saved, attachmentFilename, attachmentContentType);
     }
@@ -290,7 +479,8 @@ public class WorkOrderService {
             attachmentContentType,
             downloadUrl,
             materialsCount,
-            materialsPreview
+            materialsPreview,
+            wo.getSortIndex()
         );
     }
     
@@ -341,7 +531,8 @@ public class WorkOrderService {
             attachmentContentType,
             downloadUrl,
             materialsCount,
-            materialsPreview
+            materialsPreview,
+            wo.getSortIndex()
         );
     }
 

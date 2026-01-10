@@ -107,7 +107,7 @@ function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, 
 
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../lib/api';
+import api, { reorderWorkOrders, moveWorkOrder } from '../lib/api';
 import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority } from '../types/api';
 import { WorkOrderCard } from '../components/WorkOrderCard';
 import { MaterialsDrawer } from '../components/MaterialsDrawer';
@@ -325,6 +325,7 @@ function AdminWorkOrdersPage() {
   const [grouped, setGrouped] = React.useState<Record<string, WorkOrderResponse[]>>({});
 
   // --- Fix useEffect grouping logic ---
+  // Sort by sortIndex ASC within each column. Items with null sortIndex go at the end, sorted by priority.
   React.useEffect(() => {
     const groups: Record<string, WorkOrderResponse[]> = {};
     statusOptions.forEach(status => {
@@ -333,6 +334,25 @@ function AdminWorkOrdersPage() {
     if (data && data.content) {
       data.content.forEach((wo: WorkOrderResponse) => {
         groups[wo.status]?.push(wo);
+      });
+      // Sort each column by sortIndex ASC (nulls last), then by priority DESC, then createdAt DESC
+      const priorityOrder: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+      statusOptions.forEach(status => {
+        groups[status]?.sort((a, b) => {
+          // Items with sortIndex come first
+          if (a.sortIndex !== null && a.sortIndex !== undefined && (b.sortIndex === null || b.sortIndex === undefined)) return -1;
+          if ((a.sortIndex === null || a.sortIndex === undefined) && b.sortIndex !== null && b.sortIndex !== undefined) return 1;
+          // Both have sortIndex - sort by sortIndex ASC
+          if (a.sortIndex !== null && a.sortIndex !== undefined && b.sortIndex !== null && b.sortIndex !== undefined) {
+            return a.sortIndex - b.sortIndex;
+          }
+          // Both null - sort by priority DESC, then createdAt DESC
+          const aPriority = priorityOrder[a.priority] ?? 99;
+          const bPriority = priorityOrder[b.priority] ?? 99;
+          if (aPriority !== bPriority) return aPriority - bPriority;
+          // Same priority - newer first
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
       });
     }
     setGrouped(groups);
@@ -362,22 +382,23 @@ function AdminWorkOrdersPage() {
     });
   };
 
-  // Handle drag end
+  // Handle drag end - KANBAN ORDERING:
+  // - Same column: optimistically update UI, call PATCH /reorder with orderedIds
+  // - Cross column: optimistically update UI, call PATCH /{id}/move with newStatus and newIndex
   const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-    console.log('[DnD] Drag End:', {
-      activeId: active?.id,
-      overId: over?.id,
-      grouped,
-    });
+    
     if (!over || !active) return;
+
+    const activeId = active.id.toString();
+    const overId = over.id.toString();
 
     // Find the source column and index
     let sourceCol: string | null = null;
     let sourceIdx = -1;
     for (const status of statusOptions) {
-      const idx = grouped[status]?.findIndex((wo: WorkOrderResponse) => wo.id.toString() === active.id) ?? -1;
+      const idx = grouped[status]?.findIndex((wo: WorkOrderResponse) => wo.id.toString() === activeId) ?? -1;
       if (idx !== -1) {
         sourceCol = status;
         sourceIdx = idx;
@@ -386,67 +407,90 @@ function AdminWorkOrdersPage() {
     }
     if (!sourceCol || sourceIdx === -1) return;
 
-    // Determine if dropped on a column or a card
+    // Determine destination column and index
     let destCol: string | null = null;
     let destIdx = 0;
-    if (statusOptions.includes(over.id as WorkOrderStatus)) {
-      destCol = over.id as string;
+
+    // Check if dropped directly on a column (empty area)
+    if (statusOptions.includes(overId as WorkOrderStatus)) {
+      destCol = overId;
       destIdx = grouped[destCol]?.length ?? 0;
     } else {
+      // Dropped on a card - find which column and position
       for (const status of statusOptions) {
-        const idx = grouped[status]?.findIndex((wo: WorkOrderResponse) => wo.id.toString() === over.id) ?? -1;
+        const idx = grouped[status]?.findIndex((wo: WorkOrderResponse) => wo.id.toString() === overId) ?? -1;
         if (idx !== -1) {
           destCol = status;
           destIdx = idx;
           break;
         }
       }
-      if (destCol && destCol !== sourceCol) {
-        if (grouped[destCol] && grouped[destCol][destIdx]?.id.toString() !== active.id) {
-          // insert before destIdx
-        } else {
-          destIdx = grouped[destCol]?.length ?? 0;
-        }
-      }
     }
+    
     if (!destCol) return;
 
+    // No-op if dropped on itself
     if (sourceCol === destCol && sourceIdx === destIdx) return;
 
+    // Store previous state for rollback
+    const previousGrouped = JSON.parse(JSON.stringify(grouped));
+
     if (sourceCol === destCol) {
+      // REORDER WITHIN SAME COLUMN
       const newItems = [...(grouped[sourceCol] ?? [])];
       const [moved] = newItems.splice(sourceIdx, 1);
+      
+      // Calculate insert position: if moving down, we need to adjust since we removed an item
       let insertIdx = destIdx;
-      if (sourceIdx < destIdx) insertIdx--;
+      if (sourceIdx < destIdx) {
+        insertIdx = destIdx; // The item at destIdx shifts up after removal
+      }
       newItems.splice(insertIdx, 0, moved);
+      
+      // Update sortIndex locally for consistency
+      newItems.forEach((wo, i) => { wo.sortIndex = i; });
+      
+      // Optimistically update UI
       setGrouped(prev => ({
         ...prev,
         [sourceCol!]: newItems,
       }));
+
+      // Persist reorder via API
+      try {
+        const orderedIds = newItems.map(wo => wo.id);
+        await reorderWorkOrders(sourceCol as WorkOrderStatus, orderedIds);
+      } catch (err) {
+        console.error('Failed to reorder work orders:', err);
+        setGrouped(previousGrouped);
+        alert('Failed to reorder work orders');
+      }
     } else {
+      // MOVE ACROSS COLUMNS
       const newSource = [...(grouped[sourceCol] ?? [])];
       const [moved] = newSource.splice(sourceIdx, 1);
       const newDest = [...(grouped[destCol] ?? [])];
       moved.status = destCol as WorkOrderStatus;
       newDest.splice(destIdx, 0, moved);
+      
+      // Update sortIndex locally for consistency
+      newSource.forEach((wo, i) => { wo.sortIndex = i; });
+      newDest.forEach((wo, i) => { wo.sortIndex = i; });
+      
+      // Optimistically update UI
       setGrouped(prev => ({
         ...prev,
         [sourceCol!]: newSource,
         [destCol!]: newDest,
       }));
-      // Persist status change to backend
+
+      // Persist move via API
       try {
-        await api.put(`/api/admin/work-orders/${moved.id}`, {
-          title: moved.title,
-          description: moved.description,
-          location: moved.location,
-          priority: moved.priority,
-          dueDate: moved.dueDate,
-          status: moved.status,
-        });
-        queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
+        await moveWorkOrder(moved.id, destCol as WorkOrderStatus, destIdx);
       } catch (err) {
-        alert('Failed to update status');
+        console.error('Failed to move work order:', err);
+        setGrouped(previousGrouped);
+        alert('Failed to move work order');
       }
     }
   };
