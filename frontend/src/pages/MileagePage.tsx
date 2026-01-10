@@ -99,7 +99,11 @@ const MileagePage: React.FC = () => {
   let bg = '';
   let card = '';
   let button = '';
-  if (colorScheme === 'performance') {
+  if (colorScheme === 'dark') {
+    bg = 'bg-[#0f1419]';
+    card = 'bg-[#1a1f2e] border border-[#2d3748] text-[#e2e8f0]';
+    button = 'bg-[#3b82f6] hover:bg-[#2563eb]';
+  } else if (colorScheme === 'performance') {
     bg = 'bg-gray-100';
     card = 'bg-white border border-gray-300';
     button = 'bg-green-600 hover:bg-green-700';
@@ -115,13 +119,13 @@ const MileagePage: React.FC = () => {
   // Helper for supplier avatar
   const getSupplierAvatar = (supplier: string) => {
     if (!supplier) return (
-      <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-200 text-blue-700 font-bold text-lg">
+      <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg ${colorScheme === 'dark' ? 'bg-[#252d3d] text-[#60a5fa]' : 'bg-blue-200 text-blue-700'}`}>
         <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/><path d="M4 20v-1a4 4 0 014-4h8a4 4 0 014 4v1" stroke="currentColor" strokeWidth="2"/></svg>
       </span>
     );
     const initials = supplier.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
     return (
-      <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white font-bold text-lg">
+      <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg ${colorScheme === 'dark' ? 'bg-[#3b82f6] text-white' : 'bg-blue-500 text-white'}`}>
         {initials}
       </span>
     );
@@ -134,11 +138,14 @@ const MileagePage: React.FC = () => {
     const normalized = Math.min(value, max);
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (normalized / max) * circumference;
+    const trackColor = colorScheme === 'dark' ? '#2d3748' : '#e0e7ff';
+    const progressColor = colorScheme === 'dark' ? '#6366f1' : '#6366f1';
+    const textColor = colorScheme === 'dark' ? '#a5b4fc' : '#6366f1';
     return (
       <svg width="44" height="44" className="block" viewBox="0 0 44 44">
-        <circle cx="22" cy="22" r={radius} stroke="#e0e7ff" strokeWidth={stroke} fill="none" />
-        <circle cx="22" cy="22" r={radius} stroke="#6366f1" strokeWidth={stroke} fill="none" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" style={{transition: 'stroke-dashoffset 0.5s'}} />
-        <text x="22" y="26" textAnchor="middle" fontSize="12" fill="#6366f1" fontWeight="bold">{value}</text>
+        <circle cx="22" cy="22" r={radius} stroke={trackColor} strokeWidth={stroke} fill="none" />
+        <circle cx="22" cy="22" r={radius} stroke={progressColor} strokeWidth={stroke} fill="none" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" style={{transition: 'stroke-dashoffset 0.5s'}} />
+        <text x="22" y="26" textAnchor="middle" fontSize="12" fill={textColor} fontWeight="bold">{value}</text>
       </svg>
     );
   };
@@ -148,9 +155,9 @@ const MileagePage: React.FC = () => {
       <div className="flex-1 w-full">
         <div className="p-2 sm:p-6">
           <div className="flex flex-col items-center justify-center mb-4 w-full">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-center text-blue-900 tracking-tight mb-2" style={{ letterSpacing: '0.02em' }}>{t.mileage}</h1>
+            <h1 className={`text-3xl sm:text-4xl font-extrabold text-center tracking-tight mb-2 ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : 'text-blue-900'}`} style={{ letterSpacing: '0.02em' }}>{t.mileage}</h1>
             <button
-              className="mt-2 w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg shadow-lg font-semibold hover:scale-105 transition-transform duration-150"
+              className={`mt-2 w-full sm:w-auto px-4 py-2 text-white rounded-lg shadow-lg font-semibold hover:scale-105 transition-transform duration-150 ${colorScheme === 'dark' ? 'bg-[#3b82f6] hover:bg-[#2563eb]' : 'bg-gradient-to-r from-blue-500 to-purple-500'}`}
               onClick={handleCreate}
             >
               {t.create} {t.mileage}
@@ -160,9 +167,9 @@ const MileagePage: React.FC = () => {
             {entries.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
                 {/* Friendly empty state illustration */}
-                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" className="mb-4 text-blue-300"><path d="M3 13l2-5a2 2 0 012-1h10a2 2 0 012 1l2 5M5 13v4a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-4M7 16h.01M17 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <div className="text-lg text-blue-700 font-medium">{(t as any).noMileageEntriesYet || fallback.noMileageEntriesYet}</div>
-                <div className="text-sm text-blue-400 mb-2">{(t as any).startTrackingMileage || fallback.startTrackingMileage}</div>
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" className={`mb-4 ${colorScheme === 'dark' ? 'text-[#374151]' : 'text-blue-300'}`}><path d="M3 13l2-5a2 2 0 012-1h10a2 2 0 012 1l2 5M5 13v4a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-4M7 16h.01M17 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <div className={`text-lg font-medium ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-700'}`}>{(t as any).noMileageEntriesYet || fallback.noMileageEntriesYet}</div>
+                <div className={`text-sm mb-2 ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-blue-400'}`}>{(t as any).startTrackingMileage || fallback.startTrackingMileage}</div>
               </div>
             ) : [...entries].sort((a, b) => {
                 // Sort by date ascending (earliest first)
@@ -189,13 +196,13 @@ const MileagePage: React.FC = () => {
                         const dateInputRef = React.createRef<HTMLInputElement>();
                         return (
                           <div
-                            className={`border rounded flex items-center cursor-pointer ${colorScheme === 'current' ? 'bg-gradient-to-br from-blue-100 to-purple-200 text-blue-900' : 'bg-white'} h-10 px-2`}
+                            className={`border rounded flex items-center cursor-pointer h-10 px-2 ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0]' : colorScheme === 'current' ? 'bg-gradient-to-br from-blue-100 to-purple-200 text-blue-900' : 'bg-white'}`}
                             onClick={() => dateInputRef.current && dateInputRef.current.showPicker && dateInputRef.current.showPicker()}
                           >
                             <input
                               ref={dateInputRef}
                               type="date"
-                              className="outline-none w-full bg-transparent h-8 text-sm"
+                              className={`outline-none w-full bg-transparent h-8 text-sm ${colorScheme === 'dark' ? '[color-scheme:dark]' : ''}`}
                               value={entry.date}
                               onChange={e => handleChange(entry.id, 'date', e.target.value)}
                               placeholder={t.startDate}
@@ -207,14 +214,14 @@ const MileagePage: React.FC = () => {
                     {/* Supplier */}
                     <input
                       type="text"
-                      className={`border rounded transition-colors h-10 px-2 text-sm flex-shrink-0 w-[140px] ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
+                      className={`border rounded transition-colors h-10 px-2 text-sm flex-shrink-0 w-[140px] ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:border-[#3b82f6] focus:bg-[#1a1f2e]' : colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
                       value={entry.supplier}
                       onChange={e => handleChange(entry.id, 'supplier', e.target.value)}
                       placeholder={t.supplier || 'Supplier'}
                     />
                     <input
                       type="number"
-                      className={`border rounded transition-colors h-10 px-2 text-sm flex-shrink-0 w-[100px] ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
+                      className={`border rounded transition-colors h-10 px-2 text-sm flex-shrink-0 w-[100px] ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:border-[#3b82f6] focus:bg-[#1a1f2e]' : colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
                       value={entry.startKm}
                       onChange={e => handleChange(entry.id, 'startKm', e.target.value)}
                       placeholder={t.startKm || 'Start Km'}
@@ -222,31 +229,31 @@ const MileagePage: React.FC = () => {
                     />
                     <input
                       type="number"
-                      className={`border rounded transition-colors h-10 px-2 text-sm flex-shrink-0 w-[100px] ${colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
+                      className={`border rounded transition-colors h-10 px-2 text-sm flex-shrink-0 w-[100px] ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:border-[#3b82f6] focus:bg-[#1a1f2e]' : colorScheme === 'current' ? 'bg-blue-100 focus:bg-white text-blue-900' : 'bg-blue-50 focus:bg-white'}`}
                       value={entry.endKm}
                       onChange={e => handleChange(entry.id, 'endKm', e.target.value)}
                       placeholder={t.endKm || 'End Km'}
                       min="0"
                     />
-                    <div className={`border rounded flex items-center text-sm font-semibold h-10 px-2 flex-shrink-0 w-[110px] ${colorScheme === 'current' ? 'bg-blue-100 text-blue-900' : 'bg-blue-50 text-blue-700'}`}>
+                    <div className={`border rounded flex items-center text-sm font-semibold h-10 px-2 flex-shrink-0 w-[110px] ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#a5b4fc]' : colorScheme === 'current' ? 'bg-blue-100 text-blue-900' : 'bg-blue-50 text-blue-700'}`}>
                       {t.totalKm ? `${t.totalKm}: ` : 'Total: '}{computeTotalKm(entry.startKm, entry.endKm)}
                     </div>
                     <button
-                      className="bg-red-500 hover:bg-red-700 text-white rounded shadow font-semibold h-10 px-3 text-sm whitespace-nowrap flex-shrink-0"
+                      className={`rounded shadow font-semibold h-10 px-3 text-sm whitespace-nowrap flex-shrink-0 ${colorScheme === 'dark' ? 'bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30' : 'bg-red-500 hover:bg-red-700 text-white'}`}
                       onClick={() => handleDelete(entry.id)}
                     >{t.delete}</button>
                     {/* Status indicator */}
                     <div className="flex-shrink-0">
                       {Number(computeTotalKm(entry.startKm, entry.endKm)) > 0 ? (
-                        <span className="inline-block px-3 py-1.5 bg-green-100 text-green-700 rounded font-semibold text-sm whitespace-nowrap">{t.complete}</span>
+                        <span className={`inline-block px-3 py-1.5 rounded font-semibold text-sm whitespace-nowrap ${colorScheme === 'dark' ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-green-100 text-green-700'}`}>{t.complete}</span>
                       ) : (
-                        <span className="inline-block px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded font-semibold text-sm whitespace-nowrap">{t.incomplete}</span>
+                        <span className={`inline-block px-3 py-1.5 rounded font-semibold text-sm whitespace-nowrap ${colorScheme === 'dark' ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-500/30' : 'bg-yellow-100 text-yellow-700'}`}>{t.incomplete}</span>
                       )}
                     </div>
                   </div>
                   {/* Right side - Circular meter pinned to edge */}
                   <div className="flex flex-col items-center justify-center flex-shrink-0 ml-auto pl-4">
-                    <span className="text-xs text-blue-600 font-semibold">{t.totalKm}</span>
+                    <span className={`text-xs font-semibold ${colorScheme === 'dark' ? 'text-[#a5b4fc]' : 'text-blue-600'}`}>{t.totalKm}</span>
                     <CircularMeter value={Number(computeTotalKm(entry.startKm, entry.endKm))} max={1000} />
                   </div>
                 </div>
