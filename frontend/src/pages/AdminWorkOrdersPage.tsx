@@ -420,7 +420,10 @@ function AdminWorkOrdersPage() {
       }
     };
   const [page, setPage] = React.useState(0);
-  const [size, setSize] = React.useState(10);
+  // Use a large page size to load all work orders for Kanban board drag-and-drop to work correctly.
+  // Pagination doesn't work well with Kanban because moving items updates sortIndex across all items,
+  // not just the ones on the current page.
+  const [size, setSize] = React.useState(1000);
   const [status, setStatus] = React.useState<string>('');
   const [priority, setPriority] = React.useState<string>('');
   const [q, setQ] = React.useState('');
@@ -622,6 +625,8 @@ function AdminWorkOrdersPage() {
       try {
         const orderedIds = newItems.map(wo => wo.id);
         await reorderWorkOrders(sourceCol as WorkOrderStatus, orderedIds);
+        // Refetch to ensure UI is in sync with backend sortIndex values
+        queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
       } catch (err) {
         console.error('Failed to reorder work orders:', err);
         setGrouped(previousGrouped);
@@ -649,6 +654,8 @@ function AdminWorkOrdersPage() {
       // Persist move via API
       try {
         await moveWorkOrder(moved.id, destCol as WorkOrderStatus, destIdx);
+        // Refetch to ensure UI is in sync with backend sortIndex values
+        queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
       } catch (err) {
         console.error('Failed to move work order:', err);
         setGrouped(previousGrouped);
