@@ -4,5 +4,7 @@ public record MaterialResponse(
     Long id,
     String name,
     Integer quantity,
-    boolean bought
+    boolean bought,
+    String url,
+    String description
 ) {}

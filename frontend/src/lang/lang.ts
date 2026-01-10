@@ -53,6 +53,8 @@ export const en = {
   failedToDelete: 'Failed to delete',
   failedToLoadMaterials: 'Failed to load materials',
   boughtCount: 'Bought {bought} / {total}',
+  materialUrl: 'URL (link to product)',
+  materialDescription: 'Description',
   // Date picker translations
   months: [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -153,6 +155,8 @@ export const fr = {
   failedToDelete: 'Échec de la suppression',
   failedToLoadMaterials: 'Échec du chargement des matériaux',
   boughtCount: 'Acheté {bought} / {total}',
+  materialUrl: 'URL (lien vers le produit)',
+  materialDescription: 'Description',
   // Date picker translations
   months: [
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',

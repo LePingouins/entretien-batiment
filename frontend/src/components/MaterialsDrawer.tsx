@@ -20,10 +20,14 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
   const [error, setError] = React.useState<string | null>(null);
   const [addName, setAddName] = React.useState('');
   const [addQty, setAddQty] = React.useState<string>('');
+  const [addUrl, setAddUrl] = React.useState('');
+  const [addDescription, setAddDescription] = React.useState('');
   const [addError, setAddError] = React.useState<string | null>(null);
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [editingName, setEditingName] = React.useState('');
   const [editingQty, setEditingQty] = React.useState<string>('');
+  const [editingUrl, setEditingUrl] = React.useState('');
+  const [editingDescription, setEditingDescription] = React.useState('');
 
   React.useEffect(() => {
     if (isOpen) {
@@ -51,10 +55,17 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
     setAddError(null);
     try {
       const qty = addQty ? parseInt(addQty, 10) : undefined;
-      const newMat = await createMaterial(workOrderId, { name: addName.trim(), quantity: qty });
+      const newMat = await createMaterial(workOrderId, {
+        name: addName.trim(),
+        quantity: qty,
+        url: addUrl.trim() || undefined,
+        description: addDescription.trim() || undefined
+      });
       setMaterials(m => [...m, newMat]);
       setAddName('');
       setAddQty('');
+      setAddUrl('');
+      setAddDescription('');
     } catch {
       setAddError(t.failedToAdd);
     }
@@ -64,7 +75,12 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
     if (!editingName.trim()) return;
     try {
       const qty = editingQty ? parseInt(editingQty, 10) : undefined;
-      const updated = await updateMaterial(workOrderId, id, { name: editingName.trim(), quantity: qty });
+      const updated = await updateMaterial(workOrderId, id, {
+        name: editingName.trim(),
+        quantity: qty,
+        url: editingUrl.trim() || undefined,
+        description: editingDescription.trim() || undefined
+      });
       setMaterials(m => m.map(mat => mat.id === id ? updated : mat));
       setEditingId(null);
     } catch {
@@ -122,66 +138,118 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
       <div className="flex-1 overflow-y-auto p-4">
         {loading ? <div className={colorScheme === 'dark' ? 'text-[#94a3b8]' : ''}>{t.loading}</div> : error ? <div className="text-red-500">{error}</div> : (
           <>
-            <form onSubmit={handleAdd} className="flex gap-2 mb-4">
-              <input
-                type="text"
-                className={`${inputClass} flex-1`}
-                placeholder={t.addMaterialPlaceholder}
-                value={addName}
-                onChange={e => setAddName(e.target.value)}
-                aria-label={t.addMaterialPlaceholder}
-              />
-              <input
-                type="number"
-                className={`${inputClass} w-20`}
-                placeholder={t.quantity}
-                value={addQty}
-                onChange={e => setAddQty(e.target.value)}
-                aria-label={t.quantity}
-                min={0}
-              />
-              <button type="submit" className={addButtonClass}>{t.add}</button>
+            <form onSubmit={handleAdd} className="mb-4 space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className={`${inputClass} flex-1`}
+                  placeholder={t.addMaterialPlaceholder}
+                  value={addName}
+                  onChange={e => setAddName(e.target.value)}
+                  aria-label={t.addMaterialPlaceholder}
+                />
+                <input
+                  type="number"
+                  className={`${inputClass} w-20`}
+                  placeholder={t.quantity}
+                  value={addQty}
+                  onChange={e => setAddQty(e.target.value)}
+                  aria-label={t.quantity}
+                  min={0}
+                />
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  className={`${inputClass} flex-1`}
+                  placeholder={t.materialUrl}
+                  value={addUrl}
+                  onChange={e => setAddUrl(e.target.value)}
+                  aria-label={t.materialUrl}
+                />
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className={`${inputClass} flex-1`}
+                  placeholder={t.materialDescription}
+                  value={addDescription}
+                  onChange={e => setAddDescription(e.target.value)}
+                  aria-label={t.materialDescription}
+                />
+                <button type="submit" className={addButtonClass}>{t.add}</button>
+              </div>
             </form>
             {addError && <div className="text-red-500 mb-2">{addError}</div>}
             <ul className={`divide-y ${colorScheme === 'dark' ? 'divide-[#2d3748]' : ''}`}>
               {materials.map(mat => (
-                <li key={mat.id} className="flex items-center gap-2 py-2">
-                  <input
-                    type="checkbox"
-                    checked={mat.bought}
-                    onChange={e => handleToggleBought(mat.id, e.target.checked)}
-                    className={colorScheme === 'dark' ? 'accent-[#6366f1]' : 'accent-indigo-500'}
-                    aria-label={t.bought}
-                  />
-                  {editingId === mat.id ? (
-                    <>
-                      <input
-                        type="text"
-                        className={`${inputClass} flex-1`}
-                        value={editingName}
-                        onChange={e => setEditingName(e.target.value)}
-                        aria-label={t.edit}
-                        autoFocus
-                      />
-                      <input
-                        type="number"
-                        className={`${inputClass} w-16`}
-                        value={editingQty}
-                        onChange={e => setEditingQty(e.target.value)}
-                        aria-label={t.edit}
-                        min={0}
-                      />
-                      <button className="text-green-500 font-bold px-2" onClick={() => handleEdit(mat.id)} type="button">✔</button>
-                      <button className={`px-2 ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-400'}`} onClick={() => setEditingId(null)} type="button">✕</button>
-                    </>
-                  ) : (
-                    <>
-                      <span className={`flex-1 truncate ${mat.bought ? 'line-through' : ''} ${colorScheme === 'dark' ? (mat.bought ? 'text-[#64748b]' : 'text-[#e2e8f0]') : (mat.bought ? 'text-gray-400' : '')}`}>{mat.name}</span>
-                      <span className={`w-10 text-center ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-600'}`}>{mat.quantity ?? ''}</span>
-                      <button className={`px-1 ${colorScheme === 'dark' ? 'text-[#60a5fa]' : 'text-blue-500'}`} onClick={() => { setEditingId(mat.id); setEditingName(mat.name); setEditingQty(mat.quantity?.toString() || ''); }} aria-label={t.edit} type="button">✎</button>
-                      <button className="text-red-500 px-1" onClick={() => handleDelete(mat.id)} aria-label={t.deleteMaterial} type="button">🗑</button>
-                    </>
-                  )}
+                <li key={mat.id} className="py-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={mat.bought}
+                      onChange={e => handleToggleBought(mat.id, e.target.checked)}
+                      className={colorScheme === 'dark' ? 'accent-[#6366f1]' : 'accent-indigo-500'}
+                      aria-label={t.bought}
+                    />
+                    {editingId === mat.id ? (
+                      <div className="flex-1 space-y-1">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            className={`${inputClass} flex-1`}
+                            value={editingName}
+                            onChange={e => setEditingName(e.target.value)}
+                            aria-label={t.edit}
+                            autoFocus
+                          />
+                          <input
+                            type="number"
+                            className={`${inputClass} w-16`}
+                            value={editingQty}
+                            onChange={e => setEditingQty(e.target.value)}
+                            aria-label={t.quantity}
+                            min={0}
+                          />
+                        </div>
+                        <input
+                          type="url"
+                          className={`${inputClass} w-full`}
+                          placeholder={t.materialUrl}
+                          value={editingUrl}
+                          onChange={e => setEditingUrl(e.target.value)}
+                          aria-label={t.materialUrl}
+                        />
+                        <input
+                          type="text"
+                          className={`${inputClass} w-full`}
+                          placeholder={t.materialDescription}
+                          value={editingDescription}
+                          onChange={e => setEditingDescription(e.target.value)}
+                          aria-label={t.materialDescription}
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <button className="text-green-500 font-bold px-2" onClick={() => handleEdit(mat.id)} type="button">✔</button>
+                          <button className={`px-2 ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-400'}`} onClick={() => setEditingId(null)} type="button">✕</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <span className={`block truncate ${mat.bought ? 'line-through' : ''} ${colorScheme === 'dark' ? (mat.bought ? 'text-[#64748b]' : 'text-[#e2e8f0]') : (mat.bought ? 'text-gray-400' : '')}`}>{mat.name}</span>
+                          {mat.description && (
+                            <span className={`block text-xs truncate ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-500'}`}>{mat.description}</span>
+                          )}
+                          {mat.url && (
+                            <a href={mat.url} target="_blank" rel="noopener noreferrer" className={`block text-xs truncate ${colorScheme === 'dark' ? 'text-[#60a5fa]' : 'text-blue-500'} hover:underline`}>{mat.url}</a>
+                          )}
+                        </div>
+                        <span className={`w-10 text-center ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-600'}`}>{mat.quantity ?? ''}</span>
+                        <button className={`px-1 ${colorScheme === 'dark' ? 'text-[#60a5fa]' : 'text-blue-500'}`} onClick={() => { setEditingId(mat.id); setEditingName(mat.name); setEditingQty(mat.quantity?.toString() || ''); setEditingUrl(mat.url || ''); setEditingDescription(mat.description || ''); }} aria-label={t.edit} type="button">✎</button>
+                        <button className="text-red-500 px-1" onClick={() => handleDelete(mat.id)} aria-label={t.deleteMaterial} type="button">🗑</button>
+                      </>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

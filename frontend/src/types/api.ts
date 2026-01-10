@@ -3,11 +3,15 @@ export interface MaterialResponse {
   name: string;
   quantity?: number;
   bought: boolean;
+  url?: string;
+  description?: string;
 }
 
 export interface MaterialRequest {
   name: string;
   quantity?: number;
+  url?: string;
+  description?: string;
 }
 export enum WorkOrderStatus {
   OPEN = 'OPEN',
