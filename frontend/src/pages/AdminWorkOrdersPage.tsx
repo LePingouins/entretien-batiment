@@ -116,7 +116,7 @@ import { useOutletContext } from 'react-router-dom';
 import { ColorSchemeType, getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
 import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
 import { workOrderSchema, WorkOrderFormType } from './AdminWorkOrders/schemas';
-import { DndBoard } from './AdminWorkOrders/dndBoard';
+import { DndBoard, isBottomZone, getStatusFromBottomZone } from './AdminWorkOrders/dndBoard';
 import { FilterBar } from './AdminWorkOrders/FilterBar';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -411,8 +411,17 @@ function AdminWorkOrdersPage() {
     let destCol: string | null = null;
     let destIdx = 0;
 
+    // Check if dropped on a bottom zone (add at end of column)
+    if (isBottomZone(overId)) {
+      destCol = getStatusFromBottomZone(overId);
+      destIdx = grouped[destCol]?.length ?? 0;
+      // If moving within same column to bottom, account for the item being removed
+      if (sourceCol === destCol) {
+        destIdx = Math.max(0, destIdx - 1);
+      }
+    }
     // Check if dropped directly on a column (empty area)
-    if (statusOptions.includes(overId as WorkOrderStatus)) {
+    else if (statusOptions.includes(overId as WorkOrderStatus)) {
       destCol = overId;
       destIdx = grouped[destCol]?.length ?? 0;
     } else {
