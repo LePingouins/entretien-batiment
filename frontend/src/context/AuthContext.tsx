@@ -39,9 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       const decoded = decodeJwt(accessToken);
-      console.log('Decoded JWT:', decoded);
       const role = decoded.role || '';
-      console.log('Extracted role:', role);
       const userId = decoded.sub || '';
       setAccessToken(accessToken);
       setRole(role);

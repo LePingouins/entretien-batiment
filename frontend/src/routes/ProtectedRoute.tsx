@@ -8,7 +8,6 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
   const { accessToken, role } = useAuth();
-  console.log('ProtectedRoute role:', role, 'requiredRole:', requiredRole);
 
   if (!accessToken) {
     return <Navigate to="/login" replace />;
