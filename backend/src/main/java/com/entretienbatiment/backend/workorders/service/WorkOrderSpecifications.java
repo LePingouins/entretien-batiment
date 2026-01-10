@@ -38,4 +38,13 @@ public final class WorkOrderSpecifications {
                 cb.like(cb.lower(root.get("location")), like)
         );
     }
+
+    public static Specification<WorkOrder> locationEquals(String location) {
+        return (root, query, cb) -> {
+            if (location == null || location.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(cb.lower(root.get("location")), location.toLowerCase());
+        };
+    }
 }

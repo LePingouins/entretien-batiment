@@ -75,9 +75,10 @@ public class AdminWorkOrderController {
             @RequestParam(required = false) Long assignedToUserId,
             @RequestParam(required = false) Long createdByUserId,
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) String location,
             Pageable pageable
     ) {
-        return service.listAllAdmin(status, priority, assignedToUserId, createdByUserId, q, pageable);
+        return service.listAllAdmin(status, priority, assignedToUserId, createdByUserId, q, location, pageable);
     }
 
 

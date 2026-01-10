@@ -157,13 +157,15 @@ public class WorkOrderService {
             Long assignedToUserId,
             Long createdByUserId,
             String q,
+            String location,
             Pageable pageable
     ) {
         Specification<WorkOrder> spec = Specification.where(WorkOrderSpecifications.statusEquals(status))
                 .and(WorkOrderSpecifications.priorityEquals(priority))
                 .and(WorkOrderSpecifications.assignedToUserIdEquals(assignedToUserId))
                 .and(WorkOrderSpecifications.createdByUserIdEquals(createdByUserId))
-                .and(WorkOrderSpecifications.textSearch(q));
+                .and(WorkOrderSpecifications.textSearch(q))
+                .and(WorkOrderSpecifications.locationEquals(location));
 
         return repo.findAll(spec, pageable).map(this::toResponse);
     }
