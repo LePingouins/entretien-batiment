@@ -5,6 +5,9 @@ import { MaterialsButton } from './MaterialsButton';
 import { useLang } from '../context/LangContext';
 import { ColorSchemeContext } from './AdminLayout';
 
+// Global image cache to prevent flashing when components remount (e.g., during drag)
+const loadedImagesCache = new Set<string>();
+
 // Dark mode color mappings for status badges
 const statusColorsDark: Record<WorkOrderStatus, string> = {
   OPEN: 'bg-teal-600/30 text-teal-300 border border-teal-500/30',
@@ -84,19 +87,54 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkO
     ? backendBaseUrl + workOrder.attachmentDownloadUrl
     : undefined;
 
-  // Robust image fallback logic
-  const [imgSrc, setImgSrc] = React.useState<string | undefined>(
-    isImage && attachmentUrl ? attachmentUrl : undefined
-  );
-  const [triedApi, setTriedApi] = React.useState(false);
-  const [triedPlaceholder, setTriedPlaceholder] = React.useState(false);
+  // Check if image is already in global cache (prevents flash on remount)
+  const isImageCached = attachmentUrl ? loadedImagesCache.has(attachmentUrl) : false;
+
+  // Use refs to track previous values and avoid unnecessary resets
+  const prevAttachmentUrlRef = React.useRef<string | undefined>(attachmentUrl);
   const placeholderImg = '/placeholder.png'; // You can provide a real placeholder image
 
+  // Initialize image state - if cached, skip loading state
+  const [imgState, setImgState] = React.useState(() => ({
+    src: isImage && attachmentUrl ? attachmentUrl : undefined,
+    triedApi: false,
+    triedPlaceholder: false,
+    loaded: isImageCached, // Start as loaded if in cache
+  }));
+
+  // Only reset image state when the actual attachment URL changes
   React.useEffect(() => {
-    setImgSrc(isImage && attachmentUrl ? attachmentUrl : undefined);
-    setTriedApi(false);
-    setTriedPlaceholder(false);
-  }, [workOrder.attachmentFilename, workOrder.attachmentDownloadUrl, workOrder.attachmentContentType]);
+    if (prevAttachmentUrlRef.current !== attachmentUrl) {
+      prevAttachmentUrlRef.current = attachmentUrl;
+      const cached = attachmentUrl ? loadedImagesCache.has(attachmentUrl) : false;
+      setImgState({
+        src: isImage && attachmentUrl ? attachmentUrl : undefined,
+        triedApi: false,
+        triedPlaceholder: false,
+        loaded: cached,
+      });
+    }
+  }, [attachmentUrl, isImage]);
+
+  const handleImageLoad = React.useCallback(() => {
+    if (attachmentUrl) {
+      loadedImagesCache.add(attachmentUrl);
+    }
+    setImgState(prev => ({ ...prev, loaded: true }));
+  }, [attachmentUrl]);
+
+  const handleImageError = React.useCallback(() => {
+    setImgState(prev => {
+      if (!prev.triedApi && prev.src !== attachmentUrl) {
+        return { ...prev, src: attachmentUrl || '', triedApi: true, loaded: false };
+      } else if (!prev.triedPlaceholder) {
+        return { ...prev, src: placeholderImg, triedPlaceholder: true, loaded: false };
+      } else {
+        // Hide image if all fail
+        return { ...prev, src: undefined, loaded: true };
+      }
+    });
+  }, [attachmentUrl]);
 
   // Card styles based on color scheme
   const cardClass = colorScheme === 'dark'
@@ -134,27 +172,27 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkO
 
       {/* Attachment preview or download */}
       {attachmentUrl && (
-        <div className="mb-2">
+        <div className="mb-2" style={{ minHeight: isImage && imgState.src ? 32 : undefined }}>
           {isImage ? (
             <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
-              <img
-                src={imgSrc}
-                alt={workOrder.attachmentFilename || 'Attachment'}
-                className={`max-h-32 rounded shadow mb-1 ${colorScheme === 'dark' ? 'border border-[#2d3748]' : 'border'}`}
-                style={{ maxWidth: '100%', objectFit: 'contain' }}
-                onError={e => {
-                  if (!triedApi && imgSrc !== attachmentUrl) {
-                    setImgSrc(attachmentUrl || '');
-                    setTriedApi(true);
-                  } else if (!triedPlaceholder) {
-                    setImgSrc(placeholderImg);
-                    setTriedPlaceholder(true);
-                  } else {
-                    // Hide image if all fail
-                    setImgSrc(undefined);
-                  }
-                }}
-              />
+              {imgState.src && (
+                <img
+                  src={imgState.src}
+                  alt={workOrder.attachmentFilename || 'Attachment'}
+                  className={`max-h-32 rounded shadow mb-1 ${colorScheme === 'dark' ? 'border border-[#2d3748]' : 'border'}`}
+                  style={{ 
+                    maxWidth: '100%', 
+                    objectFit: 'contain',
+                    // Instant display if cached, otherwise fade in
+                    opacity: imgState.loaded ? 1 : 0,
+                    transition: imgState.loaded ? 'none' : 'opacity 0.15s ease-in',
+                  }}
+                  loading="eager"
+                  decoding="sync"
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                />
+              )}
             </a>
           ) : (
             <a

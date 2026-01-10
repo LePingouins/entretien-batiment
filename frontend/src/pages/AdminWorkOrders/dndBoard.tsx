@@ -102,15 +102,29 @@ type DndBoardProps = {
   onDragStart: (event: any) => void;
   onDragEnd: (event: DragEndEvent) => void;
   activeWorkOrder: WorkOrderResponse | null;
+  activeId: string | null;
   colorScheme: ColorSchemeType;
   DroppableColumn: React.ComponentType<{ status: string; colorScheme?: string; children: React.ReactNode }>;
-  SortableCard: React.ComponentType<{ workOrder: WorkOrderResponse; colorScheme?: string }>;
+  SortableCard: React.ComponentType<{ 
+    workOrder: WorkOrderResponse; 
+    colorScheme?: string;
+    activeId: string | null;
+    onOpenMaterials: (wo: WorkOrderResponse) => void;
+    onDeleted: (id: number) => void;
+    onCardClick: (wo: WorkOrderResponse) => void;
+  }>;
+  onOpenMaterials: (wo: WorkOrderResponse) => void;
+  onDeleted: (id: number) => void;
+  onCardClick: (wo: WorkOrderResponse) => void;
 };
 
-export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activeWorkOrder, colorScheme, DroppableColumn, SortableCard }: DndBoardProps) {
+export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activeWorkOrder, activeId, colorScheme, DroppableColumn, SortableCard, onOpenMaterials, onDeleted, onCardClick }: DndBoardProps) {
+  // Memoize sensors to prevent recreation
+  const sensors = useDndSensors();
+  
   return (
     <DndContext
-      sensors={useDndSensors()}
+      sensors={sensors}
       collisionDetection={customCollisionDetection}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
@@ -129,7 +143,15 @@ export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activ
                     <div className="text-gray-400 text-center py-4">No work orders</div>
                   ) : (
                     grouped[status]?.map((wo: WorkOrderResponse) => (
-                      <SortableCard key={wo.id} workOrder={wo} colorScheme={colorScheme} />
+                      <SortableCard 
+                        key={wo.id} 
+                        workOrder={wo} 
+                        colorScheme={colorScheme}
+                        activeId={activeId}
+                        onOpenMaterials={onOpenMaterials}
+                        onDeleted={onDeleted}
+                        onCardClick={onCardClick}
+                      />
                     ))
                   )}
                 </div>

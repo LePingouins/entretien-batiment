@@ -125,6 +125,146 @@ import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
+// Sortable card wrapper - defined OUTSIDE the main component to prevent remounting
+interface SortableCardProps {
+  workOrder: WorkOrderResponse;
+  colorScheme?: string;
+  activeId: string | null;
+  onOpenMaterials: (wo: WorkOrderResponse) => void;
+  onDeleted: (id: number) => void;
+  onCardClick: (wo: WorkOrderResponse) => void;
+}
+
+const SortableCardComponent = ({ workOrder, colorScheme, activeId, onOpenMaterials, onDeleted, onCardClick }: SortableCardProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: workOrder.id.toString(),
+  });
+  
+  const isActive = activeId === workOrder.id.toString();
+  const isBeingDragged = isDragging || isActive;
+  
+  // Always render the card, just hide it when dragging (keeps image mounted)
+  const style = React.useMemo(() => ({
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isBeingDragged ? 0 : 1,
+    cursor: 'pointer',
+    // Keep the element in the layout but invisible when dragging
+    visibility: isBeingDragged ? 'hidden' as const : 'visible' as const,
+    // Prevent pointer events when hidden
+    pointerEvents: isBeingDragged ? 'none' as const : 'auto' as const,
+  }), [transform, transition, isBeingDragged]);
+  
+  const handleClick = React.useCallback((e: React.MouseEvent) => {
+    if (e.defaultPrevented) return;
+    onCardClick(workOrder);
+  }, [workOrder, onCardClick]);
+  
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={handleClick}
+    >
+      <WorkOrderCard
+        workOrder={workOrder}
+        onOpenMaterials={onOpenMaterials}
+        onDeleted={onDeleted}
+      />
+    </div>
+  );
+};
+
+// Use React.memo with a custom comparison to prevent unnecessary re-renders
+const SortableCard = React.memo(SortableCardComponent, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  return (
+    prevProps.workOrder.id === nextProps.workOrder.id &&
+    prevProps.workOrder.title === nextProps.workOrder.title &&
+    prevProps.workOrder.status === nextProps.workOrder.status &&
+    prevProps.workOrder.priority === nextProps.workOrder.priority &&
+    prevProps.workOrder.description === nextProps.workOrder.description &&
+    prevProps.workOrder.dueDate === nextProps.workOrder.dueDate &&
+    prevProps.workOrder.location === nextProps.workOrder.location &&
+    prevProps.workOrder.attachmentDownloadUrl === nextProps.workOrder.attachmentDownloadUrl &&
+    prevProps.workOrder.materialsCount === nextProps.workOrder.materialsCount &&
+    prevProps.workOrder.sortIndex === nextProps.workOrder.sortIndex &&
+    prevProps.colorScheme === nextProps.colorScheme &&
+    // Only care about activeId if it affects THIS card
+    (prevProps.activeId === prevProps.workOrder.id.toString()) === (nextProps.activeId === nextProps.workOrder.id.toString())
+  );
+});
+
+// Status icons - defined outside component for stable references
+const statusIconsMap: Record<string, React.ReactElement> = {
+  OPEN: <svg width="20" height="20" fill="currentColor" className="text-teal-500" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>,
+  ASSIGNED: (
+    <svg width="24" height="24" fill="none" className="text-blue-500" viewBox="0 0 24 24">
+      <rect x="4" y="4" width="14" height="16" rx="2" stroke="currentColor" strokeWidth="2" fill="white"/>
+      <path d="M16 18l2-2c.4-.4.4-1 0-1.4l-1.6-1.6c-.4-.4-1-.4-1.4 0l-2 2" stroke="currentColor" strokeWidth="2" fill="none"/>
+      <path d="M14.5 17.5l-2-2" stroke="currentColor" strokeWidth="2" fill="none"/>
+      <circle cx="18" cy="18" r="0.7" fill="currentColor" />
+    </svg>
+  ),
+  IN_PROGRESS: (
+    <svg width="24" height="24" fill="none" className="text-yellow-500" viewBox="0 0 24 24">
+      <path d="M6 4h12M6 20h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M8 4c0 4 4 4 4 8s-4 4-4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M16 4c0 4-4 4-4 8s4 4 4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  ),
+  COMPLETED: <svg width="28" height="28" fill="none" className="text-green-500" viewBox="0 0 28 28"><path d="M7 15l6 6 8-12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  CANCELLED: <svg width="24" height="24" fill="currentColor" className="text-red-600 font-bold" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>,
+};
+
+// Droppable column wrapper - defined OUTSIDE main component to prevent remounting
+interface DroppableColumnProps {
+  status: string;
+  children: React.ReactNode;
+  colorScheme?: string;
+}
+
+const DroppableColumnComponent = ({ status, children, colorScheme }: DroppableColumnProps) => {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const { t } = useLang();
+  
+  return (
+    <div
+      ref={setNodeRef}
+      className={
+        colorScheme === 'dark'
+          ? `w-full h-full bg-[#1a1f2e] rounded-2xl shadow-lg p-4 flex flex-col border border-[#2d3748] transition-all duration-200 ${isOver ? 'ring-2 ring-[#3b82f6] scale-[1.02]' : ''}`
+          : (colorScheme === 'default' || colorScheme === 'performance')
+            ? `w-full h-full bg-white rounded-2xl shadow p-4 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400 scale-[1.02]' : ''}`
+            : `w-full h-full bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-2xl shadow-xl p-4 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-[1.02]' : ''}`
+      }
+      style={{ minHeight: 350 }}
+    >
+      <div className={
+        colorScheme === 'dark'
+          ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-[#252d3d] text-[#e2e8f0] flex items-center gap-2 border-b border-[#2d3748] shadow'
+          : colorScheme === 'default'
+            ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
+            : colorScheme === 'performance'
+              ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
+              : 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow'
+      }>
+        {status === 'CANCELLED'
+          ? <svg width="20" height="20" fill="currentColor" className="text-red-600 font-bold" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>
+          : statusIconsMap[status]
+        }
+        <span className="flex items-center gap-1 truncate">
+          {getStatusLabel(t, status)}
+        </span>
+      </div>
+      {children}
+    </div>
+  );
+};
+
+const DroppableColumn = React.memo(DroppableColumnComponent);
 
 
 // --- Priority and Status translation keys ---
@@ -163,10 +303,10 @@ function AdminWorkOrdersPage() {
   // Materials drawer state
   const [materialsDrawer, setMaterialsDrawer] = React.useState<{ open: boolean; workOrder: WorkOrderResponse | null }>({ open: false, workOrder: null });
 
-  // Handler to open materials drawer
-  const handleOpenMaterials = (wo: WorkOrderResponse) => {
+  // Handler to open materials drawer - memoized for stable reference
+  const handleOpenMaterials = React.useCallback((wo: WorkOrderResponse) => {
     setMaterialsDrawer({ open: true, workOrder: wo });
-  };
+  }, []);
 
 
 
@@ -373,14 +513,10 @@ function AdminWorkOrdersPage() {
     return null;
   }, [activeId, grouped]);
 
-  // Handle drag start
-  const onDragStart = (event: any) => {
+  // Handle drag start - memoized for stable reference
+  const onDragStart = React.useCallback((event: any) => {
     setActiveId(event.active.id);
-    console.log('[DnD] Drag Start:', {
-      activeId: event.active.id,
-      grouped,
-    });
-  };
+  }, []);
 
   // Handle reorder all by priority button
   const [isReorderingByPriority, setIsReorderingByPriority] = React.useState(false);
@@ -521,113 +657,14 @@ function AdminWorkOrdersPage() {
     }
   };
 
-  // Sortable card wrapper for dnd-kit
-  const SortableCard = React.memo(({ workOrder, colorScheme }: { workOrder: WorkOrderResponse, colorScheme?: string }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-      id: workOrder.id.toString(),
-    });
-    const style = React.useMemo(() => ({
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging || activeId === workOrder.id.toString() ? 0 : 1,
-      cursor: 'pointer',
-    }), [transform, transition, isDragging, activeId, workOrder.id]);
-    const handleClick = React.useCallback((e: React.MouseEvent) => {
-      if (e.defaultPrevented) return;
-      openEditModal(workOrder);
-    }, [workOrder]);
+  // Memoized callbacks for SortableCard to prevent unnecessary re-renders
+  const handleCardDeleted = React.useCallback((id: number) => {
+    queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
+  }, [queryClient]);
 
-    // Dynamic placeholder height logic
-    const cardRef = React.useRef<HTMLDivElement>(null);
-    const [cardHeight, setCardHeight] = React.useState<number | undefined>(undefined);
-
-    React.useLayoutEffect(() => {
-      if (!isDragging && cardRef.current) {
-        setCardHeight(cardRef.current.offsetHeight);
-      }
-    }, [isDragging]);
-
-    if (isDragging || activeId === workOrder.id.toString()) {
-      // Render a placeholder with the measured card height
-      return <div ref={setNodeRef} style={{ height: cardHeight || 160, marginBottom: 16 }} />;
-    }
-    return (
-      <div
-        ref={el => {
-          setNodeRef(el);
-          cardRef.current = el;
-        }}
-        style={style}
-        {...attributes}
-        {...listeners}
-        onClick={handleClick}
-      >
-        <WorkOrderCard
-          workOrder={workOrder}
-          onOpenMaterials={handleOpenMaterials}
-          onDeleted={() => queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] })}
-        />
-      </div>
-    );
-  });
-
-  // Droppable column wrapper
-  const DroppableColumn = React.memo(({ status, children, colorScheme }: { status: string; children: React.ReactNode; colorScheme?: string }) => {
-    const { setNodeRef, isOver } = useDroppable({ id: status });
-    const { t } = useLang();
-    const statusIcons: Record<string, React.ReactElement> = React.useMemo(() => ({
-      OPEN: <svg width="20" height="20" fill="currentColor" className="text-teal-500" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>,
-      ASSIGNED: (
-        <svg width="24" height="24" fill="none" className="text-blue-500" viewBox="0 0 24 24">
-          <rect x="4" y="4" width="14" height="16" rx="2" stroke="currentColor" strokeWidth="2" fill="white"/>
-          <path d="M16 18l2-2c.4-.4.4-1 0-1.4l-1.6-1.6c-.4-.4-1-.4-1.4 0l-2 2" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <path d="M14.5 17.5l-2-2" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <circle cx="18" cy="18" r="0.7" fill="currentColor" />
-        </svg>
-      ),
-      IN_PROGRESS: (
-        <svg width="24" height="24" fill="none" className="text-yellow-500" viewBox="0 0 24 24">
-          <path d="M6 4h12M6 20h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M8 4c0 4 4 4 4 8s-4 4-4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M16 4c0 4-4 4-4 8s4 4 4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-      ),
-      COMPLETED: <svg width="28" height="28" fill="none" className="text-green-500" viewBox="0 0 28 28"><path d="M7 15l6 6 8-12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-      CANCELLED: <svg width="24" height="24" fill="currentColor" className="text-red-600 font-bold" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>,
-    }), []);
-    return (
-      <div
-        ref={setNodeRef}
-        className={
-          colorScheme === 'dark'
-            ? `w-full h-full bg-[#1a1f2e] rounded-2xl shadow-lg p-4 flex flex-col border border-[#2d3748] transition-all duration-200 ${isOver ? 'ring-2 ring-[#3b82f6] scale-[1.02]' : ''}`
-            : (colorScheme === 'default' || colorScheme === 'performance')
-              ? `w-full h-full bg-white rounded-2xl shadow p-4 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400 scale-[1.02]' : ''}`
-              : `w-full h-full bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-2xl shadow-xl p-4 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-[1.02]' : ''}`
-        }
-        style={{ minHeight: 350 }}
-      >
-        <div className={
-          colorScheme === 'dark'
-            ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-[#252d3d] text-[#e2e8f0] flex items-center gap-2 border-b border-[#2d3748] shadow'
-            : colorScheme === 'default'
-              ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
-              : colorScheme === 'performance'
-                ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
-                : 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow'
-        }>
-          {status === 'CANCELLED'
-            ? <svg width="20" height="20" fill="currentColor" className="text-red-600 font-bold" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>
-            : statusIcons[status]
-          }
-          <span className="flex items-center gap-1 truncate">
-            {getStatusLabel(t, status)}
-          </span>
-        </div>
-        {children}
-      </div>
-    );
-  });
+  const handleCardClick = React.useCallback((wo: WorkOrderResponse) => {
+    openEditModal(wo);
+  }, []);
 
   // Filter work orders by date range on frontend
   const filteredGrouped = React.useMemo(() => {
@@ -874,9 +911,13 @@ function AdminWorkOrdersPage() {
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             activeWorkOrder={activeWorkOrder}
+            activeId={activeId}
             colorScheme={colorScheme}
             DroppableColumn={DroppableColumn}
             SortableCard={SortableCard}
+            onOpenMaterials={handleOpenMaterials}
+            onDeleted={handleCardDeleted}
+            onCardClick={handleCardClick}
           />
         )}
         {/* Hide pagination if only one or zero pages */}
