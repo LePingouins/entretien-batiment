@@ -287,6 +287,42 @@ public class WorkOrderService {
         };
     }
 
+    /**
+     * Reorder ALL work orders in EVERY column by priority.
+     * This resets any manual ordering and organizes all cards by priority
+     * (URGENT first, then HIGH, MEDIUM, LOW).
+     * Within the same priority, items are ordered by createdAt DESC (newest first).
+     */
+    @Transactional
+    public void reorderAllByPriority() {
+        // Process each status column
+        for (WorkOrderStatus status : WorkOrderStatus.values()) {
+            List<WorkOrder> columnItems = repo.findByStatusOrderedForKanban(status.name());
+            
+            if (columnItems.isEmpty()) {
+                continue;
+            }
+            
+            // Sort by priority rank ASC, then by createdAt DESC (newest first)
+            columnItems.sort((a, b) -> {
+                int rankA = getPriorityRank(a.getPriority());
+                int rankB = getPriorityRank(b.getPriority());
+                if (rankA != rankB) {
+                    return Integer.compare(rankA, rankB);
+                }
+                // Same priority: newer items first
+                return b.getCreatedAt().compareTo(a.getCreatedAt());
+            });
+            
+            // Assign sortIndex (0..N-1)
+            for (int i = 0; i < columnItems.size(); i++) {
+                columnItems.get(i).setSortIndex(i);
+            }
+            
+            repo.saveAll(columnItems);
+        }
+    }
+
     // ==================== END KANBAN ORDERING METHODS ====================
 
     @Transactional

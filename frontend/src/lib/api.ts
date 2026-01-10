@@ -125,4 +125,13 @@ export async function getWorkOrdersByStatusForKanban(status: WorkOrderStatus): P
   return res.data;
 }
 
+/**
+ * Reorder ALL work orders in EVERY column by priority.
+ * This resets any manual ordering and organizes all cards by priority
+ * (URGENT first, then HIGH, MEDIUM, LOW).
+ */
+export async function reorderAllByPriority(): Promise<void> {
+  await api.post('/api/admin/work-orders/reorder-by-priority');
+}
+
 export default api;

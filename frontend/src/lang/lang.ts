@@ -84,6 +84,7 @@ export const en = {
   attachments: 'Attachments (files/photos)',
   chooseFiles: 'Choose Files',
   noFileChosen: 'No file chosen',
+  reorderByPriority: 'Sort by Priority',
   // ...existing keys
 };
 
@@ -173,4 +174,5 @@ export const fr = {
   attachments: 'Pièces jointes (fichiers/photos)',
   chooseFiles: 'Choisir des fichiers',
   noFileChosen: 'Aucun fichier choisi',
+  reorderByPriority: 'Trier par priorité',
 };

@@ -140,6 +140,17 @@ public class AdminWorkOrderController {
         service.reorderWorkOrdersInColumn(req.status(), req.orderedIds());
     }
 
+    /**
+     * Reorder ALL work orders in EVERY column by priority.
+     * This resets any manual ordering and organizes all cards by priority
+     * (URGENT first, then HIGH, MEDIUM, LOW).
+     */
+    @PostMapping("/reorder-by-priority")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorderAllByPriority() {
+        service.reorderAllByPriority();
+    }
+
     // ==================== END KANBAN ORDERING ENDPOINTS ====================
 
         // Serve uploaded files

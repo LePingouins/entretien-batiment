@@ -107,7 +107,7 @@ function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, 
 
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import api, { reorderWorkOrders, moveWorkOrder } from '../lib/api';
+import api, { reorderWorkOrders, moveWorkOrder, reorderAllByPriority } from '../lib/api';
 import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority } from '../types/api';
 import { WorkOrderCard } from '../components/WorkOrderCard';
 import { MaterialsDrawer } from '../components/MaterialsDrawer';
@@ -380,6 +380,23 @@ function AdminWorkOrdersPage() {
       activeId: event.active.id,
       grouped,
     });
+  };
+
+  // Handle reorder all by priority button
+  const [isReorderingByPriority, setIsReorderingByPriority] = React.useState(false);
+  const handleReorderByPriority = async () => {
+    if (isReorderingByPriority) return;
+    setIsReorderingByPriority(true);
+    try {
+      await reorderAllByPriority();
+      // Refetch work orders to get the new order
+      await queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
+    } catch (err) {
+      console.error('Failed to reorder by priority:', err);
+      alert('Failed to reorder by priority');
+    } finally {
+      setIsReorderingByPriority(false);
+    }
   };
 
   // Handle drag end - KANBAN ORDERING:
@@ -803,18 +820,44 @@ function AdminWorkOrdersPage() {
                 getPriorityLabel={getPriorityLabel}
               />
             </div>
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex flex-col gap-0 self-stretch">
+              {/* New Work Order button */}
               <button
                 className={
                   colorScheme === 'dark'
-                    ? 'bg-[#3b82f6] text-white px-3 sm:px-5 py-2 rounded-lg shadow-lg hover:bg-[#2563eb] transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
+                    ? 'bg-[#3b82f6] text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-lg hover:bg-[#2563eb] transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
                     : (colorScheme === 'performance' || colorScheme === 'default')
-                      ? 'bg-white text-gray-800 border border-gray-300 px-3 sm:px-5 py-2 rounded-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 sm:px-5 py-2 rounded-lg shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-sm sm:text-base flex items-center whitespace-nowrap'
+                      ? 'bg-white text-gray-800 border border-gray-300 border-b-0 px-3 sm:px-4 py-1 rounded-t-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
                 }
                 onClick={() => setShowModal(true)}
               >
                 <span className="align-middle">{t.newWorkOrder}</span>
+              </button>
+              {/* Reorder by Priority button */}
+              <button
+                className={
+                  colorScheme === 'dark'
+                    ? 'bg-[#252d3d] text-[#e2e8f0] border border-[#3b82f6] px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-[#374151] transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
+                    : (colorScheme === 'performance' || colorScheme === 'default')
+                      ? 'bg-gray-100 text-gray-700 border border-gray-300 px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-gray-200 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
+                      : 'bg-white/80 text-purple-700 border border-purple-300 px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-purple-50 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
+                }
+                onClick={handleReorderByPriority}
+                disabled={isReorderingByPriority}
+                title={t.reorderByPriority || 'Reorder all by priority'}
+              >
+                {isReorderingByPriority ? (
+                  <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                )}
+                <span className="hidden sm:inline">{t.reorderByPriority || 'Sort by Priority'}</span>
               </button>
             </div>
           </div>
