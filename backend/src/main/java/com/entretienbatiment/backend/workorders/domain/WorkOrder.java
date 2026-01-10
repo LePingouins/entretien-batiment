@@ -72,6 +72,20 @@ public class WorkOrder {
      */
     @Column(name = "sort_index")
     private Integer sortIndex;
+
+    /**
+     * Whether this work order has been archived.
+     * Work orders in COMPLETED or CANCELLED status are archived after 7 days.
+     */
+    @Column(nullable = false)
+    private boolean archived = false;
+
+    /**
+     * Timestamp when the work order was archived.
+     */
+    @Column(name = "archived_at")
+    private Instant archivedAt;
+
     public String getAttachmentFilename() { return attachmentFilename; }
     public String getAttachmentContentType() { return attachmentContentType; }
     public void setAttachmentFilename(String attachmentFilename) { this.attachmentFilename = attachmentFilename; }
@@ -79,6 +93,12 @@ public class WorkOrder {
 
     public Integer getSortIndex() { return sortIndex; }
     public void setSortIndex(Integer sortIndex) { this.sortIndex = sortIndex; }
+
+    public boolean isArchived() { return archived; }
+    public void setArchived(boolean archived) { this.archived = archived; }
+
+    public Instant getArchivedAt() { return archivedAt; }
+    public void setArchivedAt(Instant archivedAt) { this.archivedAt = archivedAt; }
 
     protected WorkOrder() {}
 

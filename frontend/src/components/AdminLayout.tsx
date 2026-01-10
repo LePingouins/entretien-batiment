@@ -47,6 +47,7 @@ const AdminLayout: React.FC = () => {
         <nav className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm sm:text-base">
           <Link to="/admin/work-orders" className={`hover:underline whitespace-nowrap ${colorScheme === 'dark' ? 'text-[#e2e8f0] hover:text-white' : ''}`}>{t.workOrders}</Link>
           <Link to="/admin/mileage" className={`hover:underline whitespace-nowrap ${colorScheme === 'dark' ? 'text-[#e2e8f0] hover:text-white' : ''}`}>{t.mileage}</Link>
+          <Link to="/admin/archive" className={`hover:underline whitespace-nowrap ${colorScheme === 'dark' ? 'text-[#e2e8f0] hover:text-white' : ''}`}>{t.archive}</Link>
           <button onClick={handleLogout} className={`px-2 sm:px-3 py-1 rounded whitespace-nowrap transition-colors ${colorScheme === 'dark' ? 'bg-[#252d3d] hover:bg-[#374151] text-[#e2e8f0] border border-[#2d3748]' : 'bg-blue-600 hover:bg-blue-700'}`}>{t.logout}</button>
           <button
             aria-label="Settings"

@@ -47,4 +47,19 @@ public final class WorkOrderSpecifications {
             return cb.equal(cb.lower(root.get("location")), location.toLowerCase());
         };
     }
+
+    /**
+     * Filter by archived status.
+     * If archived is null, no filtering is applied.
+     */
+    public static Specification<WorkOrder> archivedEquals(Boolean archived) {
+        return (root, query, cb) -> archived == null ? cb.conjunction() : cb.equal(root.get("archived"), archived);
+    }
+
+    /**
+     * Convenience method to filter for non-archived work orders only.
+     */
+    public static Specification<WorkOrder> notArchived() {
+        return (root, query, cb) -> cb.equal(root.get("archived"), false);
+    }
 }

@@ -9,6 +9,17 @@ const api = axios.create({
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
+// Helper to decode JWT and extract payload
+function decodeJwt(token: string): { role?: string; sub?: string } {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded;
+  } catch (e) {
+    return {};
+  }
+}
+
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach(prom => {
     if (error) {
@@ -35,7 +46,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle both 401 (Unauthorized) and 403 (Forbidden) for token refresh
+    // Some backends return 403 for expired tokens
+    const status = error.response?.status;
+    const shouldRefresh = (status === 401 || status === 403) && !originalRequest._retry;
+    
+    if (shouldRefresh) {
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
@@ -51,13 +67,25 @@ api.interceptors.response.use(
       try {
         const res = await api.post('/api/auth/refresh');
         const { accessToken } = res.data;
+        // Decode the new token and update role/userId in localStorage
+        const decoded = decodeJwt(accessToken);
         localStorage.setItem('accessToken', accessToken);
+        if (decoded.role) {
+          localStorage.setItem('role', decoded.role);
+        }
+        if (decoded.sub) {
+          localStorage.setItem('userId', decoded.sub);
+        }
+        // Dispatch a storage event so AuthContext can update its state
+        window.dispatchEvent(new Event('auth-storage-update'));
         processQueue(null, accessToken);
         originalRequest.headers['Authorization'] = 'Bearer ' + accessToken;
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userId');
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {
@@ -132,6 +160,40 @@ export async function getWorkOrdersByStatusForKanban(status: WorkOrderStatus): P
  */
 export async function reorderAllByPriority(): Promise<void> {
   await api.post('/api/admin/work-orders/reorder-by-priority');
+}
+
+// --- Archive API ---
+import type { PageResponse } from '../types/api';
+
+/**
+ * Get archived work orders with optional filters.
+ */
+export async function getArchivedWorkOrders(params?: {
+  status?: WorkOrderStatus;
+  priority?: string;
+  q?: string;
+  location?: string;
+  page?: number;
+  size?: number;
+}): Promise<PageResponse<WorkOrderResponse>> {
+  const res = await api.get<PageResponse<WorkOrderResponse>>('/api/admin/work-orders/archived', { params });
+  return res.data;
+}
+
+/**
+ * Archive a work order manually.
+ */
+export async function archiveWorkOrder(workOrderId: number): Promise<WorkOrderResponse> {
+  const res = await api.patch<WorkOrderResponse>(`/api/admin/work-orders/${workOrderId}/archive`);
+  return res.data;
+}
+
+/**
+ * Unarchive (restore) a work order.
+ */
+export async function unarchiveWorkOrder(workOrderId: number): Promise<WorkOrderResponse> {
+  const res = await api.patch<WorkOrderResponse>(`/api/admin/work-orders/${workOrderId}/unarchive`);
+  return res.data;
 }
 
 export default api;

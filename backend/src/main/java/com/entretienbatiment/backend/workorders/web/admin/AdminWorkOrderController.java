@@ -153,6 +153,50 @@ public class AdminWorkOrderController {
 
     // ==================== END KANBAN ORDERING ENDPOINTS ====================
 
+    // ==================== ARCHIVE ENDPOINTS ====================
+
+    /**
+     * List archived work orders with optional filters.
+     */
+    @GetMapping("/archived")
+    public Page<WorkOrderResponse> listArchived(
+            @RequestParam(required = false) WorkOrderStatus status,
+            @RequestParam(required = false) WorkOrderPriority priority,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String location,
+            Pageable pageable
+    ) {
+        return service.listArchivedAdmin(status, priority, q, location, pageable);
+    }
+
+    /**
+     * Manually archive a work order.
+     */
+    @PatchMapping("/{id}/archive")
+    public WorkOrderResponse archive(@PathVariable Long id) {
+        return service.archiveWorkOrder(id);
+    }
+
+    /**
+     * Unarchive (restore) a work order.
+     */
+    @PatchMapping("/{id}/unarchive")
+    public WorkOrderResponse unarchive(@PathVariable Long id) {
+        return service.unarchiveWorkOrder(id);
+    }
+
+    /**
+     * Trigger manual archiving of old work orders.
+     * Mainly for testing/admin purposes.
+     */
+    @PostMapping("/archive-old")
+    public java.util.Map<String, Integer> archiveOld() {
+        int count = service.archiveOldWorkOrders();
+        return java.util.Map.of("archivedCount", count);
+    }
+
+    // ==================== END ARCHIVE ENDPOINTS ====================
+
         // Serve uploaded files
     // Moved to FilesController
 

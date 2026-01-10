@@ -9,6 +9,7 @@ import TechLayout from '../components/TechLayout';
 import TechDashboard from '../pages/TechDashboard';
 import AdminWorkOrdersPage from '../pages/AdminWorkOrdersPage';
 import MileagePage from '../pages/MileagePage';
+import ArchivePage from '../pages/ArchivePage';
 
 import { Navigate } from 'react-router-dom';
 
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
                 {
                   path: 'mileage',
                   element: <MileagePage />,
+                },
+                {
+                  path: 'archive',
+                  element: <ArchivePage />,
                 },
               // More admin pages can go here
   // ...existing code...

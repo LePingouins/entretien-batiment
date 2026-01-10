@@ -461,8 +461,17 @@ function AdminWorkOrdersPage() {
       const res = await api.get<PageResponse<WorkOrderResponse>>('/api/admin/work-orders', { params });
       return res.data;
     },
-    // keepPreviousData is not a valid option in v5, so remove it
+    // Auto-refresh every 30 seconds to pick up archived work orders
+    refetchInterval: 30000,
+    // Ensure we always get fresh data, don't use stale cache
+    staleTime: 0,
   });
+
+  // Track data updates with a serialized key to ensure useEffect triggers
+  const dataKey = React.useMemo(() => {
+    if (!data?.content) return '';
+    return data.content.map(wo => `${wo.id}:${wo.archived}`).join(',');
+  }, [data]);
 
   // --- Fix grouped state type ---
   const [grouped, setGrouped] = React.useState<Record<string, WorkOrderResponse[]>>({});
@@ -475,7 +484,8 @@ function AdminWorkOrdersPage() {
       groups[status] = [];
     });
     if (data && data.content) {
-      data.content.forEach((wo: WorkOrderResponse) => {
+      // Only include non-archived work orders (backend should already filter, but double-check)
+      data.content.filter(wo => !wo.archived).forEach((wo: WorkOrderResponse) => {
         groups[wo.status]?.push(wo);
       });
       // Sort each column by sortIndex ASC (nulls last), then by priority DESC, then createdAt DESC
@@ -499,7 +509,7 @@ function AdminWorkOrdersPage() {
       });
     }
     setGrouped(groups);
-  }, [data]);
+  }, [data, dataKey]);
 
 
   // dnd-kit sensors are now handled in DndBoard module

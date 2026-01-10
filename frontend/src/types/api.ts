@@ -44,6 +44,10 @@ export interface WorkOrderResponse {
   materialsPreview?: string[];
   /** Manual ordering index within the status column. NULL means priority-based ordering. */
   sortIndex?: number;
+  /** Whether this work order has been archived. */
+  archived: boolean;
+  /** Timestamp when the work order was archived. */
+  archivedAt?: string;
 }
 
 export interface PageResponse<T> {

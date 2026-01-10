@@ -85,6 +85,16 @@ export const en = {
   chooseFiles: 'Choose Files',
   noFileChosen: 'No file chosen',
   reorderByPriority: 'Sort by Priority',
+  // Archive feature
+  archive: 'Archive',
+  archived: 'Archived',
+  archivedAt: 'Archived At',
+  restore: 'Restore',
+  archiveWorkOrder: 'Archive',
+  restoreWorkOrder: 'Restore',
+  noArchivedWorkOrders: 'No archived work orders',
+  archiveConfirm: 'Are you sure you want to archive this work order?',
+  restoreConfirm: 'Are you sure you want to restore this work order?',
   // ...existing keys
 };
 
@@ -175,4 +185,14 @@ export const fr = {
   chooseFiles: 'Choisir des fichiers',
   noFileChosen: 'Aucun fichier choisi',
   reorderByPriority: 'Trier par priorité',
+  // Archive feature
+  archive: 'Archives',
+  archived: 'Archivé',
+  archivedAt: 'Archivé le',
+  restore: 'Restaurer',
+  archiveWorkOrder: 'Archiver',
+  restoreWorkOrder: 'Restaurer',
+  noArchivedWorkOrders: 'Aucun ordre de travail archivé',
+  archiveConfirm: 'Êtes-vous sûr de vouloir archiver cet ordre de travail ?',
+  restoreConfirm: 'Êtes-vous sûr de vouloir restaurer cet ordre de travail ?',
 };

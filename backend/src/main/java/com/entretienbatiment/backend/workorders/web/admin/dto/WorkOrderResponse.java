@@ -33,5 +33,11 @@ public record WorkOrderResponse(
         List<String> materialsPreview,
 
         /** Manual ordering index within the status column. NULL means priority-based ordering. */
-        Integer sortIndex
+        Integer sortIndex,
+
+        /** Whether this work order has been archived. */
+        boolean archived,
+
+        /** Timestamp when the work order was archived. */
+        Instant archivedAt
 ) {}

@@ -62,4 +62,41 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Long>, Jpa
      * Find all work orders by IDs.
      */
     List<WorkOrder> findByIdIn(List<Long> ids);
+
+    /**
+     * Find work orders that should be archived:
+     * - Status is COMPLETED or CANCELLED
+     * - Not already archived
+     * - Updated more than 7 days ago
+     */
+    @Query("""
+        SELECT w FROM WorkOrder w 
+        WHERE w.archived = false 
+        AND w.status IN :statuses 
+        AND w.updatedAt < :cutoffTime
+        """)
+    List<WorkOrder> findWorkOrdersToArchive(
+        @Param("statuses") List<WorkOrderStatus> statuses,
+        @Param("cutoffTime") java.time.Instant cutoffTime
+    );
+
+    /**
+     * Find work orders for Kanban, excluding archived ones.
+     */
+    @Query(value = """
+        SELECT * FROM work_orders w
+        WHERE w.status = CAST(:status AS work_order_status)
+        AND w.archived = false
+        ORDER BY 
+            CASE WHEN w.sort_index IS NOT NULL THEN 0 ELSE 1 END,
+            w.sort_index ASC NULLS LAST,
+            CASE w.priority 
+                WHEN 'URGENT' THEN 0
+                WHEN 'HIGH' THEN 1
+                WHEN 'MEDIUM' THEN 2
+                WHEN 'LOW' THEN 3
+            END,
+            w.created_at DESC
+        """, nativeQuery = true)
+    List<WorkOrder> findByStatusOrderedForKanbanNotArchived(@Param("status") String status);
 }

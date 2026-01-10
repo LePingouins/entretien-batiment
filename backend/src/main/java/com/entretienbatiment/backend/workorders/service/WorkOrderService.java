@@ -382,20 +382,115 @@ public class WorkOrderService {
             String location,
             Pageable pageable
     ) {
+        // By default, exclude archived work orders from the main admin view
         Specification<WorkOrder> spec = Specification.where(WorkOrderSpecifications.statusEquals(status))
                 .and(WorkOrderSpecifications.priorityEquals(priority))
                 .and(WorkOrderSpecifications.assignedToUserIdEquals(assignedToUserId))
                 .and(WorkOrderSpecifications.createdByUserIdEquals(createdByUserId))
                 .and(WorkOrderSpecifications.textSearch(q))
-                .and(WorkOrderSpecifications.locationEquals(location));
+                .and(WorkOrderSpecifications.locationEquals(location))
+                .and(WorkOrderSpecifications.notArchived());
 
         return repo.findAll(spec, pageable).map(this::toResponse);
     }
 
+    /**
+     * List archived work orders with optional filters.
+     */
+    @Transactional(readOnly = true)
+    public Page<WorkOrderResponse> listArchivedAdmin(
+            WorkOrderStatus status,
+            WorkOrderPriority priority,
+            String q,
+            String location,
+            Pageable pageable
+    ) {
+        Specification<WorkOrder> spec = Specification.where(WorkOrderSpecifications.statusEquals(status))
+                .and(WorkOrderSpecifications.priorityEquals(priority))
+                .and(WorkOrderSpecifications.textSearch(q))
+                .and(WorkOrderSpecifications.locationEquals(location))
+                .and(WorkOrderSpecifications.archivedEquals(true));
+
+        return repo.findAll(spec, pageable).map(this::toResponse);
+    }
+
+    /**
+     * Archive old completed/cancelled work orders.
+     * Called by a scheduled job.
+     */
+    @Transactional
+    public int archiveOldWorkOrders() {
+        // ╔════════════════════════════════════════════════════════════════════════════╗
+        // ║  ARCHIVE TIME SETTING                                                       ║
+        // ║  Change the value and unit below to control how long work orders stay      ║
+        // ║  in COMPLETED/CANCELLED before being archived.                              ║
+        // ║                                                                             ║
+        // ║  Examples:                                                                  ║
+        // ║    - 7 DAYS (production): .minus(7, ChronoUnit.DAYS)                       ║
+        // ║    - 1 MINUTE (testing):  .minus(1, ChronoUnit.MINUTES)                    ║
+        // ║    - 1 HOUR:              .minus(1, ChronoUnit.HOURS)                      ║
+        // ╚════════════════════════════════════════════════════════════════════════════╝
+        java.time.Instant cutoffTime = java.time.Instant.now().minus(1, java.time.temporal.ChronoUnit.MINUTES);
+        List<WorkOrder> toArchive = repo.findWorkOrdersToArchive(
+            List.of(WorkOrderStatus.COMPLETED, WorkOrderStatus.CANCELLED),
+            cutoffTime
+        );
+
+        java.time.Instant now = java.time.Instant.now();
+        for (WorkOrder wo : toArchive) {
+            wo.setArchived(true);
+            wo.setArchivedAt(now);
+        }
+
+        if (!toArchive.isEmpty()) {
+            repo.saveAll(toArchive);
+        }
+
+        return toArchive.size();
+    }
+
+    /**
+     * Manually archive a work order.
+     */
+    @Transactional
+    public WorkOrderResponse archiveWorkOrder(Long id) {
+        WorkOrder wo = repo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "work order not found"));
+
+        if (wo.isArchived()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "work order is already archived");
+        }
+
+        wo.setArchived(true);
+        wo.setArchivedAt(java.time.Instant.now());
+        WorkOrder saved = repo.save(wo);
+        return toResponse(saved);
+    }
+
+    /**
+     * Unarchive a work order (restore from archive).
+     */
+    @Transactional
+    public WorkOrderResponse unarchiveWorkOrder(Long id) {
+        WorkOrder wo = repo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "work order not found"));
+
+        if (!wo.isArchived()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "work order is not archived");
+        }
+
+        wo.setArchived(false);
+        wo.setArchivedAt(null);
+        WorkOrder saved = repo.save(wo);
+        return toResponse(saved);
+    }
+
     @Transactional(readOnly = true)
     public Page<WorkOrderResponse> listForTech(Long techId, Pageable pageable) {
-        // spec: assignedTo.id = techId
-        Specification<WorkOrder> spec = (root, query, cb) -> cb.equal(root.get("assignedTo").get("id"), techId);
+        // spec: assignedTo.id = techId, exclude archived
+        Specification<WorkOrder> techSpec = (root, query, cb) -> cb.equal(root.get("assignedTo").get("id"), techId);
+        Specification<WorkOrder> spec = Specification.where(techSpec)
+                .and(WorkOrderSpecifications.notArchived());
         return repo.findAll(spec, pageable).map(this::toResponse);
     }
 
@@ -516,7 +611,9 @@ public class WorkOrderService {
             downloadUrl,
             materialsCount,
             materialsPreview,
-            wo.getSortIndex()
+            wo.getSortIndex(),
+            wo.isArchived(),
+            wo.getArchivedAt()
         );
     }
     
@@ -568,7 +665,9 @@ public class WorkOrderService {
             downloadUrl,
             materialsCount,
             materialsPreview,
-            wo.getSortIndex()
+            wo.getSortIndex(),
+            wo.isArchived(),
+            wo.getArchivedAt()
         );
     }
 
