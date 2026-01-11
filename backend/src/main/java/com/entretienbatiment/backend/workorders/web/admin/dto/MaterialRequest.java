@@ -4,5 +4,6 @@ public record MaterialRequest(
     String name,
     Integer quantity,
     String url,
-    String description
+    String description,
+    String supplier
 ) {}

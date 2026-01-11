@@ -5,6 +5,7 @@ export interface MaterialResponse {
   bought: boolean;
   url?: string;
   description?: string;
+  supplier?: string;
 }
 
 export interface MaterialRequest {
@@ -12,6 +13,7 @@ export interface MaterialRequest {
   quantity?: number;
   url?: string;
   description?: string;
+  supplier?: string;
 }
 export enum WorkOrderStatus {
   OPEN = 'OPEN',

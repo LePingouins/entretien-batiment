@@ -23,11 +23,14 @@ public class WorkOrderMaterial {
     @Column(nullable = false)
     private Boolean bought = false;
 
-    @Column(length = 500)
+    @Column(columnDefinition = "TEXT")
     private String url;
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(length = 255)
+    private String supplier;
 
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
@@ -38,15 +41,20 @@ public class WorkOrderMaterial {
     protected WorkOrderMaterial() {}
 
     public WorkOrderMaterial(WorkOrder workOrder, String name, Integer quantity) {
-        this(workOrder, name, quantity, null, null);
+        this(workOrder, name, quantity, null, null, null);
     }
 
     public WorkOrderMaterial(WorkOrder workOrder, String name, Integer quantity, String url, String description) {
+        this(workOrder, name, quantity, url, description, null);
+    }
+
+    public WorkOrderMaterial(WorkOrder workOrder, String name, Integer quantity, String url, String description, String supplier) {
         this.workOrder = workOrder;
         this.name = name;
         this.quantity = quantity;
         this.url = url;
         this.description = description;
+        this.supplier = supplier;
         this.bought = false;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
@@ -80,4 +88,6 @@ public class WorkOrderMaterial {
     public void setUrl(String url) { this.url = url; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getSupplier() { return supplier; }
+    public void setSupplier(String supplier) { this.supplier = supplier; }
 }

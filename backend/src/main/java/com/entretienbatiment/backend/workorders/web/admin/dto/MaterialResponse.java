@@ -6,5 +6,6 @@ public record MaterialResponse(
     Integer quantity,
     boolean bought,
     String url,
-    String description
+    String description,
+    String supplier
 ) {}

@@ -41,7 +41,7 @@ public class WorkOrderMaterialService {
         }
         WorkOrder wo = workOrderRepo.findById(workOrderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "work order not found"));
-        WorkOrderMaterial mat = new WorkOrderMaterial(wo, req.name(), req.quantity(), req.url(), req.description());
+        WorkOrderMaterial mat = new WorkOrderMaterial(wo, req.name(), req.quantity(), req.url(), req.description(), req.supplier());
         return toResponse(materialRepo.save(mat));
     }
 
@@ -55,6 +55,7 @@ public class WorkOrderMaterialService {
         }
         if (req.url() != null) mat.setUrl(req.url().isBlank() ? null : req.url());
         if (req.description() != null) mat.setDescription(req.description().isBlank() ? null : req.description());
+        if (req.supplier() != null) mat.setSupplier(req.supplier().isBlank() ? null : req.supplier());
         return toResponse(materialRepo.save(mat));
     }
 
@@ -81,6 +82,6 @@ public class WorkOrderMaterialService {
     }
 
     private MaterialResponse toResponse(WorkOrderMaterial mat) {
-        return new MaterialResponse(mat.getId(), mat.getName(), mat.getQuantity(), mat.getBought(), mat.getUrl(), mat.getDescription());
+        return new MaterialResponse(mat.getId(), mat.getName(), mat.getQuantity(), mat.getBought(), mat.getUrl(), mat.getDescription(), mat.getSupplier());
     }
 }

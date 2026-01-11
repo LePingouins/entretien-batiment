@@ -22,12 +22,14 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
   const [addQty, setAddQty] = React.useState<string>('');
   const [addUrl, setAddUrl] = React.useState('');
   const [addDescription, setAddDescription] = React.useState('');
+  const [addSupplier, setAddSupplier] = React.useState('');
   const [addError, setAddError] = React.useState<string | null>(null);
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [editingName, setEditingName] = React.useState('');
   const [editingQty, setEditingQty] = React.useState<string>('');
   const [editingUrl, setEditingUrl] = React.useState('');
   const [editingDescription, setEditingDescription] = React.useState('');
+  const [editingSupplier, setEditingSupplier] = React.useState('');
 
   React.useEffect(() => {
     if (isOpen) {
@@ -59,13 +61,15 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
         name: addName.trim(),
         quantity: qty,
         url: addUrl.trim() || undefined,
-        description: addDescription.trim() || undefined
+        description: addDescription.trim() || undefined,
+        supplier: addSupplier.trim() || undefined
       });
       setMaterials(m => [...m, newMat]);
       setAddName('');
       setAddQty('');
       setAddUrl('');
       setAddDescription('');
+      setAddSupplier('');
     } catch {
       setAddError(t.failedToAdd);
     }
@@ -79,7 +83,8 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
         name: editingName.trim(),
         quantity: qty,
         url: editingUrl.trim() || undefined,
-        description: editingDescription.trim() || undefined
+        description: editingDescription.trim() || undefined,
+        supplier: editingSupplier.trim() || undefined
       });
       setMaterials(m => m.map(mat => mat.id === id ? updated : mat));
       setEditingId(null);
@@ -177,6 +182,16 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
                   onChange={e => setAddDescription(e.target.value)}
                   aria-label={t.materialDescription}
                 />
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className={`${inputClass} flex-1`}
+                  placeholder={t.supplier}
+                  value={addSupplier}
+                  onChange={e => setAddSupplier(e.target.value)}
+                  aria-label={t.supplier}
+                />
                 <button type="submit" className={addButtonClass}>{t.add}</button>
               </div>
             </form>
@@ -228,6 +243,14 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
                           onChange={e => setEditingDescription(e.target.value)}
                           aria-label={t.materialDescription}
                         />
+                        <input
+                          type="text"
+                          className={`${inputClass} w-full`}
+                          placeholder={t.supplier}
+                          value={editingSupplier}
+                          onChange={e => setEditingSupplier(e.target.value)}
+                          aria-label={t.supplier}
+                        />
                         <div className="flex gap-2 justify-end">
                           <button className="text-green-500 font-bold px-2" onClick={() => handleEdit(mat.id)} type="button">✔</button>
                           <button className={`px-2 ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-400'}`} onClick={() => setEditingId(null)} type="button">✕</button>
@@ -243,9 +266,12 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
                           {mat.url && (
                             <a href={mat.url} target="_blank" rel="noopener noreferrer" className={`block text-xs truncate ${colorScheme === 'dark' ? 'text-[#60a5fa]' : 'text-blue-500'} hover:underline`}>{mat.url}</a>
                           )}
+                          {mat.supplier && (
+                            <span className={`block text-xs truncate ${colorScheme === 'dark' ? 'text-[#a78bfa]' : 'text-purple-600'}`}>{t.supplier}: {mat.supplier}</span>
+                          )}
                         </div>
                         <span className={`w-10 text-center ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-600'}`}>{mat.quantity ?? ''}</span>
-                        <button className={`px-1 ${colorScheme === 'dark' ? 'text-[#60a5fa]' : 'text-blue-500'}`} onClick={() => { setEditingId(mat.id); setEditingName(mat.name); setEditingQty(mat.quantity?.toString() || ''); setEditingUrl(mat.url || ''); setEditingDescription(mat.description || ''); }} aria-label={t.edit} type="button">✎</button>
+                        <button className={`px-1 ${colorScheme === 'dark' ? 'text-[#60a5fa]' : 'text-blue-500'}`} onClick={() => { setEditingId(mat.id); setEditingName(mat.name); setEditingQty(mat.quantity?.toString() || ''); setEditingUrl(mat.url || ''); setEditingDescription(mat.description || ''); setEditingSupplier(mat.supplier || ''); }} aria-label={t.edit} type="button">✎</button>
                         <button className="text-red-500 px-1" onClick={() => handleDelete(mat.id)} aria-label={t.deleteMaterial} type="button">🗑</button>
                       </>
                     )}
