@@ -55,6 +55,8 @@ export const en = {
   boughtCount: 'Bought {bought} / {total}',
   materialUrl: 'URL (link to product)',
   materialDescription: 'Description',
+  optional: 'Optional',
+  required: 'Required',
   // Date picker translations
   months: [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -157,6 +159,8 @@ export const fr = {
   boughtCount: 'Acheté {bought} / {total}',
   materialUrl: 'URL (lien vers le produit)',
   materialDescription: 'Description',
+  optional: 'Optionnel',
+  required: 'Requis',
   // Date picker translations
   months: [
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',

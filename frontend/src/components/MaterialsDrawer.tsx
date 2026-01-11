@@ -124,6 +124,14 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
     ? 'border border-[#2d3748] bg-[#252d3d] text-[#e2e8f0] rounded px-2 py-1 focus:border-[#3b82f6] focus:outline-none'
     : 'border rounded px-2 py-1';
 
+  const requiredInputClass = colorScheme === 'dark'
+    ? 'border-l-4 border-l-[#6366f1] border border-[#2d3748] bg-[#252d3d] text-[#e2e8f0] rounded px-2 py-1 focus:border-[#3b82f6] focus:outline-none'
+    : 'border-l-4 border-l-indigo-500 border border-gray-300 rounded px-2 py-1 focus:border-indigo-400 focus:outline-none';
+
+  const optionalInputClass = colorScheme === 'dark'
+    ? 'border border-[#2d3748] bg-[#1e2433] text-[#94a3b8] rounded px-2 py-1 focus:border-[#3b82f6] focus:outline-none placeholder:text-[#64748b]'
+    : 'border border-gray-200 bg-gray-50 text-gray-600 rounded px-2 py-1 focus:border-gray-400 focus:outline-none';
+
   const addButtonClass = colorScheme === 'dark'
     ? 'bg-[#6366f1] text-white px-3 py-1 rounded hover:bg-[#4f46e5]'
     : 'bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600';
@@ -143,30 +151,40 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
       <div className="flex-1 overflow-y-auto p-4">
         {loading ? <div className={colorScheme === 'dark' ? 'text-[#94a3b8]' : ''}>{t.loading}</div> : error ? <div className="text-red-500">{error}</div> : (
           <>
-            <form onSubmit={handleAdd} className="mb-4 space-y-2">
+            <form onSubmit={handleAdd} className="mb-4 space-y-3">
+              {/* Required fields */}
               <div className="flex gap-2">
                 <input
                   type="text"
-                  className={`${inputClass} flex-1`}
-                  placeholder={t.addMaterialPlaceholder}
+                  className={`${requiredInputClass} flex-1`}
+                  placeholder={`${t.addMaterialPlaceholder} *`}
                   value={addName}
                   onChange={e => setAddName(e.target.value)}
                   aria-label={t.addMaterialPlaceholder}
+                  required
                 />
                 <input
                   type="number"
-                  className={`${inputClass} w-20`}
-                  placeholder={t.quantity}
+                  className={`${requiredInputClass} w-20`}
+                  placeholder={`${t.quantity} *`}
                   value={addQty}
                   onChange={e => setAddQty(e.target.value)}
                   aria-label={t.quantity}
                   min={0}
+                  required
                 />
               </div>
+              {/* Optional fields divider */}
+              <div className={`text-xs ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-400'} flex items-center gap-2`}>
+                <span className={`flex-1 border-t ${colorScheme === 'dark' ? 'border-[#2d3748]' : 'border-gray-200'}`}></span>
+                <span>{t.optional}</span>
+                <span className={`flex-1 border-t ${colorScheme === 'dark' ? 'border-[#2d3748]' : 'border-gray-200'}`}></span>
+              </div>
+              {/* Optional fields */}
               <div className="flex gap-2">
                 <input
                   type="url"
-                  className={`${inputClass} flex-1`}
+                  className={`${optionalInputClass} flex-1`}
                   placeholder={t.materialUrl}
                   value={addUrl}
                   onChange={e => setAddUrl(e.target.value)}
@@ -176,7 +194,7 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
               <div className="flex gap-2">
                 <input
                   type="text"
-                  className={`${inputClass} flex-1`}
+                  className={`${optionalInputClass} flex-1`}
                   placeholder={t.materialDescription}
                   value={addDescription}
                   onChange={e => setAddDescription(e.target.value)}
@@ -186,7 +204,7 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
               <div className="flex gap-2">
                 <input
                   type="text"
-                  className={`${inputClass} flex-1`}
+                  className={`${optionalInputClass} flex-1`}
                   placeholder={t.supplier}
                   value={addSupplier}
                   onChange={e => setAddSupplier(e.target.value)}
@@ -212,24 +230,26 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
                         <div className="flex gap-2">
                           <input
                             type="text"
-                            className={`${inputClass} flex-1`}
+                            className={`${requiredInputClass} flex-1`}
                             value={editingName}
                             onChange={e => setEditingName(e.target.value)}
                             aria-label={t.edit}
                             autoFocus
+                            required
                           />
                           <input
                             type="number"
-                            className={`${inputClass} w-16`}
+                            className={`${requiredInputClass} w-16`}
                             value={editingQty}
                             onChange={e => setEditingQty(e.target.value)}
                             aria-label={t.quantity}
                             min={0}
+                            required
                           />
                         </div>
                         <input
                           type="url"
-                          className={`${inputClass} w-full`}
+                          className={`${optionalInputClass} w-full`}
                           placeholder={t.materialUrl}
                           value={editingUrl}
                           onChange={e => setEditingUrl(e.target.value)}
@@ -237,7 +257,7 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
                         />
                         <input
                           type="text"
-                          className={`${inputClass} w-full`}
+                          className={`${optionalInputClass} w-full`}
                           placeholder={t.materialDescription}
                           value={editingDescription}
                           onChange={e => setEditingDescription(e.target.value)}
@@ -245,7 +265,7 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
                         />
                         <input
                           type="text"
-                          className={`${inputClass} w-full`}
+                          className={`${optionalInputClass} w-full`}
                           placeholder={t.supplier}
                           value={editingSupplier}
                           onChange={e => setEditingSupplier(e.target.value)}
