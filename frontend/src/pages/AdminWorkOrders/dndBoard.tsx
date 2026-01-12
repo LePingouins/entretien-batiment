@@ -1,6 +1,6 @@
 // DnD/board logic for AdminWorkOrdersPage
 import * as React from 'react';
-import { DndContext, closestCenter, rectIntersection, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, CollisionDetection, useDroppable } from '@dnd-kit/core';
+import { DndContext, closestCenter, rectIntersection, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent, DragOverlay, CollisionDetection, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { WorkOrderResponse, WorkOrderStatus } from '../../types/api';
 import { WorkOrderCard } from '../../components/WorkOrderCard';
@@ -86,7 +86,13 @@ function BottomDropZone({ status, colorScheme, hasItems }: { status: string; col
 
 export function useDndSensors() {
   return useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { 
+      activationConstraint: { 
+        delay: 200,
+        tolerance: 5 
+      } 
+    })
   );
 }
 
