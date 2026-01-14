@@ -1,3 +1,23 @@
+import * as React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import api, { reorderWorkOrders, moveWorkOrder, reorderAllByPriority } from '../lib/api';
+import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority } from '../types/api';
+import { WorkOrderCard } from '../components/WorkOrderCard';
+import { MaterialsDrawer } from '../components/MaterialsDrawer';
+import { useLang } from '../context/LangContext';
+import { useOutletContext } from 'react-router-dom';
+import { ColorSchemeType, getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
+import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
+import { workOrderSchema, WorkOrderFormType } from './AdminWorkOrders/schemas';
+import { DndBoard, isBottomZone, getStatusFromBottomZone } from './AdminWorkOrders/dndBoard';
+import { FilterBar } from './AdminWorkOrders/FilterBar';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { DragEndEvent } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+
 // Edit modal with Escape key handler
 function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, editErrors, isEditSubmitting, priorityOptions, editModal, queryClient, colorScheme }: any) {
   React.useEffect(() => {
@@ -104,26 +124,6 @@ function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, 
     </div>
   );
 }
-
-import * as React from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import api, { reorderWorkOrders, moveWorkOrder, reorderAllByPriority } from '../lib/api';
-import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority } from '../types/api';
-import { WorkOrderCard } from '../components/WorkOrderCard';
-import { MaterialsDrawer } from '../components/MaterialsDrawer';
-import { useLang } from '../context/LangContext';
-import { useOutletContext } from 'react-router-dom';
-import { ColorSchemeType, getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
-import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
-import { workOrderSchema, WorkOrderFormType } from './AdminWorkOrders/schemas';
-import { DndBoard, isBottomZone, getStatusFromBottomZone } from './AdminWorkOrders/dndBoard';
-import { FilterBar } from './AdminWorkOrders/FilterBar';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { DragEndEvent } from '@dnd-kit/core';
-import { useSortable } from '@dnd-kit/sortable';
-import { useDroppable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 
 // Sortable card wrapper - defined OUTSIDE the main component to prevent remounting
 interface SortableCardProps {

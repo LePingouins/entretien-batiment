@@ -129,7 +129,7 @@ export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activ
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
-      <div className="flex gap-4 pb-12 px-2 sm:px-4 pt-4 w-full overflow-x-auto">
+      <div className="flex gap-4 pb-12 px-2 sm:px-4 pt-4 w-full justify-evenly overflow-x-auto md:overflow-x-visible">
         {statusOptions.map((status: string) => (
           <div className="flex-shrink-0 w-[260px] sm:w-[280px] flex flex-col" key={status}>
             <DroppableColumn status={status} colorScheme={colorScheme}>
