@@ -147,12 +147,9 @@ const SortableCardComponent = ({ workOrder, colorScheme, activeId, onOpenMateria
   const style = React.useMemo(() => ({
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isBeingDragged ? 0 : 1,
-    cursor: 'pointer',
-    // Keep the element in the layout but invisible when dragging
-    visibility: isBeingDragged ? 'hidden' as const : 'visible' as const,
-    // Prevent pointer events when hidden
-    pointerEvents: isBeingDragged ? 'none' as const : 'auto' as const,
+    opacity: isBeingDragged ? 0.3 : 1,
+    cursor: 'grab',
+    touchAction: 'none', // Prevents scroll interference on mobile
   }), [transform, transition, isBeingDragged]);
   
   const handleClick = React.useCallback((e: React.MouseEvent) => {

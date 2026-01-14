@@ -81,10 +81,9 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkO
   const { colorScheme } = React.useContext(ColorSchemeContext);
   const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
-  // Always use backend base URL for attachments (now /api/files/workorders/)
-  const backendBaseUrl = 'http://localhost:8080';
+  // Use relative URL for attachments (works with proxy in dev/preview)
   const attachmentUrl = workOrder.attachmentDownloadUrl
-    ? backendBaseUrl + workOrder.attachmentDownloadUrl
+    ? workOrder.attachmentDownloadUrl
     : undefined;
 
   // Check if image is already in global cache (prevents flash on remount)
