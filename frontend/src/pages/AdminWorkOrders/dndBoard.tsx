@@ -5,6 +5,8 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { WorkOrderResponse, WorkOrderStatus } from '../../types/api';
 import { WorkOrderCard } from '../../components/WorkOrderCard';
 
+// Allow passing a custom DragOverlayCard for urgent work orders
+
 // Status column IDs for detection
 const STATUS_IDS = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
@@ -122,9 +124,10 @@ type DndBoardProps = {
   onOpenMaterials: (wo: WorkOrderResponse) => void;
   onDeleted: (id: number) => void;
   onCardClick: (wo: WorkOrderResponse) => void;
+  DragOverlayCard?: React.ComponentType<{ workOrder: any; colorScheme?: string }>;
 };
 
-export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activeWorkOrder, activeId, colorScheme, DroppableColumn, SortableCard, onOpenMaterials, onDeleted, onCardClick }: DndBoardProps) {
+export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activeWorkOrder, activeId, colorScheme, DroppableColumn, SortableCard, onOpenMaterials, onDeleted, onCardClick, DragOverlayCard }: DndBoardProps) {
   // Memoize sensors to prevent recreation
   const sensors = useDndSensors();
   
@@ -174,9 +177,13 @@ export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activ
       </div>
       <DragOverlay>
         {activeWorkOrder ? (
-          <div style={{ zIndex: 9999 }}>
-            <WorkOrderCard workOrder={activeWorkOrder} />
-          </div>
+          DragOverlayCard ? (
+            <DragOverlayCard workOrder={activeWorkOrder} colorScheme={colorScheme} />
+          ) : (
+            <div style={{ zIndex: 9999 }}>
+              <WorkOrderCard workOrder={activeWorkOrder} />
+            </div>
+          )
         ) : null}
       </DragOverlay>
     </DndContext>

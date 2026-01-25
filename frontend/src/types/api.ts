@@ -75,3 +75,38 @@ export interface ErrorResponse {
   status: number;
   timestamp: string;
 }
+
+// --- Urgent Work Orders Types ---
+
+export type UrgentWorkOrderStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export interface UrgentWorkOrderResponse {
+  id: number;
+  title: string;
+  description: string;
+  location: string;
+  priority: WorkOrderPriority;
+  status: UrgentWorkOrderStatus;
+  createdByUserId: number;
+  assignedToUserId?: number;
+  requestedDate: string;
+  dueDate: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  attachmentFilename?: string;
+  attachmentContentType?: string;
+  attachmentDownloadUrl?: string;
+  materialsCount?: number;
+  materialsPreview?: string[];
+  sortIndex?: number;
+  archived: boolean;
+  archivedAt?: string;
+}
+
+export interface UrgentWorkOrderRequest {
+  title: string;
+  description: string;
+  location: string;
+  files?: FileList | File[];
+}

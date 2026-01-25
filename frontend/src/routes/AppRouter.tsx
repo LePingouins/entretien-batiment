@@ -11,6 +11,8 @@ import AdminWorkOrdersPage from '../pages/AdminWorkOrdersPage';
 import MileagePage from '../pages/MileagePage';
 import ArchivePage from '../pages/ArchivePage';
 
+import UrgentWorkOrdersPage from '../pages/UrgentWorkOrdersPage';
+
 import { Navigate } from 'react-router-dom';
 
 const router = createBrowserRouter([
@@ -37,6 +39,10 @@ const router = createBrowserRouter([
               {
                 path: 'work-orders',
                 element: <AdminWorkOrdersPage />,
+              },
+              {
+                path: 'urgent-work-orders',
+                element: <UrgentWorkOrdersPage />,
               },
                 {
                   path: 'mileage',

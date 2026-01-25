@@ -197,3 +197,43 @@ export async function unarchiveWorkOrder(workOrderId: number): Promise<WorkOrder
 }
 
 export default api;
+
+// --- Urgent Work Orders API ---
+import type { UrgentWorkOrderResponse, UrgentWorkOrderRequest } from '../types/api';
+
+export async function getUrgentWorkOrders(): Promise<UrgentWorkOrderResponse[]> {
+  const res = await api.get<UrgentWorkOrderResponse[]>('/api/urgent-work-orders');
+  return res.data;
+}
+
+export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { dueDate?: string; priority?: string; }) : Promise<UrgentWorkOrderResponse> {
+  const formData = new FormData();
+  formData.append('title', payload.title);
+  formData.append('description', payload.description);
+  formData.append('location', payload.location);
+  if (payload.dueDate) {
+    // Always send as ISO string
+    formData.append('dueDate', payload.dueDate.length === 10 ? payload.dueDate + 'T00:00:00' : payload.dueDate);
+  }
+  if (payload.priority) {
+    formData.append('priority', payload.priority);
+  }
+  if (payload.files && payload.files.length > 0) {
+    for (let i = 0; i < payload.files.length; i++) {
+      formData.append('files', payload.files[i]);
+    }
+  }
+  const res = await api.post('/api/urgent-work-orders', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+}
+
+export async function updateUrgentWorkOrder(id: number, data: Partial<UrgentWorkOrderRequest & { status: string }>): Promise<UrgentWorkOrderResponse> {
+  const res = await api.patch<UrgentWorkOrderResponse>(`/api/urgent-work-orders/${id}`, data);
+  return res.data;
+}
+
+export async function deleteUrgentWorkOrder(id: number): Promise<void> {
+  await api.delete(`/api/urgent-work-orders/${id}`);
+}
