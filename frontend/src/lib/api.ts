@@ -98,30 +98,49 @@ api.interceptors.response.use(
 
 
 // --- Materials API ---
+
 import type { MaterialRequest, MaterialResponse } from '../types/api';
 
+// Normal work order materials
 export async function getMaterials(workOrderId: number): Promise<MaterialResponse[]> {
   const res = await api.get(`/api/work-orders/${workOrderId}/materials`);
   return res.data;
 }
-
 export async function createMaterial(workOrderId: number, payload: MaterialRequest): Promise<MaterialResponse> {
   const res = await api.post(`/api/work-orders/${workOrderId}/materials`, payload);
   return res.data;
 }
-
 export async function updateMaterial(workOrderId: number, materialId: number, payload: Partial<MaterialRequest>): Promise<MaterialResponse> {
   const res = await api.patch(`/api/work-orders/${workOrderId}/materials/${materialId}`, payload);
   return res.data;
 }
-
 export async function setMaterialBought(workOrderId: number, materialId: number, bought: boolean): Promise<MaterialResponse> {
   const res = await api.patch(`/api/work-orders/${workOrderId}/materials/${materialId}/bought`, { bought });
   return res.data;
 }
-
 export async function deleteMaterial(workOrderId: number, materialId: number): Promise<void> {
   await api.delete(`/api/work-orders/${workOrderId}/materials/${materialId}`);
+}
+
+// Urgent work order materials
+export async function getUrgentMaterials(urgentWorkOrderId: number): Promise<MaterialResponse[]> {
+  const res = await api.get(`/api/urgent-work-orders/${urgentWorkOrderId}/materials`);
+  return res.data;
+}
+export async function createUrgentMaterial(urgentWorkOrderId: number, payload: MaterialRequest): Promise<MaterialResponse> {
+  const res = await api.post(`/api/urgent-work-orders/${urgentWorkOrderId}/materials`, payload);
+  return res.data;
+}
+export async function updateUrgentMaterial(urgentWorkOrderId: number, materialId: number, payload: Partial<MaterialRequest>): Promise<MaterialResponse> {
+  const res = await api.patch(`/api/urgent-work-orders/${urgentWorkOrderId}/materials/${materialId}`, payload);
+  return res.data;
+}
+export async function setUrgentMaterialBought(urgentWorkOrderId: number, materialId: number, bought: boolean): Promise<MaterialResponse> {
+  const res = await api.patch(`/api/urgent-work-orders/${urgentWorkOrderId}/materials/${materialId}/bought`, { bought });
+  return res.data;
+}
+export async function deleteUrgentMaterial(urgentWorkOrderId: number, materialId: number): Promise<void> {
+  await api.delete(`/api/urgent-work-orders/${urgentWorkOrderId}/materials/${materialId}`);
 }
 
 // --- Work Order Kanban Ordering API ---
@@ -203,7 +222,21 @@ import type { UrgentWorkOrderResponse, UrgentWorkOrderRequest } from '../types/a
 
 export async function getUrgentWorkOrders(): Promise<UrgentWorkOrderResponse[]> {
   const res = await api.get<UrgentWorkOrderResponse[]>('/api/urgent-work-orders');
-  return res.data;
+  // Patch: convert materialsPreview string to array for frontend compatibility
+  return res.data.map((wo: any) => {
+    let preview: string[] = [];
+    if (wo.materialsPreview) {
+      if (Array.isArray(wo.materialsPreview)) {
+        preview = wo.materialsPreview;
+      } else if (typeof wo.materialsPreview === 'string' && wo.materialsPreview.length > 0) {
+        preview = wo.materialsPreview.split(/,\s*/);
+      }
+    }
+    return {
+      ...wo,
+      materialsPreview: preview,
+    };
+  });
 }
 
 export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { dueDate?: string; priority?: string; }) : Promise<UrgentWorkOrderResponse> {
@@ -229,9 +262,28 @@ export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { 
   return res.data;
 }
 
-export async function updateUrgentWorkOrder(id: number, data: Partial<UrgentWorkOrderRequest & { status: string }>): Promise<UrgentWorkOrderResponse> {
-  const res = await api.patch<UrgentWorkOrderResponse>(`/api/urgent-work-orders/${id}`, data);
-  return res.data;
+export async function updateUrgentWorkOrder(id: number, data: Partial<UrgentWorkOrderRequest & { status: string; dueDate?: string; priority?: string }>): Promise<UrgentWorkOrderResponse> {
+  // If files are present, use FormData
+  if (data.files && (data.files instanceof FileList ? data.files.length > 0 : Array.isArray(data.files) && data.files.length > 0)) {
+    const formData = new FormData();
+    if (data.title !== undefined) formData.append('title', data.title);
+    if (data.description !== undefined) formData.append('description', data.description);
+    if (data.location !== undefined) formData.append('location', data.location);
+    if (data.dueDate !== undefined) formData.append('dueDate', data.dueDate.length === 10 ? data.dueDate + 'T00:00:00' : data.dueDate);
+    if (data.priority !== undefined) formData.append('priority', data.priority);
+    if (data.status !== undefined) formData.append('status', data.status);
+    const filesArr = data.files instanceof FileList ? Array.from(data.files) : Array.isArray(data.files) ? data.files : [];
+    for (let i = 0; i < filesArr.length; i++) {
+      formData.append('files', filesArr[i]);
+    }
+    const res = await api.patch(`/api/urgent-work-orders/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  } else {
+    const res = await api.patch<UrgentWorkOrderResponse>(`/api/urgent-work-orders/${id}`, data);
+    return res.data;
+  }
 }
 
 export async function deleteUrgentWorkOrder(id: number): Promise<void> {

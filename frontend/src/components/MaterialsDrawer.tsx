@@ -1,8 +1,13 @@
 import * as React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { MaterialResponse, MaterialRequest } from '../types/api';
-import { getMaterials, createMaterial, updateMaterial, setMaterialBought, deleteMaterial } from '../lib/api';
+import {
+  getMaterials, createMaterial, updateMaterial, setMaterialBought, deleteMaterial,
+  getUrgentMaterials, createUrgentMaterial, updateUrgentMaterial, setUrgentMaterialBought, deleteUrgentMaterial
+} from '../lib/api';
 import { useLang } from '../context/LangContext';
 import { ColorSchemeContext } from './AdminLayout';
+
 
 interface MaterialsDrawerProps {
   isOpen: boolean;
@@ -10,9 +15,11 @@ interface MaterialsDrawerProps {
   workOrderTitle?: string;
   onClose: () => void;
   onMaterialsChanged?: (materials: MaterialResponse[]) => void;
+  urgent?: boolean;
 }
 
-export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, onMaterialsChanged }: MaterialsDrawerProps) {
+export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, onMaterialsChanged, urgent = false }: MaterialsDrawerProps) {
+  const queryClient = useQueryClient();
   const { t } = useLang();
   const { colorScheme } = React.useContext(ColorSchemeContext);
   const [materials, setMaterials] = React.useState<MaterialResponse[]>([]);
@@ -34,7 +41,8 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
   React.useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      getMaterials(workOrderId)
+      const fetch = urgent ? getUrgentMaterials : getMaterials;
+      fetch(workOrderId)
         .then(mats => {
           setMaterials(mats);
           setError(null);
@@ -42,7 +50,7 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
         .catch(() => setError(t.failedToLoadMaterials))
         .finally(() => setLoading(false));
     }
-  }, [isOpen, workOrderId]);
+  }, [isOpen, workOrderId, urgent]);
 
   React.useEffect(() => {
     if (onMaterialsChanged) onMaterialsChanged(materials);
@@ -57,7 +65,8 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
     setAddError(null);
     try {
       const qty = addQty ? parseInt(addQty, 10) : undefined;
-      const newMat = await createMaterial(workOrderId, {
+      const fn = urgent ? createUrgentMaterial : createMaterial;
+      const newMat = await fn(workOrderId, {
         name: addName.trim(),
         quantity: qty,
         url: addUrl.trim() || undefined,
@@ -65,6 +74,7 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
         supplier: addSupplier.trim() || undefined
       });
       setMaterials(m => [...m, newMat]);
+      if (urgent) queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
       setAddName('');
       setAddQty('');
       setAddUrl('');
@@ -79,7 +89,8 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
     if (!editingName.trim()) return;
     try {
       const qty = editingQty ? parseInt(editingQty, 10) : undefined;
-      const updated = await updateMaterial(workOrderId, id, {
+      const fn = urgent ? updateUrgentMaterial : updateMaterial;
+      const updated = await fn(workOrderId, id, {
         name: editingName.trim(),
         quantity: qty,
         url: editingUrl.trim() || undefined,
@@ -87,6 +98,7 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
         supplier: editingSupplier.trim() || undefined
       });
       setMaterials(m => m.map(mat => mat.id === id ? updated : mat));
+      if (urgent) queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
       setEditingId(null);
     } catch {
       setError(t.failedToUpdate);
@@ -95,8 +107,10 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
 
   const handleToggleBought = async (id: number, bought: boolean) => {
     try {
-      const updated = await setMaterialBought(workOrderId, id, bought);
+      const fn = urgent ? setUrgentMaterialBought : setMaterialBought;
+      const updated = await fn(workOrderId, id, bought);
       setMaterials(m => m.map(mat => mat.id === id ? updated : mat));
+      if (urgent) queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
     } catch {
       setError(t.failedToUpdate);
     }
@@ -104,8 +118,10 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
 
   const handleDelete = async (id: number) => {
     try {
-      await deleteMaterial(workOrderId, id);
+      const fn = urgent ? deleteUrgentMaterial : deleteMaterial;
+      await fn(workOrderId, id);
       setMaterials(m => m.filter(mat => mat.id !== id));
+      if (urgent) queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
     } catch {
       setError(t.failedToDelete);
     }

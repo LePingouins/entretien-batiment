@@ -58,21 +58,21 @@ const UrgentDndBoard = () => {
     }
     if (newStatus && from.status !== newStatus) {
       await moveWorkOrder(from.id, newStatus, 0);
-      queryClient.invalidateQueries(['urgentWorkOrders']);
+      queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
     }
   };
 
   const handleCheckmark = async (wo: WorkOrderResponse) => {
     if (wo.status !== WorkOrderStatus.COMPLETED) {
       await moveWorkOrder(wo.id, WorkOrderStatus.COMPLETED, 0);
-      queryClient.invalidateQueries(['urgentWorkOrders']);
+      queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
     }
   };
 
   const handleArchive = async (wo: WorkOrderResponse) => {
     await archiveWorkOrder(wo.id);
-    queryClient.invalidateQueries(['urgentWorkOrders']);
-    queryClient.invalidateQueries(['archivedWorkOrders']);
+    queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+    queryClient.invalidateQueries({ queryKey: ['archivedWorkOrders'] });
   };
 
   return (

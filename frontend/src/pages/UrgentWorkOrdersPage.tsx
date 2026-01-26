@@ -23,7 +23,7 @@ function DroppableColumn(props: any) {
 }
 
 function UrgentDndBoard(props: any) {
-  const { columns, workOrders, onMove, onOpenMaterials, onDeleted, onCardClick } = props;
+  const { columns, workOrders, onMove, onOpenMaterials, onDeleted, onCardClick, onEdit } = props;
   const [activeId, setActiveId] = React.useState(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -71,6 +71,8 @@ function UrgentDndBoard(props: any) {
                       id={workOrder.id.toString()}
                       workOrder={workOrder}
                       colorScheme={column.colorScheme}
+                      onDeleted={onDeleted}
+                      onEdit={onEdit}
                     />
                   ))}
                 </SortableContext>
@@ -122,9 +124,11 @@ import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { UrgentWorkOrderCard } from '../components/UrgentWorkOrderCard';
+import { SharedEditModal } from '../components/SharedEditModal';
+import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
 // Sortable wrapper for urgent work order card
 function SortableUrgentWorkOrderCard(props: any) {
-  const { id, workOrder, colorScheme, activeId, onOpenMaterials, onDeleted, onCardClick } = props;
+  const { id, workOrder, colorScheme, activeId, onOpenMaterials, onDeleted, onCardClick, onEdit } = props;
   const {
     attributes,
     listeners,
@@ -145,6 +149,8 @@ function SortableUrgentWorkOrderCard(props: any) {
       <UrgentWorkOrderCard
         workOrder={workOrder}
         colorScheme={colorScheme}
+        onDelete={onDeleted ? () => onDeleted(workOrder.id) : undefined}
+        onEdit={onEdit ? () => onEdit(workOrder) : undefined}
       />
     </div>
   );
@@ -184,6 +190,49 @@ const DroppableColumnComponent = ({ status, children, colorScheme }: { status: s
 };
 
 function UrgentWorkOrdersPage() {
+    const [editModal, setEditModal] = React.useState<{ open: boolean; workOrder: UrgentWorkOrderResponse | null }>({ open: false, workOrder: null });
+    const {
+      register: editRegister,
+      handleSubmit: handleEditSubmit,
+      reset: editReset,
+      formState: { errors: editErrors, isSubmitting: isEditSubmitting },
+      setValue: setEditValue,
+      watch: editWatch,
+    } = useForm<UrgentWorkOrderRequest & { dueDate?: string; priority?: string }>({});
+
+    const editFiles = editWatch('files');
+
+    const handleEdit = (workOrder: UrgentWorkOrderResponse) => {
+      setEditModal({ open: true, workOrder });
+      editReset({
+        title: workOrder.title,
+        description: workOrder.description,
+        location: workOrder.location,
+        // files is not set here
+      });
+      setEditValue('priority' as any, workOrder.priority);
+      setEditValue('dueDate' as any, workOrder.dueDate?.slice(0, 10) || '');
+    };
+
+    const onEdit: SubmitHandler<UrgentWorkOrderRequest & { dueDate?: string; priority?: string }> = async (data) => {
+      if (!editModal.workOrder) return;
+      try {
+        await updateUrgentWorkOrder(editModal.workOrder.id, {
+          title: data.title,
+          description: data.description,
+          location: data.location,
+          dueDate: data.dueDate || '',
+          files: data.files,
+        });
+        setEditModal({ open: false, workOrder: null });
+        editReset();
+        queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+        setOptimisticUrgentData(undefined);
+      } catch (err) {
+        alert('Failed to update urgent work order');
+      }
+    };
+
     const queryClient = useQueryClient();
     const { colorScheme }: { colorScheme: ColorSchemeType } = useOutletContext() || { colorScheme: 'default' };
     const { t } = useLang();
@@ -305,21 +354,23 @@ function UrgentWorkOrdersPage() {
     formState: { errors, isSubmitting },
     setValue,
     watch,
-  } = useForm<UrgentWorkOrderRequest>({
+  } = useForm<UrgentWorkOrderRequest & { dueDate?: string }>({
     defaultValues: {},
   });
   const files = watch('files');
 
   const onCreate: SubmitHandler<any> = async (data) => {
     try {
-      await createUrgentWorkOrder({
+      // Always send dueDate from the form (not 'date')
+      const payload: any = {
         title: data.title,
         description: data.description,
         location: data.location,
-        dueDate: data.dueDate || data.date || '',
         priority: data.priority || 'URGENT',
         files: data.files,
-      });
+        dueDate: data.dueDate || '',
+      };
+      await createUrgentWorkOrder(payload);
       setShowModal(false);
       reset();
       queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
@@ -469,8 +520,20 @@ function UrgentWorkOrdersPage() {
                 }
               }}
               onOpenMaterials={handleOpenMaterials}
-              onDeleted={() => {}}
+              onDeleted={async (id: number) => {
+                // Optimistically remove from UI
+                setOptimisticUrgentData((urgentData || []).filter((wo) => wo.id !== id));
+                try {
+                  await deleteUrgentWorkOrder(id);
+                } catch (e) {
+                  alert('Failed to delete urgent work order');
+                  setOptimisticUrgentData(undefined);
+                } finally {
+                  queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                }
+              }}
               onCardClick={() => {}}
+              onEdit={handleEdit}
             />
             {/* Materials Drawer for urgent work orders */}
             {drawerOpen && drawerWorkOrderId !== null && (
@@ -480,6 +543,7 @@ function UrgentWorkOrdersPage() {
                   workOrderId={drawerWorkOrderId}
                   workOrderTitle={drawerWorkOrderTitle}
                   onClose={handleCloseDrawer}
+                  urgent={true}
                 />
               </Suspense>
             )}
@@ -502,15 +566,15 @@ function UrgentWorkOrdersPage() {
             </button>
             <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : 'text-blue-900'}`}>New Urgent Work Order</h2>
             <form onSubmit={handleSubmit(onCreate)} className="flex flex-col gap-4">
-                            {/* Date field */}
-                            <div>
-                              <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>Date</label>
-                              <input
-                                type="date"
-                                className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`}
-                                name="date"
-                              />
-                            </div>
+              {/* Due Date field (always use dueDate) */}
+              <div>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>Due Date</label>
+                <input
+                  type="date"
+                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`}
+                  {...register('dueDate')}
+                />
+              </div>
               <div>
                 <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.title}</label>
                 <input className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`} {...register('title')} />
@@ -577,6 +641,88 @@ function UrgentWorkOrdersPage() {
             </form>
           </div>
         </div>
+      )}
+      {editModal.open && (
+        <SharedEditModal
+          open={editModal.open}
+          onClose={() => setEditModal({ open: false, workOrder: null })}
+          title={'Edit Urgent Work Order'}
+          onSubmit={handleEditSubmit(onEdit)}
+          isSubmitting={isEditSubmitting}
+          colorScheme={colorScheme}
+          showDelete={true}
+          deleteLabel={t.delete}
+          onDelete={async () => {
+            if (!editModal.workOrder) return;
+            if (window.confirm(t.confirmDelete || 'Are you sure you want to delete this urgent work order?')) {
+              try {
+                await deleteUrgentWorkOrder(editModal.workOrder.id);
+                setEditModal({ open: false, workOrder: null });
+                queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+              } catch (err) {
+                alert(t.errorLoading || 'Failed to delete urgent work order');
+              }
+            }
+          }}
+        >
+          <div>
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.title}</label>
+            <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('title')} />
+            {editErrors.title && <div className={styles.errorMsg}>{editErrors.title.message}</div>}
+          </div>
+          <div>
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.description}</label>
+            <textarea className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} rows={3} {...editRegister('description')} />
+            {editErrors.description && <div className={styles.errorMsg}>{editErrors.description.message}</div>}
+          </div>
+          <div>
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.location}</label>
+            <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('location')} />
+            {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
+          </div>
+          {/* No Priority field for UrgentWorkOrders */}
+          <div>
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.dueDate}</label>
+            <input type="date" className={styles.input + ' ' + (colorScheme === 'dark' ? '[color-scheme:dark] !bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('dueDate' as any)} />
+            {(editErrors as Record<string, any>).dueDate && <div className={styles.errorMsg}>{(editErrors as Record<string, any>).dueDate.message}</div>}
+          </div>
+          {/* File/Photo Upload Section */}
+          <div>
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.attachments || 'Attachments'}</label>
+            <input
+              type="file"
+              multiple
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+              className={styles.input + ' cursor-pointer ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')}
+              onChange={e => setEditValue('files', e.target.files ?? undefined)}
+              title={t.chooseFiles || 'Choose files'}
+            />
+            <div className={"text-xs mt-1 " + (colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-500')}>
+              {editFiles && editFiles.length > 0
+                ? Array.from(editFiles as File[]).map(f => f.name).join(', ')
+                : t.noFileChosen || 'No file chosen'}
+            </div>
+            {editFiles && editFiles.length > 0 && (
+              <div className="mt-2 flex flex-col gap-2 max-h-32 overflow-y-auto">
+                {Array.from(editFiles as File[]).map((file, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    {file.type.startsWith('image/') ? (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-[#2d3748]' : 'border'}`}
+                        onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                      />
+                    ) : (
+                      <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#64748b]' : 'bg-gray-100 text-gray-500'}`}>File</span>
+                    )}
+                    <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>{file.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </SharedEditModal>
       )}
     </div>
   );

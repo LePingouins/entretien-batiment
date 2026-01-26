@@ -66,9 +66,34 @@ public class UrgentWorkOrderController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<UrgentWorkOrder> patchStatus(@PathVariable Long id, @RequestBody java.util.Map<String, Object> updates) {
+    public ResponseEntity<UrgentWorkOrder> patchFields(@PathVariable Long id, @RequestBody java.util.Map<String, Object> updates) {
         return service.findById(id)
                 .map(existing -> {
+                    if (updates.containsKey("title")) {
+                        existing.setTitle((String) updates.get("title"));
+                    }
+                    if (updates.containsKey("description")) {
+                        existing.setDescription((String) updates.get("description"));
+                    }
+                    if (updates.containsKey("location")) {
+                        existing.setLocation((String) updates.get("location"));
+                    }
+                    if (updates.containsKey("dueDate")) {
+                        Object dueDate = updates.get("dueDate");
+                        if (dueDate instanceof String && !((String) dueDate).isEmpty()) {
+                            // Accept both date and date-time strings
+                            String dueDateStr = (String) dueDate;
+                            if (dueDateStr.length() == 10) {
+                                dueDateStr += "T00:00:00";
+                            }
+                            existing.setDueDate(java.time.LocalDateTime.parse(dueDateStr));
+                        } else {
+                            existing.setDueDate(null);
+                        }
+                    }
+                    if (updates.containsKey("priority")) {
+                        existing.setPriority((String) updates.get("priority"));
+                    }
                     if (updates.containsKey("status")) {
                         existing.setStatus((String) updates.get("status"));
                     }

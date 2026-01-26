@@ -12,118 +12,14 @@ import { workOrderSchema, WorkOrderFormType } from './AdminWorkOrders/schemas';
 import { DndBoard, isBottomZone, getStatusFromBottomZone } from './AdminWorkOrders/dndBoard';
 import { FilterBar } from './AdminWorkOrders/FilterBar';
 import { useForm, SubmitHandler } from 'react-hook-form';
+import { SharedEditModal } from '../components/SharedEditModal';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DragEndEvent } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
-// Edit modal with Escape key handler
-function EditModalWithEscape({ onClose, handleEditSubmit, onEdit, editRegister, editErrors, isEditSubmitting, priorityOptions, editModal, queryClient, colorScheme }: any) {
-  React.useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-  const { t } = useLang();
-  const modalRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
 
-  // Dark mode classes
-  const overlayClass = colorScheme === 'dark' ? 'bg-black/60' : 'bg-black/40';
-  const containerClass = colorScheme === 'dark' 
-    ? 'bg-[#1a1f2e] border border-[#2d3748] text-[#e2e8f0]' 
-    : 'bg-white';
-  const labelClass = colorScheme === 'dark' ? 'text-[#94a3b8]' : '';
-  const inputClass = colorScheme === 'dark' 
-    ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' 
-    : '';
-  const titleClass = colorScheme === 'dark' ? 'text-[#e2e8f0]' : '';
-  const closeBtnClass = colorScheme === 'dark' 
-    ? 'text-[#94a3b8] hover:text-red-400 bg-transparent' 
-    : '';
-
-  return (
-    <div className={`${styles.modalOverlay} ${overlayClass}`}>
-      <div ref={modalRef} className={`${styles.modalContainer} ${containerClass}`}>
-        <button
-          className={`${styles.modalCloseBtn} ${closeBtnClass}`}
-          onClick={onClose}
-        >✕</button>
-        <h2 className={`${styles.modalTitle} ${titleClass}`}>{t.editWorkOrder}</h2>
-        <form onSubmit={handleEditSubmit(onEdit)} className={styles.formEditModal}>
-          <div>
-            <label className={`${styles.label} ${labelClass}`}>{t.title}</label>
-            <input className={`${styles.input} ${inputClass}`} {...editRegister('title')} />
-            {editErrors.title && <div className={styles.errorMsg}>{editErrors.title.message}</div>}
-          </div>
-          <div>
-            <label className={`${styles.label} ${labelClass}`}>{t.description}</label>
-            <textarea className={`${styles.input} ${inputClass}`} {...editRegister('description')} />
-            {editErrors.description && <div className={styles.errorMsg}>{editErrors.description.message}</div>}
-          </div>
-          <div>
-            <label className={`${styles.label} ${labelClass}`}>{t.location}</label>
-            <select className={`${styles.input} ${inputClass}`} {...editRegister('location')}>
-              <option value="" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>-- Select Location --</option>
-              <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Horizon Nature</option>
-              <option value="inewa" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Inewa</option>
-            </select>
-            {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
-          </div>
-          <div>
-            <label className={`${styles.label} ${labelClass}`}>{t.priority}</label>
-            <select className={`${styles.input} ${inputClass}`} {...editRegister('priority')}>
-              {priorityOptions.map((p: string) => (
-                <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>{getPriorityLabel(t, p)}</option>
-              ))}
-            </select>
-            {editErrors.priority && <div className={styles.errorMsg}>{editErrors.priority.message}</div>}
-          </div>
-          <div>
-            <label className={`${styles.label} ${labelClass}`}>{t.dueDate}</label>
-            <input type="date" className={`${styles.input} ${inputClass} ${colorScheme === 'dark' ? '[color-scheme:dark]' : ''}`} {...editRegister('dueDate')} />
-            {editErrors.dueDate && <div className={styles.errorMsg}>{editErrors.dueDate.message}</div>}
-          </div>
-          <div className={styles.modalBtnRow}>
-            <button
-              type="submit"
-              className={colorScheme === 'dark' ? 'bg-[#3b82f6] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#2563eb] transition-colors' : styles.saveBtn}
-              disabled={isEditSubmitting}
-            >
-              {isEditSubmitting ? t.saveChanges : t.saveChanges}
-            </button>
-            <button
-              type="button"
-              className={colorScheme === 'dark' ? 'bg-red-600/20 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg font-medium hover:bg-red-600/30 transition-colors' : styles.deleteBtn}
-              onClick={async () => {
-                if (window.confirm(t.confirmDelete)) {
-                  try {
-                    await api.delete(`/api/admin/work-orders/${editModal.workOrder.id}`);
-                    onClose();
-                    queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
-                  } catch (err) {
-                    alert(t.errorLoading);
-                  }
-                }
-              }}
-            >{t.delete}</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 // Sortable card wrapper - defined OUTSIDE the main component to prevent remounting
 interface SortableCardProps {
@@ -827,18 +723,62 @@ function AdminWorkOrdersPage() {
       >
         {/* Modal for editing work order */}
         {editModal.open && (
-          <EditModalWithEscape
+          <SharedEditModal
+            open={editModal.open}
             onClose={() => setEditModal({ open: false, workOrder: null })}
-            handleEditSubmit={handleEditSubmit}
-            onEdit={onEdit}
-            editRegister={editRegister}
-            editErrors={editErrors}
-            isEditSubmitting={isEditSubmitting}
-            priorityOptions={priorityOptions}
-            editModal={editModal}
-            queryClient={queryClient}
+            title={t.editWorkOrder}
+            onSubmit={handleEditSubmit(onEdit)}
+            isSubmitting={isEditSubmitting}
             colorScheme={colorScheme}
-          />
+            showDelete={true}
+            onDelete={async () => {
+              if (!editModal.workOrder) return;
+              if (window.confirm(t.confirmDelete)) {
+                try {
+                  await api.delete(`/api/admin/work-orders/${editModal.workOrder.id}`);
+                  setEditModal({ open: false, workOrder: null });
+                  queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
+                } catch (err) {
+                  alert(t.errorLoading);
+                }
+              }
+            }}
+            deleteLabel={t.delete}
+          >
+            <div>
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.title}</label>
+              <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('title')} />
+              {editErrors.title && <div className={styles.errorMsg}>{editErrors.title.message}</div>}
+            </div>
+            <div>
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.description}</label>
+              <textarea className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('description')} />
+              {editErrors.description && <div className={styles.errorMsg}>{editErrors.description.message}</div>}
+            </div>
+            <div>
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.location}</label>
+              <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('location')}>
+                <option value="" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>-- Select Location --</option>
+                <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Horizon Nature</option>
+                <option value="inewa" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Inewa</option>
+              </select>
+              {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
+            </div>
+            <div>
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.priority}</label>
+              <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('priority')}>
+                {priorityOptions.map((p: string) => (
+                  <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>{getPriorityLabel(t, p)}</option>
+                ))}
+              </select>
+              {editErrors.priority && <div className={styles.errorMsg}>{editErrors.priority.message}</div>}
+            </div>
+            <div>
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.dueDate}</label>
+              <input type="date" className={styles.input + ' ' + (colorScheme === 'dark' ? '[color-scheme:dark] !bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('dueDate')} />
+              {editErrors.dueDate && <div className={styles.errorMsg}>{editErrors.dueDate.message}</div>}
+            </div>
+          </SharedEditModal>
         )}
         <div className="w-full">
           <div className="w-full flex items-start gap-3 relative">

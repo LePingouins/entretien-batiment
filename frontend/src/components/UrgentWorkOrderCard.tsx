@@ -66,7 +66,9 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
         <span className={`px-2 py-1 rounded text-xs font-semibold ${colorScheme === 'dark' ? statusColorsDark[workOrder.status] : statusColorsLight[workOrder.status]}`}>{workOrder.status}</span>
       </div>
       <div className="flex flex-wrap gap-2 sm:gap-3 items-center mb-1 sm:mb-2">
-        <span className={`text-xs flex items-center gap-1 font-semibold ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`}>Due: {workOrder.dueDate ? workOrder.dueDate.slice(0, 10) : '-'}</span>
+        <span className={`text-xs flex items-center gap-1 font-semibold ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`}>
+          Due: {workOrder.dueDate && typeof workOrder.dueDate === 'string' && workOrder.dueDate.trim() !== '' ? workOrder.dueDate.slice(0, 10) : ''}
+        </span>
       </div>
       <div className={`text-sm line-clamp-2 mb-2 transition-all duration-200 ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-800'}`}>{workOrder.description}</div>
       <div className={`text-xs flex items-center gap-1 mb-2 ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`}> 
