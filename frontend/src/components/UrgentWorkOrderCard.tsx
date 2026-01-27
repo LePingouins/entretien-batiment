@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { UrgentWorkOrderResponse, WorkOrderPriority, UrgentWorkOrderStatus } from '../types/api';
 import { MaterialsButton } from './MaterialsButton';
+import { ColorSchemeContext } from './AdminLayout';
 
 interface UrgentWorkOrderCardProps {
   workOrder: UrgentWorkOrderResponse;
@@ -40,15 +41,17 @@ const priorityColorsLight: Record<WorkOrderPriority, string> = {
 };
 
 export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOrder, colorScheme = 'default', onEdit, onDelete }) => {
+  const { colorScheme: effectiveColorScheme } = React.useContext(ColorSchemeContext);
   const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
   const attachmentUrl = workOrder.attachmentDownloadUrl || (workOrder.attachmentFilename ? `/uploads/urgentworkorders/${workOrder.attachmentFilename}` : undefined);
 
-  const cardClass = colorScheme === 'dark'
+  // Match AdminWorkOrdersPage card style exactly
+  const cardClass = effectiveColorScheme === 'dark'
     ? 'rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl bg-[#252d3d] p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 border border-[#2d3748] transition-transform duration-200 hover:scale-[1.02] sm:hover:scale-105 hover:border-[#3b82f6] cursor-pointer w-full overflow-hidden'
     : 'rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl bg-gradient-to-br from-white/70 to-blue-100/60 p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 border border-blue-200 backdrop-blur-md transition-transform duration-200 hover:scale-[1.02] sm:hover:scale-105 hover:shadow-blue-400/40 hover:bg-white/80 cursor-pointer w-full overflow-hidden';
 
-  const cardShadow = colorScheme === 'dark'
+  const cardShadow = effectiveColorScheme === 'dark'
     ? '0 8px 32px 0 rgba(0, 0, 0, 0.4)'
     : '0 8px 32px 0 rgba(31, 38, 135, 0.18)';
 
@@ -62,17 +65,17 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
       onClick={() => onEdit?.(workOrder)}
     >
       <div className="flex justify-between items-start sm:items-center mb-1 sm:mb-2 gap-2 flex-wrap">
-        <h3 className={`font-bold text-sm sm:text-lg truncate flex items-center gap-1 sm:gap-2 max-w-[70%] ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>{workOrder.title}</h3>
-        <span className={`px-2 py-1 rounded text-xs font-semibold ${colorScheme === 'dark' ? statusColorsDark[workOrder.status] : statusColorsLight[workOrder.status]}`}>{workOrder.status}</span>
+        <h3 className={`font-bold text-sm sm:text-lg truncate flex items-center gap-1 sm:gap-2 max-w-[70%] ${effectiveColorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>{workOrder.title}</h3>
+        <span className={`px-2 py-1 rounded text-xs font-semibold ${effectiveColorScheme === 'dark' ? statusColorsDark[workOrder.status] : statusColorsLight[workOrder.status]}`}>{workOrder.status}</span>
       </div>
       <div className="flex flex-wrap gap-2 sm:gap-3 items-center mb-1 sm:mb-2">
-        <span className={`text-xs flex items-center gap-1 font-semibold ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`}>
+        <span className={`text-xs flex items-center gap-1 font-semibold ${effectiveColorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`}>
           Due: {workOrder.dueDate && typeof workOrder.dueDate === 'string' && workOrder.dueDate.trim() !== '' ? workOrder.dueDate.slice(0, 10) : ''}
         </span>
       </div>
-      <div className={`text-sm line-clamp-2 mb-2 transition-all duration-200 ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-800'}`}>{workOrder.description}</div>
-      <div className={`text-xs flex items-center gap-1 mb-2 ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`}> 
-        <svg width="14" height="14" fill="currentColor" className={colorScheme === 'dark' ? 'text-[#4ade80]' : 'text-green-400'} viewBox="0 0 20 20"><path d="M10 2a6 6 0 016 6c0 4.418-6 10-6 10S4 12.418 4 8a6 6 0 016-6zm0 8a2 2 0 110-4 2 2 0 010 4z"/></svg>
+      <div className={`text-sm line-clamp-2 mb-2 transition-all duration-200 ${effectiveColorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-800'}`}>{workOrder.description}</div>
+      <div className={`text-xs flex items-center gap-1 mb-2 ${effectiveColorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`}> 
+        <svg width="14" height="14" fill="currentColor" className={effectiveColorScheme === 'dark' ? 'text-[#4ade80]' : 'text-green-400'} viewBox="0 0 20 20"><path d="M10 2a6 6 0 016 6c0 4.418-6 10-6 10S4 12.418 4 8a6 6 0 016-6zm0 8a2 2 0 110-4 2 2 0 010 4z"/></svg>
         Location: {workOrder.location}
       </div>
       {attachmentUrl && (

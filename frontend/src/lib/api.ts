@@ -1,3 +1,13 @@
+/**
+ * Reorder urgent work orders within a single status column.
+ * Sets sortIndex = array index for each id in orderedIds.
+ * Used when dragging a card within the same column.
+ */
+export async function reorderUrgentWorkOrders(status: string, orderedIds: number[]): Promise<void> {
+  // Backend expects array of {id, sortIndex}
+  const reorderRequests = orderedIds.map((id, idx) => ({ id, sortIndex: idx }));
+  await api.patch('/api/urgent-work-orders/reorder', reorderRequests);
+}
 import axios from 'axios';
 
 const api = axios.create({

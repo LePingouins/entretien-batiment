@@ -1,118 +1,159 @@
-// --- DnD Board Implementation ---
-function BottomDropZone(props: any) {
-  const { columnId, onDrop } = props;
+import { useDroppable } from '@dnd-kit/core';
+// --- DnD Board Implementation (Refactored) ---
+import { DndContext, closestCenter, rectIntersection, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay, CollisionDetection } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+
+const STATUS_IDS = ['IN_PROGRESS', 'COMPLETED'];
+const BOTTOM_ZONE_PREFIX = 'bottom-';
+const getBottomZoneId = (status: string) => `${BOTTOM_ZONE_PREFIX}${status}`;
+const isBottomZone = (id: string) => id.startsWith(BOTTOM_ZONE_PREFIX);
+const getStatusFromBottomZone = (id: string) => id.replace(BOTTOM_ZONE_PREFIX, '');
+
+// Use only rectIntersection for reliable column hitboxes
+const customCollisionDetection: CollisionDetection = rectIntersection;
+
+function BottomDropZone({ status, colorScheme, hasItems }: { status: string; colorScheme: string; hasItems: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id: getBottomZoneId(status) });
   return (
     <div
-      style={{ height: 24, background: 'transparent', width: '100%' }}
-      onDragOver={e => e.preventDefault()}
-      onDrop={e => {
-        e.preventDefault();
-        if (onDrop) onDrop(columnId);
-      }}
-    />
-  );
-}
-
-function DroppableColumn(props: any) {
-  const { id, children } = props;
-  return (
-    <div style={{ minHeight: 100, width: '100%' }}>
-      {children}
+      ref={setNodeRef}
+      className={`mt-2 rounded-lg border-2 border-dashed transition-all duration-200 ${isOver 
+        ? colorScheme === 'dark'
+          ? 'border-blue-400 bg-blue-500/20 min-h-[60px]'
+          : 'border-blue-400 bg-blue-100 min-h-[60px]'
+        : colorScheme === 'dark'
+          ? 'border-transparent hover:border-gray-600 min-h-[40px]'
+          : 'border-transparent hover:border-gray-300 min-h-[40px]'} ${hasItems ? '' : 'hidden'}`}
+      style={{ flexShrink: 0 }}
+    >
+      {isOver && (
+        <div className={`text-center py-3 text-sm ${colorScheme === 'dark' ? 'text-blue-300' : 'text-blue-600'}`}>Drop here to add at end</div>
+      )}
     </div>
   );
 }
 
-function UrgentDndBoard(props: any) {
-  const { columns, workOrders, onMove, onOpenMaterials, onDeleted, onCardClick, onEdit } = props;
-  const [activeId, setActiveId] = React.useState(null);
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    })
+function useDndSensors() {
+  return useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
+}
+
+function UrgentDndBoard({ columns, workOrders, onMove, onOpenMaterials, onDeleted, onCardClick, onEdit }: any) {
+  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const [activeWorkOrder, setActiveWorkOrder] = React.useState<any>(null);
+  const sensors = useDndSensors();
 
   const findWorkOrder = (id: any) => workOrders.find((w: any) => w.id.toString() === id);
 
   const handleDragStart = (event: any) => {
     setActiveId(event.active.id);
+    setActiveWorkOrder(findWorkOrder(event.active.id));
   };
 
   const handleDragEnd = (event: any) => {
-    const { active, over } = event;
     setActiveId(null);
-    if (over && active.id !== over.id) {
-      onMove(active.id, over.id);
+    setActiveWorkOrder(null);
+    const { active, over } = event;
+    console.log('DnD handleDragEnd', { active, over });
+    if (!over || active.id === over.id) return;
+    const from = workOrders.find((wo: any) => wo.id.toString() === active.id);
+    const overCard = workOrders.find((wo: any) => wo.id.toString() === over.id);
+    console.log('DnD debug', {
+      activeId: active.id,
+      overId: over.id,
+      from,
+      overCard,
+      STATUS_IDS,
+      isOverColumn: STATUS_IDS.includes(over.id),
+      isOverCard: !!overCard
+    });
+    // If dropped on a column header, move to top of that column if changing status
+    if (STATUS_IDS.includes(over.id)) {
+      if (from && from.status !== over.id) {
+        console.log('DnD: calling onMove for column', { activeId: active.id, overId: over.id });
+        onMove(active.id, over.id, { atTop: true });
+      }
+      return;
     }
+    // If dropped on a card
+    if (overCard && from) {
+      if (from.status !== overCard.status) {
+        // Move to top of new column
+        console.log('DnD: calling onMove for card (status change)', { activeId: active.id, overStatus: overCard.status });
+        onMove(active.id, overCard.status, { atTop: true });
+      } else {
+        // Reorder within same column
+        console.log('DnD: calling onMove for card (reorder)', { activeId: active.id, overId: over.id });
+        onMove(active.id, over.id, { reorder: true });
+      }
+      return;
+    }
+    // Ignore other cases
+    return;
   };
-
-  const collisionDetection = (args: any) => closestCenter(args);
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={collisionDetection}
+      collisionDetection={customCollisionDetection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 32, width: '100%' }}>
-        <div style={{ display: 'flex', gap: 32, maxWidth: 800, width: '100%', justifyContent: 'center' }}>
-          {columns.map((column: any) => (
-            <div key={column.id} style={{ flex: 1, minWidth: 320, maxWidth: 400 }}>
-              <DroppableColumnComponent status={column.id} colorScheme={column.colorScheme}>
-                <SortableContext
-                  items={column.workOrders.map((w: any) => w.id.toString())}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {column.workOrders.map((workOrder: any) => (
-                    <SortableUrgentWorkOrderCard
-                      key={workOrder.id}
-                      id={workOrder.id.toString()}
-                      workOrder={workOrder}
-                      colorScheme={column.colorScheme}
-                      onDeleted={onDeleted}
-                      onEdit={onEdit}
-                    />
-                  ))}
-                </SortableContext>
-                <BottomDropZone columnId={column.id} onDrop={() => {}} />
-              </DroppableColumnComponent>
-            </div>
-          ))}
-        </div>
+      <div className="flex gap-4 pb-12 px-2 sm:px-4 pt-4 w-full justify-evenly overflow-x-auto md:overflow-x-visible">
+        {columns.map((column: any) => (
+          <div className="flex-shrink-0 w-[260px] sm:w-[280px] flex flex-col" key={column.id}>
+            <DroppableColumnComponent status={column.id} colorScheme={column.colorScheme}>
+              <SortableContext
+                id={column.id}
+                items={column.workOrders.map((w: any) => w.id.toString())}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex-1 flex flex-col gap-4 min-h-[180px]">
+                  {(column.workOrders.length ?? 0) === 0 ? (
+                    <div className="text-gray-400 text-center py-4">No urgent work orders</div>
+                  ) : (
+                    column.workOrders.map((workOrder: any) => (
+                      <SortableUrgentWorkOrderCard
+                        key={workOrder.id}
+                        id={workOrder.id.toString()}
+                        workOrder={workOrder}
+                        colorScheme={column.colorScheme}
+                        activeId={activeId}
+                        onOpenMaterials={onOpenMaterials}
+                        onDeleted={onDeleted}
+                        onCardClick={onCardClick}
+                        onEdit={onEdit}
+                      />
+                    ))
+                  )}
+                </div>
+                <BottomDropZone status={column.id} colorScheme={column.colorScheme} hasItems={(column.workOrders.length ?? 0) > 0} />
+              </SortableContext>
+            </DroppableColumnComponent>
+          </div>
+        ))}
       </div>
       <DragOverlay>
-        {activeId ? (
+        {activeWorkOrder ? (
           <UrgentWorkOrderCard
-            workOrder={findWorkOrder(activeId)}
-            colorScheme={columns.find((col: any) => col.workOrders.some((w: any) => w.id.toString() === activeId))?.colorScheme}
+            workOrder={activeWorkOrder}
+            colorScheme={columns.find((col: any) => col.workOrders.some((w: any) => w.id.toString() === activeWorkOrder.id))?.colorScheme || 'default'}
           />
         ) : null}
       </DragOverlay>
     </DndContext>
   );
 }
-// --- End DnD Board Implementation ---
+// --- End DnD Board Implementation (Refactored) ---
 import * as React from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Suspense } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUrgentWorkOrders, createUrgentWorkOrder, updateUrgentWorkOrder, deleteUrgentWorkOrder } from '../lib/api';
 import { UrgentWorkOrderResponse, UrgentWorkOrderRequest, WorkOrderResponse, UrgentWorkOrderStatus } from '../types/api';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragOverlay,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { arrayMove } from '@dnd-kit/sortable';
 // Remove duplicate CSS import
 import { FilterBar } from './AdminWorkOrders/FilterBar';
 import { ColorSchemeType } from './AdminWorkOrders/colorSchemes';
@@ -120,7 +161,6 @@ import { ColorSchemeType } from './AdminWorkOrders/colorSchemes';
 
 const statusOptions = ['IN_PROGRESS', 'COMPLETED'];
 import { getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
-import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { UrgentWorkOrderCard } from '../components/UrgentWorkOrderCard';
@@ -170,19 +210,30 @@ const statusIconsMap: Record<string, React.ReactElement> = {
 
 const DroppableColumnComponent = ({ status, children, colorScheme }: { status: string; children: React.ReactNode; colorScheme?: string }) => {
   const { setNodeRef, isOver } = useDroppable({ id: status });
-  // Ensure drag-and-drop context is preserved for DndBoard
+  // Accept only valid ColorSchemeType, fallback to 'default'
+  const validSchemes: ColorSchemeType[] = ['current', 'performance', 'default', 'dark'];
+  const scheme: ColorSchemeType = validSchemes.includes(colorScheme as ColorSchemeType)
+    ? (colorScheme as ColorSchemeType)
+    : 'default';
+  const columnClass = getColorSchemeClass(scheme, 'column');
+  const headerClass = getColorSchemeClass(scheme, 'header');
   return (
     <div
       ref={setNodeRef}
       data-droppable={status}
-      className={`w-full bg-white dark:bg-[#1a1f2e] rounded-2xl shadow p-4 flex flex-col border border-gray-200 dark:border-[#2d3748] h-full min-w-[260px] max-w-[320px] transition-all duration-200 ${isOver ? (colorScheme === 'dark' ? 'ring-2 ring-blue-400 bg-blue-900/30' : 'ring-2 ring-blue-400 bg-blue-100') : ''}`}
-      style={{ boxSizing: 'border-box' }}
+      className={
+        columnClass +
+        (scheme === 'dark'
+          ? (isOver ? ' ring-2 ring-blue-400 bg-blue-900/30' : '')
+          : (isOver ? ' ring-2 ring-blue-400 bg-blue-100' : ''))
+      }
+      style={{ boxSizing: 'border-box', minHeight: 320 }}
     >
-      <div className={`font-bold text-base mb-3 px-2 py-2 rounded-xl flex items-center gap-2 border-b border-gray-200 dark:border-[#2d3748] shadow ${colorScheme === 'dark' ? 'bg-[#252d3d] text-[#e2e8f0]' : 'bg-white text-gray-800'}`}>
+      <div className={headerClass}>
         {statusIconsMap[status]}
         <span>{status === 'IN_PROGRESS' ? 'En cours' : 'Terminée'}</span>
       </div>
-      <div className="flex flex-col gap-3" style={{ flex: 1 }}>
+      <div className="flex flex-col gap-3" style={{ flex: 1, minHeight: 120 }}>
         {children}
       </div>
     </div>
@@ -217,7 +268,10 @@ function UrgentWorkOrdersPage() {
     const onEdit: SubmitHandler<UrgentWorkOrderRequest & { dueDate?: string; priority?: string }> = async (data) => {
       if (!editModal.workOrder) return;
       try {
-        await updateUrgentWorkOrder(editModal.workOrder.id, {
+        // Preserve previous sortIndex
+        const prevSortIndex = editModal.workOrder.sortIndex;
+        const prevStatus = editModal.workOrder.status;
+        const updated = await updateUrgentWorkOrder(editModal.workOrder.id, {
           title: data.title,
           description: data.description,
           location: data.location,
@@ -226,8 +280,13 @@ function UrgentWorkOrdersPage() {
         });
         setEditModal({ open: false, workOrder: null });
         editReset();
+        // Optimistically update only the edited card, preserving order
+        setOptimisticUrgentData((urgentData || []).map(wo =>
+          wo.id === updated.id
+            ? { ...updated, sortIndex: prevSortIndex, status: prevStatus }
+            : wo
+        ));
         queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
-        setOptimisticUrgentData(undefined);
       } catch (err) {
         alert('Failed to update urgent work order');
       }
@@ -298,8 +357,14 @@ function UrgentWorkOrdersPage() {
     // Group urgent work orders by status for board rendering
     const grouped = React.useMemo(() => {
       if (!Array.isArray(urgentData)) return { IN_PROGRESS: [], COMPLETED: [] };
-      const inProgress = urgentData.filter((wo: UrgentWorkOrderResponse) => wo.status === 'IN_PROGRESS');
-      const completed = urgentData.filter((wo: UrgentWorkOrderResponse) => wo.status === 'COMPLETED');
+      const inProgress = urgentData
+        .filter((wo: UrgentWorkOrderResponse) => wo.status === 'IN_PROGRESS')
+        .slice()
+        .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0));
+      const completed = urgentData
+        .filter((wo: UrgentWorkOrderResponse) => wo.status === 'COMPLETED')
+        .slice()
+        .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0));
       return {
         IN_PROGRESS: inProgress,
         COMPLETED: completed,
@@ -370,9 +435,15 @@ function UrgentWorkOrdersPage() {
         files: data.files,
         dueDate: data.dueDate || '',
       };
-      await createUrgentWorkOrder(payload);
+      const newWorkOrder = await createUrgentWorkOrder(payload);
       setShowModal(false);
       reset();
+      // Optimistically add new work order to UI
+      setOptimisticUrgentData(prev => {
+        const arr = Array.isArray(prev) ? prev.slice() : Array.isArray(urgentDataRaw) ? urgentDataRaw.slice() : [];
+        arr.push(newWorkOrder);
+        return arr;
+      });
       queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
     } catch (err) {
       alert('Failed to create urgent work order');
@@ -498,20 +569,53 @@ function UrgentWorkOrdersPage() {
                 { id: 'COMPLETED', workOrders: grouped.COMPLETED, colorScheme },
               ]}
               workOrders={urgentData || []}
-              onMove={async (activeId: any, overId: any) => {
+              onMove={async (activeId: any, overId: any, opts?: { atTop?: boolean; reorder?: boolean }) => {
                 const from = (urgentData || []).find((wo) => wo.id.toString() === activeId);
-                let newStatus = null;
+                if (!from) return;
+                // Handle status change (move to another column)
                 if (["IN_PROGRESS", "COMPLETED"].includes(overId)) {
-                  newStatus = overId;
+                  if (from.status !== overId) {
+                    const newUrgentData = [
+                      { ...from, status: overId },
+                      ...((urgentData || []).filter((wo) => wo.status === overId && wo.id !== from.id)),
+                      ...((urgentData || []).filter((wo) => wo.status !== overId && wo.id !== from.id)),
+                    ];
+                    setOptimisticUrgentData(newUrgentData);
+                    try {
+                      await updateUrgentWorkOrder(from.id, { status: overId });
+                      const newOrder = [from.id, ...((urgentData || []).filter((wo) => wo.status === overId && wo.id !== from.id)).map(wo => wo.id)];
+                      await import('../lib/api').then(api => api.reorderUrgentWorkOrders(overId, newOrder));
+                      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] }), 300);
+                    } catch (e) {
+                      setOptimisticUrgentData(undefined);
+                    } finally {
+                      queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                    }
+                  }
+                  return;
                 }
-                if (newStatus && from && from.status !== newStatus) {
-                  setOptimisticUrgentData(
-                    (urgentData || []).map((wo) =>
-                      wo.id === from.id ? { ...wo, status: newStatus } : wo
-                    )
-                  );
+                const overCard = (urgentData || []).find((wo) => wo.id.toString() === overId);
+                if (overCard && from.status === overCard.status) {
+                  const col = (urgentData || []).filter((wo) => wo.status === from.status);
+                  const oldIndex = col.findIndex((wo) => wo.id.toString() === activeId);
+                  const newIndex = col.findIndex((wo) => wo.id.toString() === overId);
+                  if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+                  const newCol = [...col];
+                  const [moved] = newCol.splice(oldIndex, 1);
+                  newCol.splice(newIndex, 0, moved);
+                  const newUrgentData: UrgentWorkOrderResponse[] = [];
+                  (urgentData || []).forEach(wo => {
+                    if (wo.status !== from.status) {
+                      newUrgentData.push(wo);
+                    }
+                  });
+                  newCol.forEach(wo => {
+                    newUrgentData.push(wo);
+                  });
+                  setOptimisticUrgentData([...newUrgentData]);
                   try {
-                    await updateUrgentWorkOrder(from.id, { status: newStatus });
+                    await import('../lib/api').then(api => api.reorderUrgentWorkOrders(from.status, newCol.map(w => w.id)));
+                    setTimeout(() => queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] }), 300);
                   } catch (e) {
                     setOptimisticUrgentData(undefined);
                   } finally {
@@ -544,6 +648,19 @@ function UrgentWorkOrdersPage() {
                   workOrderTitle={drawerWorkOrderTitle}
                   onClose={handleCloseDrawer}
                   urgent={true}
+                  onMaterialsChanged={(materials) => {
+                    setOptimisticUrgentData((prev) => {
+                      if (!prev) return prev;
+                      return prev.map(wo => {
+                        if (wo.id !== drawerWorkOrderId) return wo;
+                        return {
+                          ...wo,
+                          materialsCount: materials.length,
+                          materialsPreview: materials.slice(0, 2).map(m => m.name),
+                        };
+                      });
+                    });
+                  }}
                 />
               </Suspense>
             )}

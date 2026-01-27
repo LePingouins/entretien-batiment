@@ -115,4 +115,17 @@ public class UrgentWorkOrderController {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }
+
+        // PATCH endpoint for reordering urgent work orders
+        @PatchMapping("/reorder")
+        public ResponseEntity<Void> reorderUrgentWorkOrders(@RequestBody List<UrgentWorkOrderReorderRequest> reorderRequests) {
+            service.reorderUrgentWorkOrders(reorderRequests);
+            return ResponseEntity.noContent().build();
+        }
+
+        // DTO for reorder requests
+        public static class UrgentWorkOrderReorderRequest {
+            public Long id;
+            public Integer sortIndex;
+        }
 }
