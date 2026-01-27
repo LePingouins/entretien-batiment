@@ -116,16 +116,16 @@ public class UrgentWorkOrderController {
         return ResponseEntity.noContent().build();
     }
 
-        // PATCH endpoint for reordering urgent work orders
-        @PatchMapping("/reorder")
-        public ResponseEntity<Void> reorderUrgentWorkOrders(@RequestBody List<UrgentWorkOrderReorderRequest> reorderRequests) {
-            service.reorderUrgentWorkOrders(reorderRequests);
-            return ResponseEntity.noContent().build();
-        }
+    // PATCH endpoint for reordering urgent work orders within a status column
+    @PatchMapping("/reorder")
+    public ResponseEntity<Void> reorderUrgentWorkOrders(@RequestBody ReorderUrgentWorkOrdersRequest req) {
+        service.reorderUrgentWorkOrdersInColumn(req.status, req.orderedIds);
+        return ResponseEntity.noContent().build();
+    }
 
-        // DTO for reorder requests
-        public static class UrgentWorkOrderReorderRequest {
-            public Long id;
-            public Integer sortIndex;
-        }
+    // DTO for reorder requests
+    public static class ReorderUrgentWorkOrdersRequest {
+        public String status;
+        public java.util.List<Long> orderedIds;
+    }
 }

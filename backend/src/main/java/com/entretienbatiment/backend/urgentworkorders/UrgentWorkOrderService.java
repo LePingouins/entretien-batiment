@@ -28,22 +28,42 @@ public class UrgentWorkOrderService {
         repository.deleteById(id);
     }
 
-        // Batch reorder urgent work orders by updating sortIndex
-        public void reorderUrgentWorkOrders(List<UrgentWorkOrderController.UrgentWorkOrderReorderRequest> reorderRequests) {
-            List<UrgentWorkOrder> workOrders = repository.findAllById(
-                reorderRequests.stream().map(r -> r.id).toList()
-            );
-            // Map id to new sortIndex
-            java.util.Map<Long, Integer> idToSortIndex = new java.util.HashMap<>();
-            for (var req : reorderRequests) {
-                idToSortIndex.put(req.id, req.sortIndex);
+    // Reorder urgent work orders within a single status column
+    public void reorderUrgentWorkOrdersInColumn(String status, java.util.List<Long> orderedIds) {
+        // Fetch all urgent work orders with the given status
+        java.util.List<UrgentWorkOrder> columnItems = repository.findAll()
+            .stream()
+            .filter(wo -> status.equals(wo.getStatus()))
+            .toList();
+
+        // Validate: all IDs must belong to the specified status
+        java.util.Set<Long> validIds = columnItems.stream().map(UrgentWorkOrder::getId).collect(java.util.stream.Collectors.toSet());
+        for (Long id : orderedIds) {
+            if (!validIds.contains(id)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "Urgent work order " + id + " does not belong to status " + status
+                );
             }
-            for (UrgentWorkOrder workOrder : workOrders) {
-                Integer newIndex = idToSortIndex.get(workOrder.getId());
-                if (newIndex != null) {
-                    workOrder.setSortIndex(newIndex);
-                }
-            }
-            repository.saveAll(workOrders);
         }
+
+        // Set sortIndex = array index for each id in orderedIds
+        java.util.Map<Long, UrgentWorkOrder> woMap = columnItems.stream().collect(java.util.stream.Collectors.toMap(UrgentWorkOrder::getId, wo -> wo));
+        for (int i = 0; i < orderedIds.size(); i++) {
+            UrgentWorkOrder wo = woMap.get(orderedIds.get(i));
+            if (wo != null) {
+                wo.setSortIndex(i);
+            }
+        }
+
+        // For any other items in the column not in orderedIds, put them after
+        int nextIndex = orderedIds.size();
+        for (UrgentWorkOrder wo : columnItems) {
+            if (!orderedIds.contains(wo.getId())) {
+                wo.setSortIndex(nextIndex++);
+            }
+        }
+
+        repository.saveAll(columnItems);
+    }
 }

@@ -4,9 +4,7 @@
  * Used when dragging a card within the same column.
  */
 export async function reorderUrgentWorkOrders(status: string, orderedIds: number[]): Promise<void> {
-  // Backend expects array of {id, sortIndex}
-  const reorderRequests = orderedIds.map((id, idx) => ({ id, sortIndex: idx }));
-  await api.patch('/api/urgent-work-orders/reorder', reorderRequests);
+  await api.patch('/api/urgent-work-orders/reorder', { status, orderedIds });
 }
 import axios from 'axios';
 

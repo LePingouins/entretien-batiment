@@ -210,13 +210,13 @@ const statusIconsMap: Record<string, React.ReactElement> = {
 
 const DroppableColumnComponent = ({ status, children, colorScheme }: { status: string; children: React.ReactNode; colorScheme?: string }) => {
   const { setNodeRef, isOver } = useDroppable({ id: status });
-  // Accept only valid ColorSchemeType, fallback to 'default'
-  const validSchemes: ColorSchemeType[] = ['current', 'performance', 'default', 'dark'];
-  const scheme: ColorSchemeType = validSchemes.includes(colorScheme as ColorSchemeType)
-    ? (colorScheme as ColorSchemeType)
-    : 'default';
-  const columnClass = getColorSchemeClass(scheme, 'column');
-  const headerClass = getColorSchemeClass(scheme, 'header');
+    const { t } = useLang();
+    const validSchemes: ColorSchemeType[] = ['current', 'performance', 'default', 'dark'];
+    const scheme: ColorSchemeType = validSchemes.includes(colorScheme as ColorSchemeType)
+      ? (colorScheme as ColorSchemeType)
+      : 'default';
+    const columnClass = getColorSchemeClass(scheme, 'column');
+    const headerClass = getColorSchemeClass(scheme, 'header');
   return (
     <div
       ref={setNodeRef}
@@ -231,7 +231,7 @@ const DroppableColumnComponent = ({ status, children, colorScheme }: { status: s
     >
       <div className={headerClass}>
         {statusIconsMap[status]}
-        <span>{status === 'IN_PROGRESS' ? 'En cours' : 'Terminée'}</span>
+          <span>{status === 'IN_PROGRESS' ? t.statusInProgress : t.statusCompleted}</span>
       </div>
       <div className="flex flex-col gap-3" style={{ flex: 1, minHeight: 120 }}>
         {children}
