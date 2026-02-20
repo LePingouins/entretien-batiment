@@ -12,6 +12,7 @@ import MileagePage from '../pages/MileagePage';
 import ArchivePage from '../pages/ArchivePage';
 
 import UrgentWorkOrdersPage from '../pages/UrgentWorkOrdersPage';
+import DashboardPage from '../pages/DashboardPage';
 
 import { Navigate } from 'react-router-dom';
 
@@ -37,12 +38,24 @@ const router = createBrowserRouter([
             element: <AdminLayout />, // layout for admin
             children: [
               {
+                index: true,
+                element: <DashboardPage />,
+              },
+              {
                 path: 'work-orders',
                 element: <AdminWorkOrdersPage />,
               },
               {
+                path: 'work-orders/:id',
+                element: React.createElement(React.lazy(() => import('../pages/WorkOrderDetailPage'))),
+              },
+              {
                 path: 'urgent-work-orders',
                 element: <UrgentWorkOrdersPage />,
+              },
+              {
+                path: 'urgent-work-orders/:id',
+                element: React.createElement(React.lazy(() => import('../pages/UrgentWorkOrderDetailPage'))),
               },
                 {
                   path: 'mileage',

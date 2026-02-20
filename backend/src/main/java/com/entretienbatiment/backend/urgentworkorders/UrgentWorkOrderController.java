@@ -16,9 +16,23 @@ public class UrgentWorkOrderController {
     }
 
     @GetMapping
-    public List<UrgentWorkOrder> getAll() {
-        return service.findAll();
+    public List<UrgentWorkOrder> getAll(@RequestParam(required = false) String q,
+                                        @RequestParam(required = false) String status,
+                                        @RequestParam(required = false) String location) {
+        // If no filters, return all non-archived
+        if (q == null && status == null && location == null) {
+            return service.findAll();
+        }
+        return service.findAllActiveFiltered(q, status, location);
     }
+
+    @GetMapping("/archived")
+    public List<UrgentWorkOrder> getAllArchived(@RequestParam(required = false) String q,
+                                                @RequestParam(required = false) String status,
+                                                @RequestParam(required = false) String location) {
+        return service.findAllArchived(q, status, location);
+    }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<UrgentWorkOrder> getById(@PathVariable Long id) {
@@ -52,12 +66,15 @@ public class UrgentWorkOrderController {
                 String originalFilename = file.getOriginalFilename();
                 String ext = originalFilename != null && originalFilename.contains(".") ? originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
                 String storedFilename = java.util.UUID.randomUUID() + ext;
-                java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "urgentworkorders");
+                // Use same directory as regular work orders to reuse FilesController
+                java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
                 java.nio.file.Files.createDirectories(uploadDir);
                 java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
                 file.transferTo(filePath);
                 urgentWorkOrder.setAttachmentFilename(storedFilename);
                 urgentWorkOrder.setAttachmentContentType(file.getContentType());
+                // Set download URL to point to existing FilesController endpoint
+                urgentWorkOrder.setAttachmentDownloadUrl("/api/files/workorders/" + storedFilename);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to store file", e);
             }
@@ -113,6 +130,18 @@ public class UrgentWorkOrderController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/archive")
+    public ResponseEntity<Void> archive(@PathVariable Long id) {
+        service.archive(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/unarchive")
+    public ResponseEntity<Void> unarchive(@PathVariable Long id) {
+        service.unarchive(id);
         return ResponseEntity.noContent().build();
     }
 

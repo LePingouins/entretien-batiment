@@ -1,3 +1,8 @@
+// Fetch a single work order by ID
+export async function getWorkOrderById(id: number): Promise<import('../types/api').WorkOrderResponse> {
+  const res = await api.get(`/api/admin/work-orders/${id}`);
+  return res.data;
+}
 /**
  * Reorder urgent work orders within a single status column.
  * Sets sortIndex = array index for each id in orderedIds.
@@ -226,10 +231,24 @@ export async function unarchiveWorkOrder(workOrderId: number): Promise<WorkOrder
 export default api;
 
 // --- Urgent Work Orders API ---
-import type { UrgentWorkOrderResponse, UrgentWorkOrderRequest } from '../types/api';
+import type { UrgentWorkOrderResponse, UrgentWorkOrderRequest, MileageEntry } from '../types/api';
 
-export async function getUrgentWorkOrders(): Promise<UrgentWorkOrderResponse[]> {
-  const res = await api.get<UrgentWorkOrderResponse[]>('/api/urgent-work-orders');
+export async function getUrgentWorkOrders(params?: {
+  status?: string;
+  q?: string;
+  location?: string;
+  technician?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<UrgentWorkOrderResponse[]> {
+  const p: any = {};
+  if (params?.q) p.q = params.q;
+  if (params?.status) p.status = params.status;
+  if (params?.location) p.location = params.location;
+  if (params?.technician) p.technician = params.technician;
+  if (params?.startDate) p.startDate = params.startDate;
+  if (params?.endDate) p.endDate = params.endDate;
+  const res = await api.get<UrgentWorkOrderResponse[]>('/api/urgent-work-orders', { params: p });
   // Patch: convert materialsPreview string to array for frontend compatibility
   return res.data.map((wo: any) => {
     let preview: string[] = [];
@@ -296,4 +315,55 @@ export async function updateUrgentWorkOrder(id: number, data: Partial<UrgentWork
 
 export async function deleteUrgentWorkOrder(id: number): Promise<void> {
   await api.delete(`/api/urgent-work-orders/${id}`);
+}
+
+export async function getArchivedUrgentWorkOrders(params?: {
+  q?: string;
+  status?: string;
+  location?: string;
+}): Promise<UrgentWorkOrderResponse[]> {
+  const p: any = {};
+  if (params?.q) p.q = params.q;
+  if (params?.status) p.status = params.status;
+  if (params?.location) p.location = params.location;
+  const res = await api.get<UrgentWorkOrderResponse[]>('/api/urgent-work-orders/archived', { params: p });
+  return res.data;
+}
+
+
+
+export async function archiveUrgentWorkOrder(id: number): Promise<void> {
+  await api.patch(`/api/urgent-work-orders/${id}/archive`);
+}
+
+export async function unarchiveUrgentWorkOrder(id: number): Promise<void> {
+  await api.patch(`/api/urgent-work-orders/${id}/unarchive`);
+}
+
+export async function getArchivedMileageEntries(params?: {
+  q?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<MileageEntry[]> {
+  const p: any = {};
+  if (params?.q) p.q = params.q;
+  if (params?.startDate) p.startDate = params.startDate;
+  if (params?.endDate) p.endDate = params.endDate;
+  const res = await api.get<MileageEntry[]>('/api/mileage/archived', { params: p });
+  return res.data;
+}
+
+
+
+export async function archiveMileageEntry(id: number): Promise<void> {
+  await api.patch(`/api/mileage/${id}/archive`);
+}
+
+export async function unarchiveMileageEntry(id: number): Promise<void> {
+  await api.patch(`/api/mileage/${id}/unarchive`);
+}
+
+export async function getDashboardStats(): Promise<import('../types/api').DashboardStats> {
+  const res = await api.get('/api/admin/dashboard');
+  return res.data;
 }

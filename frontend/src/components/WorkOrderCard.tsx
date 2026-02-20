@@ -10,34 +10,34 @@ const loadedImagesCache = new Set<string>();
 
 // Dark mode color mappings for status badges
 const statusColorsDark: Record<WorkOrderStatus, string> = {
-  OPEN: 'bg-teal-600/30 text-teal-300 border border-teal-500/30',
-  ASSIGNED: 'bg-blue-600/30 text-blue-300 border border-blue-500/30',
-  IN_PROGRESS: 'bg-yellow-600/30 text-yellow-300 border border-yellow-500/30',
-  COMPLETED: 'bg-green-600/30 text-green-300 border border-green-500/30',
-  CANCELLED: 'bg-red-600/30 text-red-300 border border-red-500/30',
+  OPEN: 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/25',
+  ASSIGNED: 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/25',
+  IN_PROGRESS: 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/25',
+  COMPLETED: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/25',
+  CANCELLED: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/25',
 };
 
 const statusColorsLight: Record<WorkOrderStatus, string> = {
-  OPEN: 'bg-teal-500 text-white',
-  ASSIGNED: 'bg-blue-200 text-blue-800',
-  IN_PROGRESS: 'bg-yellow-200 text-yellow-800',
-  COMPLETED: 'bg-green-200 text-green-800',
-  CANCELLED: 'bg-red-200 text-red-800',
+  OPEN: 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
+  ASSIGNED: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+  IN_PROGRESS: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  COMPLETED: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  CANCELLED: 'bg-red-50 text-red-700 ring-1 ring-red-200',
 };
 
 // Dark mode color mappings for priority badges
 const priorityColorsDark: Record<WorkOrderPriority, string> = {
-  LOW: 'bg-green-600/30 text-green-300 border border-green-500/30',
-  MEDIUM: 'bg-yellow-600/30 text-yellow-300 border border-yellow-500/30',
-  HIGH: 'bg-orange-600/30 text-orange-300 border border-orange-500/30',
-  URGENT: 'bg-red-600/30 text-red-300 border border-red-500/30',
+  LOW: 'bg-green-500/15 text-green-300 ring-1 ring-green-500/25',
+  MEDIUM: 'bg-yellow-500/15 text-yellow-300 ring-1 ring-yellow-500/25',
+  HIGH: 'bg-orange-500/15 text-orange-300 ring-1 ring-orange-500/25',
+  URGENT: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/25',
 };
 
 const priorityColorsLight: Record<WorkOrderPriority, string> = {
-  LOW: 'bg-green-100 text-green-800',
-  MEDIUM: 'bg-yellow-100 text-yellow-800',
-  HIGH: 'bg-orange-100 text-orange-800',
-  URGENT: 'bg-red-100 text-red-800',
+  LOW: 'bg-green-50 text-green-700 ring-1 ring-green-200',
+  MEDIUM: 'bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200',
+  HIGH: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
+  URGENT: 'bg-red-50 text-red-700 ring-1 ring-red-200',
 };
 
 export function StatusBadge({ status }: { status: WorkOrderStatus }) {
@@ -75,9 +75,10 @@ interface WorkOrderCardComponentProps {
   workOrder: WorkOrderResponse;
   onOpenMaterials?: (workOrder: WorkOrderResponse) => void;
   onDeleted?: (id: number) => void;
+  onArchived?: (id: number) => void;
 }
 
-const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkOrderCardComponentProps) => {
+const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchived }: WorkOrderCardComponentProps) => {
   const { colorScheme } = React.useContext(ColorSchemeContext);
   const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
@@ -137,36 +138,43 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkO
 
   // Card styles based on color scheme
   const cardClass = colorScheme === 'dark'
-    ? 'rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl bg-[#252d3d] p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 border border-[#2d3748] transition-transform duration-200 hover:scale-[1.02] sm:hover:scale-105 hover:border-[#3b82f6] cursor-pointer w-full overflow-hidden'
-    : 'rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl bg-gradient-to-br from-white/70 to-blue-100/60 p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 border border-blue-200 backdrop-blur-md transition-transform duration-200 hover:scale-[1.02] sm:hover:scale-105 hover:shadow-blue-400/40 hover:bg-white/80 cursor-pointer w-full overflow-hidden';
+    ? 'rounded-xl bg-surface-800 p-4 flex flex-col gap-2.5 border border-surface-700 transition-all duration-200 hover:border-brand-500/40 hover:shadow-lg cursor-pointer w-full overflow-hidden'
+    : 'rounded-xl bg-white p-4 flex flex-col gap-2.5 border border-surface-200 shadow-card transition-all duration-200 hover:shadow-card-hover hover:border-surface-300 cursor-pointer w-full overflow-hidden';
 
-  const cardShadow = colorScheme === 'dark'
-    ? '0 8px 32px 0 rgba(0, 0, 0, 0.4)'
-    : '0 8px 32px 0 rgba(31, 38, 135, 0.18)';
+  const cardShadow = undefined;
 
   return (
     <div
       className={cardClass}
-      style={{ boxShadow: cardShadow }}
+      style={cardShadow ? { boxShadow: cardShadow } : undefined}
       tabIndex={0}
       role="group"
       aria-label={`Work order ${workOrder.title}`}
     >
-      <div className="flex justify-between items-start sm:items-center mb-1 sm:mb-2 gap-2 flex-wrap">
-        <h3 className={`font-bold text-sm sm:text-lg truncate flex items-center gap-1 sm:gap-2 max-w-[70%] ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>
-          <span className={`inline-block flex-shrink-0 ${colorScheme === 'dark' ? 'text-[#3b82f6]' : 'text-blue-500'}`}><svg width="16" height="16" className="sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 12H9v-2h2v2zm0-4H9V6h2v4z"/></svg></span>
-          <Link to={`./${workOrder.id}`} tabIndex={0} aria-label={`View details for ${workOrder.title}`} className={`truncate ${colorScheme === 'dark' ? 'text-[#e2e8f0] hover:text-white' : ''}`}>{workOrder.title}</Link>
-        </h3>
-        <StatusBadge status={workOrder.status} />
-      </div>
-      <div className="flex flex-wrap gap-2 sm:gap-3 items-center mb-1 sm:mb-2">
+      <div className="flex justify-between items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-xs font-mono ${colorScheme === 'dark' ? 'text-surface-500' : 'text-surface-400'}`}>#{workOrder.id}</span>
+            <StatusBadge status={workOrder.status} />
+          </div>
+          <Link to={`./${workOrder.id}`} tabIndex={0} aria-label={`View details for ${workOrder.title}`}>
+            <h3 className={`font-semibold text-sm sm:text-base truncate ${colorScheme === 'dark' ? 'text-surface-100 hover:text-white' : 'text-surface-900 hover:text-brand-700'}`}>
+              {workOrder.title}
+            </h3>
+          </Link>
+        </div>
         <PriorityBadge priority={workOrder.priority} />
-        <span className={`text-xs flex items-center gap-1 ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`} aria-label={`Due date: ${workOrder.dueDate?.slice(0, 10)}`}><svg width="14" height="14" fill="currentColor" className={colorScheme === 'dark' ? 'text-[#60a5fa]' : 'text-blue-400'} viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm10 6v10H4V8h12z"/></svg>Due: {workOrder.dueDate?.slice(0, 10)}</span>
       </div>
-      <div className={`text-sm line-clamp-2 mb-2 transition-all duration-200 ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-800'}`} aria-label={`Description: ${workOrder.description}`}>{workOrder.description}</div>
-      <div className={`text-xs flex items-center gap-1 mb-2 ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-gray-700'}`} aria-label={`Location: ${workOrder.location}`}> 
-        <svg width="14" height="14" fill="currentColor" className={colorScheme === 'dark' ? 'text-[#4ade80]' : 'text-green-400'} viewBox="0 0 20 20"><path d="M10 2a6 6 0 016 6c0 4.418-6 10-6 10S4 12.418 4 8a6 6 0 016-6zm0 8a2 2 0 110-4 2 2 0 010 4z"/></svg>
-        Location: {workOrder.location}
+      <p className={`text-sm line-clamp-2 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>{workOrder.description}</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <span className={`flex items-center gap-1.5 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="opacity-60"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          {workOrder.dueDate?.slice(0, 10) || 'No date'}
+        </span>
+        <span className={`flex items-center gap-1.5 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="opacity-60"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          {workOrder.location || 'N/A'}
+        </span>
       </div>
 
       {/* Attachment preview or download */}
@@ -178,7 +186,7 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkO
                 <img
                   src={imgState.src}
                   alt={workOrder.attachmentFilename || 'Attachment'}
-                  className={`max-h-32 rounded shadow mb-1 ${colorScheme === 'dark' ? 'border border-[#2d3748]' : 'border'}`}
+                  className={`max-h-32 rounded shadow mb-1 ${colorScheme === 'dark' ? 'border border-surface-700' : 'border'}`}
                   style={{ 
                     maxWidth: '100%', 
                     objectFit: 'contain',
@@ -198,7 +206,7 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkO
               href={attachmentUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`underline text-xs ${colorScheme === 'dark' ? 'text-[#60a5fa]' : 'text-blue-700'}`}
+              className={`underline text-xs ${colorScheme === 'dark' ? 'text-brand-400' : 'text-blue-700'}`}
               download={workOrder.attachmentFilename}
             >
               {workOrder.attachmentFilename || 'Download attachment'}
@@ -207,28 +215,47 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkO
         </div>
       )}
 
-      <div className="flex gap-3 mt-2 items-center">
-        <div className="flex items-center gap-2">
+      <div className={`flex items-center gap-2 pt-2 mt-1 border-t ${colorScheme === 'dark' ? 'border-surface-700' : 'border-surface-100'}`}>
+        <div className="flex items-center -space-x-1.5">
           <img
             src={avatarUrl(workOrder.assignedToUserId || 0)}
-            alt="Assignee avatar"
-            className={`w-8 h-8 rounded-full shadow-lg transition-transform duration-200 hover:scale-110 ${colorScheme === 'dark' ? 'border-2 border-[#2d3748]' : 'border-2 border-white'}`}
+            alt="Assignee"
+            className={`w-6 h-6 rounded-full ring-2 ${colorScheme === 'dark' ? 'ring-surface-800' : 'ring-white'}`}
             title="Assignee"
-            tabIndex={0}
           />
           <img
             src={avatarUrl(workOrder.createdByUserId)}
-            alt="Creator avatar"
-            className={`w-8 h-8 rounded-full shadow-lg transition-transform duration-200 hover:scale-110 ${colorScheme === 'dark' ? 'border-2 border-[#2d3748]' : 'border-2 border-white'}`}
+            alt="Creator"
+            className={`w-6 h-6 rounded-full ring-2 ${colorScheme === 'dark' ? 'ring-surface-800' : 'ring-white'}`}
             title="Creator"
-            tabIndex={0}
           />
         </div>
         <div className="flex-1" />
-        <span className="flex gap-2">
+        <span className="flex gap-1">
+          {/* Archive Button */}
+          <button
+            title="Archive"
+            className={`p-1.5 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-500 hover:text-amber-400 hover:bg-surface-700' : 'text-surface-400 hover:text-amber-600 hover:bg-amber-50'}`}
+            onClick={async e => {
+              e.stopPropagation();
+              if (window.confirm('Are you sure you want to archive this work order?')) {
+                try {
+                  const { archiveWorkOrder } = await import('../lib/api');
+                  await archiveWorkOrder(workOrder.id);
+                  if (onArchived) onArchived(workOrder.id);
+                  else window.location.reload();
+                } catch {
+                 alert('Failed to archive work order');
+                }
+              }
+            }}
+          >
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" /><path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" /></svg>
+          </button>
+          
           <button
             title="Edit"
-            className={`p-2 rounded-full transition-colors duration-200 ${colorScheme === 'dark' ? 'bg-[#1a1f2e] hover:bg-[#374151] text-[#60a5fa]' : 'bg-blue-100 hover:bg-blue-200'}`}
+            className={`p-1.5 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-500 hover:text-brand-400 hover:bg-surface-700' : 'text-surface-400 hover:text-brand-600 hover:bg-brand-50'}`}
             onClick={e => {
               e.stopPropagation();
               // Open edit modal by simulating card click
@@ -236,11 +263,11 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted }: WorkO
               (e.currentTarget.closest('[role="group"]') as HTMLElement)?.dispatchEvent(click);
             }}
           >
-            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 010 2.828l-10 10A2 2 0 016 16H4a1 1 0 01-1-1v-2a2 2 0 01.586-1.414l10-10a2 2 0 012.828 0z"/></svg>
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 010 2.828l-10 10A2 2 0 016 16H4a1 1 0 01-1-1v-2a2 2 0 01.586-1.414l10-10a2 2 0 012.828 0z"/></svg>
           </button>
           <button
             title="Delete"
-            className={`p-2 rounded-full transition-colors duration-200 ${colorScheme === 'dark' ? 'bg-[#1a1f2e] hover:bg-red-900/50 text-red-400' : 'bg-red-100 hover:bg-red-200'}`}
+            className={`p-1.5 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-500 hover:text-red-400 hover:bg-surface-700' : 'text-surface-400 hover:text-red-600 hover:bg-red-50'}`}
             onClick={async e => {
               e.stopPropagation();
               if (window.confirm('Are you sure you want to delete this work order?')) {

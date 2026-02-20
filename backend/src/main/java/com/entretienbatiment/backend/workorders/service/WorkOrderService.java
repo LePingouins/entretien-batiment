@@ -426,11 +426,13 @@ public class WorkOrderService {
         // ║  in COMPLETED/CANCELLED before being archived.                              ║
         // ║                                                                             ║
         // ║  Examples:                                                                  ║
+        // ║    - 3 MONTHS (quarterly): .minus(90, ChronoUnit.DAYS)                     ║
         // ║    - 7 DAYS (production): .minus(7, ChronoUnit.DAYS)                       ║
         // ║    - 1 MINUTE (testing):  .minus(1, ChronoUnit.MINUTES)                    ║
         // ║    - 1 HOUR:              .minus(1, ChronoUnit.HOURS)                      ║
         // ╚════════════════════════════════════════════════════════════════════════════╝
-        java.time.Instant cutoffTime = java.time.Instant.now().minus(1, java.time.temporal.ChronoUnit.MINUTES);
+        // Archive items older than 3 months (approx 90 days)
+        java.time.Instant cutoffTime = java.time.Instant.now().minus(90, java.time.temporal.ChronoUnit.DAYS);
         List<WorkOrder> toArchive = repo.findWorkOrdersToArchive(
             List.of(WorkOrderStatus.COMPLETED, WorkOrderStatus.CANCELLED),
             cutoffTime

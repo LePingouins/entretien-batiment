@@ -1,0 +1,27 @@
+/* Printable layout utility styles (for future extension) */
+.printable-content {}
+.no-print {}
+
+@media print {
+	.printable-content {
+		width: 100vw !important;
+		max-width: 100vw !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		background: white !important;
+		color: black !important;
+		box-shadow: none !important;
+		border: none !important;
+		font-size: 12pt !important;
+		overflow: visible !important;
+		/* Try to fit to one page */
+		zoom: 0.85;
+		page-break-inside: avoid;
+	}
+	.printable-content > * {
+		page-break-inside: avoid;
+	}
+	.printable-content h1, .printable-content h2, .printable-content h3 {
+		page-break-after: avoid;
+	}
+}

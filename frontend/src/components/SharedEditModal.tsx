@@ -39,11 +39,11 @@ export const SharedEditModal: React.FC<EditModalProps> = ({
 
   const overlayClass = colorScheme === 'dark' ? 'bg-black/60' : 'bg-black/40';
   const containerClass = colorScheme === 'dark'
-    ? 'bg-[#1a1f2e] border border-[#2d3748] text-[#e2e8f0]'
+    ? 'bg-surface-800 border border-surface-700 text-surface-100'
     : 'bg-white';
-  const titleClass = colorScheme === 'dark' ? 'text-[#e2e8f0]' : '';
+  const titleClass = colorScheme === 'dark' ? 'text-surface-100' : '';
   const closeBtnClass = colorScheme === 'dark'
-    ? 'text-[#94a3b8] hover:text-red-400 bg-transparent'
+    ? 'text-surface-400 hover:text-red-400 bg-transparent'
     : '';
 
   return (
@@ -60,7 +60,7 @@ export const SharedEditModal: React.FC<EditModalProps> = ({
           <div className={styles.modalBtnRow}>
             <button
               type="submit"
-              className={colorScheme === 'dark' ? 'bg-[#3b82f6] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#2563eb] transition-colors' : styles.saveBtn}
+              className={colorScheme === 'dark' ? 'bg-brand-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-700 transition-colors' : styles.saveBtn}
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}

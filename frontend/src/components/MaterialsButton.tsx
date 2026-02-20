@@ -19,15 +19,15 @@ export const MaterialsButton: React.FC<MaterialsButtonProps> = ({ count = 0, pre
         : []);
 
   const buttonClass = colorScheme === 'dark'
-    ? 'flex items-center gap-2 px-3 py-1 rounded-full bg-[#1a1f2e] hover:bg-[#374151] text-[#a5b4fc] border border-[#2d3748] text-xs font-semibold transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#6366f1] relative'
+    ? 'flex items-center gap-2 px-3 py-1 rounded-full bg-surface-800 hover:bg-surface-600 text-indigo-300 border border-surface-700 text-xs font-semibold transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 relative'
     : 'flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-semibold transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-400 relative';
 
   const countBadgeClass = colorScheme === 'dark'
-    ? 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#6366f1] text-white text-xs font-bold ml-1'
+    ? 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold ml-1'
     : 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-500 text-white text-xs font-bold ml-1';
 
   const previewClass = colorScheme === 'dark'
-    ? 'ml-2 truncate text-[#64748b] max-w-[120px]'
+    ? 'ml-2 truncate text-surface-500 max-w-[120px]'
     : 'ml-2 truncate text-gray-500 max-w-[120px]';
 
   return (

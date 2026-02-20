@@ -85,11 +85,21 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // ✅ allow preflight
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
-                // Make files endpoint public
+                // Make files endpoint public for download
                 .requestMatchers("/api/files/workorders/**").permitAll()
-                .requestMatchers("/api/mileage/**").permitAll()
+                
+                // Admin endpoints - strict
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                
+                // Tech dashboard - strict
                 .requestMatchers("/api/tech/**").hasRole("TECH")
+
+                // Common secured endpoints
+                // Explicitly allow archived endpoints if they are causing issues with authenticated()
+                .requestMatchers("/api/mileage/**").hasAnyRole("ADMIN", "TECH")
+                .requestMatchers("/api/urgent-work-orders/**").hasAnyRole("ADMIN", "TECH")
+                
+                // Catch-all
                 .anyRequest().authenticated()
             )
             .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class)

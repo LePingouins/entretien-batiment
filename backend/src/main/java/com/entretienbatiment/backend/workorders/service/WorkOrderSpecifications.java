@@ -31,12 +31,25 @@ public final class WorkOrderSpecifications {
         }
 
         String like = "%" + q.trim().toLowerCase() + "%";
+        boolean isNumeric = q.trim().matches("\\d+");
 
-        return (root, query, cb) -> cb.or(
-                cb.like(cb.lower(root.get("title")), like),
-                cb.like(cb.lower(root.get("description")), like),
-                cb.like(cb.lower(root.get("location")), like)
-        );
+        return (root, query, cb) -> {
+            if (isNumeric) {
+                // If q is numeric, search by ID as well as text fields
+                return cb.or(
+                    cb.equal(root.get("id"), Long.valueOf(q.trim())),
+                    cb.like(cb.lower(root.get("title")), like),
+                    cb.like(cb.lower(root.get("description")), like),
+                    cb.like(cb.lower(root.get("location")), like)
+                );
+            } else {
+                return cb.or(
+                    cb.like(cb.lower(root.get("title")), like),
+                    cb.like(cb.lower(root.get("description")), like),
+                    cb.like(cb.lower(root.get("location")), like)
+                );
+            }
+        };
     }
 
     public static Specification<WorkOrder> locationEquals(String location) {

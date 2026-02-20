@@ -7,7 +7,8 @@ import java.time.LocalDateTime;
 
 public class UrgentWorkOrder {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_order_shared_id_seq")
+    @SequenceGenerator(name = "work_order_shared_id_seq", sequenceName = "work_order_shared_id_seq", allocationSize = 1)
     private Long id;
 
     private String title;
@@ -32,10 +33,12 @@ public class UrgentWorkOrder {
     private Integer materialsCount;
     private String materialsPreview; // Could be JSON or comma-separated
 
-    private Boolean archived;
+    @Column(columnDefinition = "boolean default false")
+    private Boolean archived = false;
     private LocalDateTime archivedAt;
 
     private Integer sortIndex;
+
 
     // Constructors
     public UrgentWorkOrder() {}
@@ -78,7 +81,12 @@ public class UrgentWorkOrder {
     public void setAttachmentFilename(String attachmentFilename) { this.attachmentFilename = attachmentFilename; }
     public String getAttachmentContentType() { return attachmentContentType; }
     public void setAttachmentContentType(String attachmentContentType) { this.attachmentContentType = attachmentContentType; }
-    public String getAttachmentDownloadUrl() { return attachmentDownloadUrl; }
+    public String getAttachmentDownloadUrl() { 
+        if (attachmentDownloadUrl == null && attachmentFilename != null) {
+            return "/api/files/workorders/" + attachmentFilename;
+        }
+        return attachmentDownloadUrl; 
+    }
     public void setAttachmentDownloadUrl(String attachmentDownloadUrl) { this.attachmentDownloadUrl = attachmentDownloadUrl; }
     public Integer getMaterialsCount() { return materialsCount; }
     public void setMaterialsCount(Integer materialsCount) { this.materialsCount = materialsCount; }

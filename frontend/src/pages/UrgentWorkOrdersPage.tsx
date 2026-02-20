@@ -1,7 +1,59 @@
-import { useDroppable } from '@dnd-kit/core';
-// --- DnD Board Implementation (Refactored) ---
-import { DndContext, closestCenter, rectIntersection, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay, CollisionDetection } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+
+import React, { Suspense } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
+import { DndContext, closestCenter, rectIntersection, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay, CollisionDetection, useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+import api, { getUrgentWorkOrders, updateUrgentWorkOrder, deleteUrgentWorkOrder, archiveUrgentWorkOrder, createUrgentWorkOrder } from '../lib/api';
+import { UrgentWorkOrderResponse, UrgentWorkOrderRequest, UrgentWorkOrderStatus } from '../types/api';
+import { ColorSchemeType } from './AdminWorkOrders/colorSchemes';
+import { useLang } from '../context/LangContext';
+import { WorkOrderCard } from '../components/WorkOrderCard';
+import { UrgentWorkOrderCard } from '../components/UrgentWorkOrderCard';
+import { SharedEditModal } from '../components/SharedEditModal';
+import { FilterBar } from './AdminWorkOrders/FilterBar';
+import { MaterialsDrawer } from '../components/MaterialsDrawer';
+import { getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
+import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
+
+// Reusable modal component for creating/updating
+const UrgentWorkOrderModal = ({
+  open,
+  onClose,
+  title,
+  children,
+  colorScheme,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  colorScheme: ColorSchemeType;
+}) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+      <div 
+        className={`w-full max-w-lg rounded-xl shadow-2xl transform transition-all animate-scaleIn max-h-[90vh] overflow-y-auto ${
+          colorScheme === 'dark' ? 'bg-surface-800 text-surface-50 border border-surface-700' : 'bg-white text-gray-900'
+        }`}
+      >
+        <div className={`flex justify-between items-center p-5 border-b ${colorScheme === 'dark' ? 'border-surface-700' : 'border-gray-100'}`}>
+          <h2 className="text-xl font-bold">{title}</h2>
+          <button onClick={onClose} className={`p-1.5 rounded-lg transition-colors ${colorScheme === 'dark' ? 'hover:bg-surface-700 text-surface-400' : 'hover:bg-gray-100 text-gray-400'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div className="p-6">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const STATUS_IDS = ['IN_PROGRESS', 'COMPLETED'];
 const BOTTOM_ZONE_PREFIX = 'bottom-';
@@ -19,15 +71,15 @@ function BottomDropZone({ status, colorScheme, hasItems }: { status: string; col
       ref={setNodeRef}
       className={`mt-2 rounded-lg border-2 border-dashed transition-all duration-200 ${isOver 
         ? colorScheme === 'dark'
-          ? 'border-blue-400 bg-blue-500/20 min-h-[60px]'
-          : 'border-blue-400 bg-blue-100 min-h-[60px]'
+          ? 'border-brand-400 bg-brand-500/20 min-h-[60px]'
+          : 'border-brand-400 bg-brand-50 min-h-[60px]'
         : colorScheme === 'dark'
           ? 'border-transparent hover:border-gray-600 min-h-[40px]'
           : 'border-transparent hover:border-gray-300 min-h-[40px]'} ${hasItems ? '' : 'hidden'}`}
       style={{ flexShrink: 0 }}
     >
       {isOver && (
-        <div className={`text-center py-3 text-sm ${colorScheme === 'dark' ? 'text-blue-300' : 'text-blue-600'}`}>Drop here to add at end</div>
+        <div className={`text-center py-3 text-sm ${colorScheme === 'dark' ? 'text-brand-300' : 'text-brand-600'}`}>Drop here to add at end</div>
       )}
     </div>
   );
@@ -40,7 +92,7 @@ function useDndSensors() {
   );
 }
 
-function UrgentDndBoard({ columns, workOrders, onMove, onOpenMaterials, onDeleted, onCardClick, onEdit }: any) {
+function UrgentDndBoard({ columns, workOrders, onMove, onOpenMaterials, onDeleted, onCardClick, onEdit, onArchive }: any) {
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [activeWorkOrder, setActiveWorkOrder] = React.useState<any>(null);
   const sensors = useDndSensors();
@@ -125,6 +177,7 @@ function UrgentDndBoard({ columns, workOrders, onMove, onOpenMaterials, onDelete
                         onDeleted={onDeleted}
                         onCardClick={onCardClick}
                         onEdit={onEdit}
+                        onArchive={onArchive}
                       />
                     ))
                   )}
@@ -146,29 +199,21 @@ function UrgentDndBoard({ columns, workOrders, onMove, onOpenMaterials, onDelete
     </DndContext>
   );
 }
-// --- End DnD Board Implementation (Refactored) ---
-import * as React from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { Suspense } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getUrgentWorkOrders, createUrgentWorkOrder, updateUrgentWorkOrder, deleteUrgentWorkOrder } from '../lib/api';
-import { UrgentWorkOrderResponse, UrgentWorkOrderRequest, WorkOrderResponse, UrgentWorkOrderStatus } from '../types/api';
-import { arrayMove } from '@dnd-kit/sortable';
-// Remove duplicate CSS import
-import { FilterBar } from './AdminWorkOrders/FilterBar';
-import { ColorSchemeType } from './AdminWorkOrders/colorSchemes';
-// Removed duplicate import
 
 const statusOptions = ['IN_PROGRESS', 'COMPLETED'];
-import { getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { UrgentWorkOrderCard } from '../components/UrgentWorkOrderCard';
-import { SharedEditModal } from '../components/SharedEditModal';
-import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
-// Sortable wrapper for urgent work order card
+const statusIconsMap: Record<string, React.ReactElement> = {
+  IN_PROGRESS: (
+    <svg width="24" height="24" fill="none" className="text-yellow-500" viewBox="0 0 24 24">
+      <path d="M6 4h12M6 20h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M8 4c0 4 4 4 4 8s-4 4-4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M16 4c0 4-4 4-4 8s4 4 4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  ),
+  COMPLETED: <svg width="28" height="28" fill="none" className="text-green-500" viewBox="0 0 28 28"><path d="M7 15l6 6 8-12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+};
+
 function SortableUrgentWorkOrderCard(props: any) {
-  const { id, workOrder, colorScheme, activeId, onOpenMaterials, onDeleted, onCardClick, onEdit } = props;
+  const { id, workOrder, colorScheme, activeId, onOpenMaterials, onDeleted, onCardClick, onEdit, onArchive } = props;
   const {
     attributes,
     listeners,
@@ -177,12 +222,17 @@ function SortableUrgentWorkOrderCard(props: any) {
     transition,
     isDragging,
   } = useSortable({ id });
+  
+  const isActive = activeId === id;
+  const isBeingDragged = isDragging || isActive;
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.7 : 1,
-    zIndex: isDragging ? 10 : 'auto',
+    opacity: isBeingDragged ? 0.3 : 1,
     cursor: 'grab',
+    touchAction: 'none',
+    zIndex: isDragging ? 10 : 'auto',
   };
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
@@ -191,56 +241,80 @@ function SortableUrgentWorkOrderCard(props: any) {
         colorScheme={colorScheme}
         onDelete={onDeleted ? () => onDeleted(workOrder.id) : undefined}
         onEdit={onEdit ? () => onEdit(workOrder) : undefined}
+        onArchive={onArchive ? () => onArchive(workOrder.id) : undefined}
       />
     </div>
   );
 }
-import { useOutletContext } from 'react-router-dom';
-import { useLang } from '../context/LangContext';
-import { MaterialsDrawer } from '../components/MaterialsDrawer';
 
-const statusIconsMap: Record<string, React.ReactElement> = {
-  IN_PROGRESS: (
-    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" className="text-yellow-500"><path d="M6 4h12M6 20h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M8 4c0 4 4 4 4 8s-4 4-4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M16 4c0 4-4 4-4 8s4 4 4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-  ),
-  COMPLETED: (
-    <svg width="24" height="24" fill="none" viewBox="0 0 28 28" className="text-green-500"><path d="M7 15l6 6 8-12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-  ),
-};
+interface DroppableColumnProps {
+  status: string;
+  children: React.ReactNode;
+  colorScheme?: string;
+}
 
-const DroppableColumnComponent = ({ status, children, colorScheme }: { status: string; children: React.ReactNode; colorScheme?: string }) => {
+const DroppableColumnComponent = ({ status, children, colorScheme }: DroppableColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: status });
-    const { t } = useLang();
-    const validSchemes: ColorSchemeType[] = ['current', 'performance', 'default', 'dark'];
-    const scheme: ColorSchemeType = validSchemes.includes(colorScheme as ColorSchemeType)
-      ? (colorScheme as ColorSchemeType)
-      : 'default';
-    const columnClass = getColorSchemeClass(scheme, 'column');
-    const headerClass = getColorSchemeClass(scheme, 'header');
+  const { t } = useLang();
+  
+  const getStatusLabel = (s: string) => {
+    switch (s) {
+      case 'IN_PROGRESS': return t.statusInProgress || 'In Progress';
+      case 'COMPLETED': return t.statusCompleted || 'Completed';
+      default: return s;
+    }
+  };
+  
   return (
     <div
       ref={setNodeRef}
-      data-droppable={status}
       className={
-        columnClass +
-        (scheme === 'dark'
-          ? (isOver ? ' ring-2 ring-blue-400 bg-blue-900/30' : '')
-          : (isOver ? ' ring-2 ring-blue-400 bg-blue-100' : ''))
+        colorScheme === 'dark'
+          ? `w-full h-full bg-surface-800 rounded-xl shadow-card p-4 flex flex-col border border-surface-700 transition-all duration-200 ${isOver ? 'ring-2 ring-brand-500' : ''}`
+          : (colorScheme === 'default' || colorScheme === 'performance')
+            ? `w-full h-full bg-white rounded-xl shadow p-4 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400' : ''}`
+            : `w-full h-full bg-white/60 backdrop-blur-md rounded-xl shadow-card p-4 flex flex-col border-2 border-brand-200/40 transition-all duration-200 ${isOver ? 'ring-4 ring-brand-400/60' : ''}`
       }
-      style={{ boxSizing: 'border-box', minHeight: 320 }}
+      style={{ minHeight: 350 }}
     >
-      <div className={headerClass}>
+      <div className={
+        colorScheme === 'dark'
+          ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-surface-700 text-surface-100 flex items-center gap-2 border-b border-surface-700 shadow'
+          : colorScheme === 'default'
+            ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
+            : colorScheme === 'performance'
+              ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
+              : 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-brand-50/60 text-surface-900 flex items-center gap-2 shadow'
+      }>
         {statusIconsMap[status]}
-          <span>{status === 'IN_PROGRESS' ? t.statusInProgress : t.statusCompleted}</span>
+        <span className="flex items-center gap-1 truncate">
+          {getStatusLabel(status)}
+        </span>
       </div>
-      <div className="flex flex-col gap-3" style={{ flex: 1, minHeight: 120 }}>
-        {children}
-      </div>
+      {children}
     </div>
   );
 };
 
+
 function UrgentWorkOrdersPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    // Modal state for creating urgent work order
+    const [showModal, setShowModal] = React.useState(false);
+    
+    // Auto-open modal if query param is set
+    React.useEffect(() => {
+      if (searchParams.get('action') === 'create') {
+        setShowModal(true);
+        // Remove the param so it doesn't reopen on refresh
+        setSearchParams(prev => {
+          const newParams = new URLSearchParams(prev);
+          newParams.delete('action');
+          return newParams;
+        }, { replace: true });
+      }
+    }, [searchParams, setSearchParams]);
+
     const [editModal, setEditModal] = React.useState<{ open: boolean; workOrder: UrgentWorkOrderResponse | null }>({ open: false, workOrder: null });
     const {
       register: editRegister,
@@ -308,13 +382,6 @@ function UrgentWorkOrdersPage() {
     const endDateInputRef = React.useRef(null);
 
 
-    // Example options (customize as needed)
-    const technicianOptions = [
-      { id: '', name: t.allTechnicians || 'All Technicians' },
-    ];
-    const locationOptions = [
-      { id: '', name: t.allLocations || 'All Locations' },
-    ];
 
     // Query all urgent work orders and group by status
     const [optimisticUrgentData, setOptimisticUrgentData] = React.useState<UrgentWorkOrderResponse[] | undefined>(undefined);
@@ -323,12 +390,73 @@ function UrgentWorkOrdersPage() {
       isLoading,
       error
     } = useQuery({
-      queryKey: ['urgentWorkOrders'],
-      queryFn: getUrgentWorkOrders,
+      queryKey: ['urgentWorkOrders', { status, q, location: locationFilter, technician, startDate, endDate }],
+      queryFn: () => getUrgentWorkOrders({ status, q, location: locationFilter, technician, startDate, endDate }),
       refetchInterval: 30000,
       staleTime: 0,
     });
     const urgentData = optimisticUrgentData || urgentDataRaw;
+
+    // Fix for "Add Manual" button
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isSubmitting },
+    setValue
+  } = useForm<UrgentWorkOrderRequest & { dueDate?: string; priority?: string }>();
+
+  const files = watch('files');
+
+  const handleCreate = () => {
+    reset();
+    setValue('priority', 'URGENT');
+    setShowModal(true);
+  };
+
+
+
+    const onSubmit: SubmitHandler<UrgentWorkOrderRequest & { dueDate?: string; priority?: string }> = async (data) => {
+      try {
+        const formData = new FormData();
+        formData.append('title', data.title);
+        formData.append('description', data.description);
+        formData.append('location', data.location);
+        if (data.priority) formData.append('priority', data.priority);
+        // Ensure date is truncated or formatted correctly if needed
+        if (data.dueDate) formData.append('dueDate', data.dueDate);
+        const filesArr = data.files instanceof FileList ? Array.from(data.files) : Array.isArray(data.files) ? data.files : [];
+        for (let i = 0; i < filesArr.length; i++) {
+          formData.append('files', filesArr[i]);
+        }
+        await api.post('/api/urgent-work-orders', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        reset();
+        setShowModal(false);
+        queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+      } catch (err) {
+        alert('Failed to create urgent work order');
+      }
+    };
+
+
+    // Example options (customize as needed)
+    const technicianOptions = [
+      { id: '', name: t.allTechnicians || 'All Technicians' },
+    ];
+    // Dynamically extract unique locations from urgentData
+    const locationOptions = React.useMemo(() => {
+      const locations = Array.isArray(urgentData)
+        ? Array.from(new Set(urgentData.map((wo: UrgentWorkOrderResponse) => wo.location).filter(Boolean)))
+        : [];
+      return [
+        { id: '', name: t.allLocations || 'All Locations' },
+        ...locations.map(loc => ({ id: loc, name: loc }))
+      ];
+    }, [urgentData, t.allLocations]);
 
     // Materials drawer state
     const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -371,6 +499,19 @@ function UrgentWorkOrdersPage() {
       };
     }, [urgentData]);
 
+    const handleArchive = async (id: number) => {
+        // Optimistically remove from UI
+        setOptimisticUrgentData((urgentData || []).filter((wo) => wo.id !== id));
+        try {
+          await archiveUrgentWorkOrder(id);
+        } catch (e) {
+          alert('Failed to archive urgent work order');
+          setOptimisticUrgentData(undefined);
+        } finally {
+          queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+        }
+      };
+
     // Drag and drop handlers
     const [activeId, setActiveId] = React.useState<string | null>(null);
     const [activeWorkOrder, setActiveWorkOrder] = React.useState<UrgentWorkOrderResponse | null>(null);
@@ -410,80 +551,12 @@ function UrgentWorkOrdersPage() {
       }
     };
 
-  // Modal state for creating urgent work order
-  const [showModal, setShowModal] = React.useState(false);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-    setValue,
-    watch,
-  } = useForm<UrgentWorkOrderRequest & { dueDate?: string }>({
-    defaultValues: {},
-  });
-  const files = watch('files');
 
-  const onCreate: SubmitHandler<any> = async (data) => {
-    try {
-      // Always send dueDate from the form (not 'date')
-      const payload: any = {
-        title: data.title,
-        description: data.description,
-        location: data.location,
-        priority: data.priority || 'URGENT',
-        files: data.files,
-        dueDate: data.dueDate || '',
-      };
-      const newWorkOrder = await createUrgentWorkOrder(payload);
-      setShowModal(false);
-      reset();
-      // Optimistically add new work order to UI
-      setOptimisticUrgentData(prev => {
-        const arr = Array.isArray(prev) ? prev.slice() : Array.isArray(urgentDataRaw) ? urgentDataRaw.slice() : [];
-        arr.push(newWorkOrder);
-        return arr;
-      });
-      queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
-    } catch (err) {
-      alert('Failed to create urgent work order');
-    }
-  };
-              <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.attachments || 'Attachments'}</label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`}
-                  onChange={e => setValue('files', e.target.files ?? undefined)}
-                  title={t.chooseFiles || 'Choose files'}
-                />
-                <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-500'}`}>
-                  {files && files.length > 0
-                    ? Array.from(files as File[]).map(f => f.name).join(', ')
-                    : t.noFileChosen || 'No file chosen'}
-                </div>
-                {files && files.length > 0 && (
-                  <div className="mt-2 flex flex-col gap-2 max-h-32 overflow-y-auto">
-                    {Array.from(files as File[]).map((file, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        {file.type.startsWith('image/') ? (
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={file.name}
-                            className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-[#2d3748]' : 'border'}`}
-                            onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
-                          />
-                        ) : (
-                          <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#64748b]' : 'bg-gray-100 text-gray-500'}`}>File</span>
-                        )}
-                        <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>{file.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+
+    // ...
+    // ...
+
+
 
   // Label helpers
   const getStatusLabel = (t: any, s: string) => {
@@ -503,24 +576,17 @@ function UrgentWorkOrdersPage() {
   };
 
   return (
-    <div className={getColorSchemeClass(colorScheme, 'wrapper')}>
-      <div className={
-        colorScheme === 'dark'
-          ? 'bg-[#1a1f2e] rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-[#2d3748]'
-          : colorScheme === 'performance'
-            ? 'bg-gray-100 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-gray-200'
-            : colorScheme === 'current'
-              ? 'bg-blue-50 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-blue-100'
-              : 'bg-blue-100/60 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-blue-200'
-      }>
+    <div className={(colorScheme === 'dark' ? 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8' : 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8')}>
+      <h1 className={`text-2xl font-bold mb-4 ${colorScheme === 'dark' ? 'text-surface-100' : 'text-surface-900'}`}>{t.urgentWorkOrders}</h1>
+      <div className="mb-8">
         <div className="w-full flex items-start gap-3 relative mb-4">
           <div className="flex-1 min-w-0 overflow-x-auto">
             <FilterBar
               status={status}
               setStatus={setStatus}
               statusOptions={statusOptions}
-              priority={priority}
-              setPriority={setPriority}
+              priority={''}
+              setPriority={() => {}}
               priorityOptions={[]}
               technician={technician}
               setTechnician={setTechnician}
@@ -546,10 +612,10 @@ function UrgentWorkOrdersPage() {
             <button
               className={
                 colorScheme === 'dark'
-                  ? 'bg-[#3b82f6] text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-lg hover:bg-[#2563eb] transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
+                  ? 'bg-brand-600 text-white px-3 sm:px-4 py-2 rounded-lg shadow-card hover:bg-brand-700 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
                   : (colorScheme === 'performance' || colorScheme === 'default')
-                    ? 'bg-white text-gray-800 border border-gray-300 border-b-0 px-3 sm:px-4 py-1 rounded-t-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
+                    ? 'bg-white text-gray-800 border border-gray-300 px-3 sm:px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
+                    : 'bg-brand-600 text-white px-3 sm:px-4 py-2 rounded-lg shadow-card transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
               }
               onClick={() => setShowModal(true)}
             >
@@ -638,6 +704,7 @@ function UrgentWorkOrdersPage() {
               }}
               onCardClick={() => {}}
               onEdit={handleEdit}
+              onArchive={handleArchive}
             />
             {/* Materials Drawer for urgent work orders */}
             {drawerOpen && drawerWorkOrderId !== null && (
@@ -673,56 +740,56 @@ function UrgentWorkOrdersPage() {
             if (e.target === e.currentTarget) setShowModal(false);
           }}
         >
-          <div className={`rounded-2xl shadow-2xl p-6 w-full max-w-md relative my-4 max-h-[90vh] overflow-y-auto ${colorScheme === 'dark' ? 'bg-[#1a1f2e] border border-[#2d3748]' : 'bg-white/95 backdrop-blur-md border border-blue-200'}`}>
+          <div className={`rounded-xl shadow-card p-6 w-full max-w-md relative my-4 max-h-[90vh] overflow-y-auto ${colorScheme === 'dark' ? 'bg-surface-800 border border-surface-700' : 'bg-white/95 backdrop-blur-md border border-brand-200'}`}>
             <button
-              className={`absolute top-2.5 right-3.5 rounded-full w-8 h-8 flex items-center justify-center text-xl font-bold transition-colors ${colorScheme === 'dark' ? 'text-[#94a3b8] hover:text-red-400 hover:bg-[#252d3d]' : 'text-red-400 hover:bg-red-50 border border-red-200'}`}
+              className={`absolute top-2.5 right-3.5 rounded-full w-8 h-8 flex items-center justify-center text-xl font-bold transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-700' : 'text-red-400 hover:bg-red-50 border border-red-200'}`}
               aria-label="Close"
               onClick={() => setShowModal(false)}
             >
               ×
             </button>
-            <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : 'text-blue-900'}`}>New Urgent Work Order</h2>
-            <form onSubmit={handleSubmit(onCreate)} className="flex flex-col gap-4">
+            <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${colorScheme === 'dark' ? 'text-surface-100' : 'text-surface-900'}`}>{t.urgentWorkOrders || 'Urgent Work Orders'}</h2>
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
               {/* Due Date field (always use dueDate) */}
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>Due Date</label>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>Due Date</label>
                 <input
                   type="date"
-                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`}
+                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`}
                   {...register('dueDate')}
                 />
               </div>
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.title}</label>
-                <input className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`} {...register('title')} />
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.title}</label>
+                <input className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`} {...register('title')} />
                 {errors.title && <div className="text-red-500 text-xs">{errors.title.message}</div>}
               </div>
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.description}</label>
-                <textarea className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`} rows={3} {...register('description')} />
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.description}</label>
+                <textarea className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`} rows={3} {...register('description')} />
                 {errors.description && <div className="text-red-500 text-xs">{errors.description.message}</div>}
               </div>
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.location}</label>
-                <select className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`} {...register('location')}>
-                  <option value="" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>-- {t.selectLocation || 'Select Location'} --</option>
-                  <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Horizon Nature</option>
-                  <option value="inewa" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Inewa</option>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.location}</label>
+                <select className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`} {...register('location')}>
+                  <option value="" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>-- {t.selectLocation || 'Select Location'} --</option>
+                  <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Horizon Nature</option>
+                  <option value="inewa" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Inewa</option>
                 </select>
                 {errors.location && <div className="text-red-500 text-xs">{errors.location.message}</div>}
               </div>
               {/* File/Photo Upload Section */}
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.attachments || 'Attachments'}</label>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.attachments || 'Attachments'}</label>
                 <input
                   type="file"
                   multiple
                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`}
+                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`}
                   onChange={e => setValue('files', e.target.files ?? undefined)}
                   title={t.chooseFiles || 'Choose files'}
                 />
-                <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-500'}`}>
+                <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-surface-500' : 'text-gray-500'}`}>
                   {files && files.length > 0
                     ? Array.from(files as File[]).map(f => f.name).join(', ')
                     : t.noFileChosen || 'No file chosen'}
@@ -735,13 +802,13 @@ function UrgentWorkOrdersPage() {
                           <img
                             src={URL.createObjectURL(file)}
                             alt={file.name}
-                            className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-[#2d3748]' : 'border'}`}
+                            className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-surface-700' : 'border'}`}
                             onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
                           />
                         ) : (
-                          <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#64748b]' : 'bg-gray-100 text-gray-500'}`}>File</span>
+                          <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-500' : 'bg-gray-100 text-gray-500'}`}>File</span>
                         )}
-                        <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>{file.name}</span>
+                        <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
                       </div>
                     ))}
                   </div>
@@ -750,7 +817,7 @@ function UrgentWorkOrdersPage() {
 
               <button
                 type="submit"
-                className={`px-6 py-2 rounded-xl shadow-lg transition-all duration-200 font-semibold text-base mt-2 ${colorScheme === 'dark' ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]' : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:scale-105 hover:shadow-blue-400/40'}`}
+                className={`px-6 py-2 rounded-xl shadow-card transition-all duration-200 font-semibold text-base mt-2 ${colorScheme === 'dark' ? 'bg-brand-600 text-white hover:bg-brand-700' : 'bg-brand-600 text-white'}`}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? t.create : t.create}
@@ -783,38 +850,38 @@ function UrgentWorkOrdersPage() {
           }}
         >
           <div>
-            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.title}</label>
-            <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('title')} />
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.title}</label>
+            <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('title')} />
             {editErrors.title && <div className={styles.errorMsg}>{editErrors.title.message}</div>}
           </div>
           <div>
-            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.description}</label>
-            <textarea className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} rows={3} {...editRegister('description')} />
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.description}</label>
+            <textarea className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} rows={3} {...editRegister('description')} />
             {editErrors.description && <div className={styles.errorMsg}>{editErrors.description.message}</div>}
           </div>
           <div>
-            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.location}</label>
-            <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('location')} />
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.location}</label>
+            <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('location')} />
             {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
           </div>
           {/* No Priority field for UrgentWorkOrders */}
           <div>
-            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.dueDate}</label>
-            <input type="date" className={styles.input + ' ' + (colorScheme === 'dark' ? '[color-scheme:dark] !bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('dueDate' as any)} />
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.dueDate}</label>
+            <input type="date" className={styles.input + ' ' + (colorScheme === 'dark' ? '[color-scheme:dark] !bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('dueDate' as any)} />
             {(editErrors as Record<string, any>).dueDate && <div className={styles.errorMsg}>{(editErrors as Record<string, any>).dueDate.message}</div>}
           </div>
           {/* File/Photo Upload Section */}
           <div>
-            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.attachments || 'Attachments'}</label>
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.attachments || 'Attachments'}</label>
             <input
               type="file"
               multiple
               accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-              className={styles.input + ' cursor-pointer ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')}
+              className={styles.input + ' cursor-pointer ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')}
               onChange={e => setEditValue('files', e.target.files ?? undefined)}
               title={t.chooseFiles || 'Choose files'}
             />
-            <div className={"text-xs mt-1 " + (colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-500')}>
+            <div className={"text-xs mt-1 " + (colorScheme === 'dark' ? 'text-surface-500' : 'text-gray-500')}>
               {editFiles && editFiles.length > 0
                 ? Array.from(editFiles as File[]).map(f => f.name).join(', ')
                 : t.noFileChosen || 'No file chosen'}
@@ -827,13 +894,13 @@ function UrgentWorkOrdersPage() {
                       <img
                         src={URL.createObjectURL(file)}
                         alt={file.name}
-                        className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-[#2d3748]' : 'border'}`}
+                        className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-surface-700' : 'border'}`}
                         onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
                       />
                     ) : (
-                      <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#64748b]' : 'bg-gray-100 text-gray-500'}`}>File</span>
+                      <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-500' : 'bg-gray-100 text-gray-500'}`}>File</span>
                     )}
-                    <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>{file.name}</span>
+                    <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
                   </div>
                 ))}
               </div>

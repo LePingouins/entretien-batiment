@@ -16,7 +16,8 @@ import java.util.List;
 public class WorkOrder {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_order_shared_id_seq")
+    @SequenceGenerator(name = "work_order_shared_id_seq", sequenceName = "work_order_shared_id_seq", allocationSize = 1)
     private Long id;
 
     @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)

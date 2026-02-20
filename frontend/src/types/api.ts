@@ -110,3 +110,27 @@ export interface UrgentWorkOrderRequest {
   location: string;
   files?: FileList | File[];
 }
+
+// --- Mileage Types ---
+export interface MileageEntry {
+  id: number;
+  date: string;
+  supplier: string;
+  startKm: number;
+  endKm: number;
+  totalKm?: number;
+  notes?: string;
+  archived: boolean;
+  archivedAt?: string;
+  workOrderId?: number;
+  urgentWorkOrderId?: number;
+}
+
+// --- Dashboard Types ---
+export interface DashboardStats {
+  totalWorkOrders: number;
+  activeWorkOrders: number;
+  urgentWorkOrders: number;
+  activeUrgentWorkOrders: number;
+  mileageEntries: number;
+}

@@ -5,7 +5,7 @@ import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority } f
 import { WorkOrderCard } from '../components/WorkOrderCard';
 import { MaterialsDrawer } from '../components/MaterialsDrawer';
 import { useLang } from '../context/LangContext';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { ColorSchemeType, getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
 import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
 import { workOrderSchema, WorkOrderFormType } from './AdminWorkOrders/schemas';
@@ -28,10 +28,11 @@ interface SortableCardProps {
   activeId: string | null;
   onOpenMaterials: (wo: WorkOrderResponse) => void;
   onDeleted: (id: number) => void;
+  onArchived: (id: number) => void;
   onCardClick: (wo: WorkOrderResponse) => void;
 }
 
-const SortableCardComponent = ({ workOrder, colorScheme, activeId, onOpenMaterials, onDeleted, onCardClick }: SortableCardProps) => {
+const SortableCardComponent = ({ workOrder, colorScheme, activeId, onOpenMaterials, onDeleted, onArchived, onCardClick }: SortableCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: workOrder.id.toString(),
   });
@@ -65,6 +66,7 @@ const SortableCardComponent = ({ workOrder, colorScheme, activeId, onOpenMateria
         workOrder={workOrder}
         onOpenMaterials={onOpenMaterials}
         onDeleted={onDeleted}
+        onArchived={onArchived}
       />
     </div>
   );
@@ -128,21 +130,21 @@ const DroppableColumnComponent = ({ status, children, colorScheme }: DroppableCo
       ref={setNodeRef}
       className={
         colorScheme === 'dark'
-          ? `w-full h-full bg-[#1a1f2e] rounded-2xl shadow-lg p-4 flex flex-col border border-[#2d3748] transition-all duration-200 ${isOver ? 'ring-2 ring-[#3b82f6] scale-[1.02]' : ''}`
+          ? `w-full h-full bg-surface-800 rounded-xl shadow-card p-4 flex flex-col border border-surface-700 transition-all duration-200 ${isOver ? 'ring-2 ring-brand-500' : ''}`
           : (colorScheme === 'default' || colorScheme === 'performance')
-            ? `w-full h-full bg-white rounded-2xl shadow p-4 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400 scale-[1.02]' : ''}`
-            : `w-full h-full bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-2xl shadow-xl p-4 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60 scale-[1.02]' : ''}`
+            ? `w-full h-full bg-white rounded-xl shadow p-4 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400' : ''}`
+            : `w-full h-full bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-xl shadow-card p-4 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60' : ''}`
       }
       style={{ minHeight: 350 }}
     >
       <div className={
         colorScheme === 'dark'
-          ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-[#252d3d] text-[#e2e8f0] flex items-center gap-2 border-b border-[#2d3748] shadow'
+          ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-surface-700 text-surface-100 flex items-center gap-2 border-b border-surface-700 shadow'
           : colorScheme === 'default'
             ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
             : colorScheme === 'performance'
               ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
-              : 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-blue-200/60 text-blue-900 flex items-center gap-2 shadow'
+              : 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-blue-200/60 text-surface-900 flex items-center gap-2 shadow'
       }>
         {status === 'CANCELLED'
           ? <svg width="20" height="20" fill="currentColor" className="text-red-600 font-bold" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M7 7l10 10M7 17L17 7"/></svg>
@@ -188,38 +190,38 @@ const getStatusLabel = (t: any, s: string) => {
 const statusOptions = Object.values(WorkOrderStatus);
 const priorityOptions = Object.values(WorkOrderPriority);
 
-
 function AdminWorkOrdersPage() {
+  const queryClient = useQueryClient();
+  // Fix: Provide missing handlers if not already defined
+  const handleMaterialsChanged = React.useCallback(() => {
+    // Implement logic or leave empty if not needed
+    queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
+  }, [queryClient]);
+
+  const handleOpenMaterials = React.useCallback((wo: WorkOrderResponse) => {
+    setMaterialsDrawer({ open: true, workOrder: wo });
+  }, []);
+    const [searchParams, setSearchParams] = useSearchParams();
     // Add refs for date inputs
     const startDateInputRef = React.useRef<HTMLInputElement | null>(null);
     const endDateInputRef = React.useRef<HTMLInputElement | null>(null);
   // Materials drawer state
   const [materialsDrawer, setMaterialsDrawer] = React.useState<{ open: boolean; workOrder: WorkOrderResponse | null }>({ open: false, workOrder: null });
-
-  // Handler to open materials drawer - memoized for stable reference
-  const handleOpenMaterials = React.useCallback((wo: WorkOrderResponse) => {
-    setMaterialsDrawer({ open: true, workOrder: wo });
-  }, []);
-
-
-
-  // Update board state for materials count/preview after CRUD
-  const handleMaterialsChanged = (materials: import('../types/api').MaterialResponse[]) => {
-    if (!materialsDrawer.workOrder) return;
-    setGrouped((prev: Record<string, WorkOrderResponse[]>) => {
-      const updated: Record<string, WorkOrderResponse[]> = { ...prev };
-      for (const status of statusOptions) {
-        updated[status] = updated[status]?.map((wo: WorkOrderResponse) =>
-          wo.id === materialsDrawer.workOrder!.id
-            ? { ...wo, materialsCount: materials.length, materialsPreview: materials.slice(0, 2).map((m) => m.name) }
-            : wo
-        );
-      }
-      return updated;
-    });
-  };
   // Modal state for creating work order
   const [showModal, setShowModal] = React.useState(false);
+
+  // Auto-open modal if query param is set
+  React.useEffect(() => {
+    if (searchParams.get('action') === 'create') {
+      setShowModal(true);
+      // Remove the param so it doesn't reopen on refresh
+      setSearchParams(prev => {
+        const newParams = new URLSearchParams(prev);
+        newParams.delete('action');
+        return newParams;
+      }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
   // Close modal on Escape key
   React.useEffect(() => {
     if (!showModal) return;
@@ -235,7 +237,6 @@ function AdminWorkOrdersPage() {
   const colorScheme: ColorSchemeType = outlet?.colorScheme || 'default';
   // Modal state for editing work order
   const [editModal, setEditModal] = React.useState<{ open: boolean; workOrder: WorkOrderResponse | null }>({ open: false, workOrder: null });
-  const queryClient = useQueryClient();
 
 
 
@@ -572,6 +573,10 @@ function AdminWorkOrdersPage() {
     queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
   }, [queryClient]);
 
+  const handleCardArchived = React.useCallback((id: number) => {
+    queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
+  }, [queryClient]);
+
   const handleCardClick = React.useCallback((wo: WorkOrderResponse) => {
     openEditModal(wo);
   }, []);
@@ -593,8 +598,8 @@ function AdminWorkOrdersPage() {
   }, [grouped, startDate, endDate]);
 
   return (
-    <div className={styles.wrapper + ' ' + getColorSchemeClass(colorScheme, 'wrapper')}>
-      <h1 className={`text-3xl md:text-4xl font-extrabold mb-3 text-center tracking-tight drop-shadow-sm mt-2 ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : 'text-blue-900'}`}>Work Order</h1>
+    <div className={(colorScheme === 'dark' ? 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8' : 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8')}>
+      <h1 className={`text-2xl font-bold mb-4 ${colorScheme === 'dark' ? 'text-surface-100' : 'text-surface-900'}`}>{t.workOrders}</h1>
       {/* Materials Drawer (should be at root, not inside cards) */}
       <MaterialsDrawer
         isOpen={materialsDrawer.open}
@@ -611,49 +616,49 @@ function AdminWorkOrdersPage() {
             if (e.target === e.currentTarget) setShowModal(false);
           }}
         >
-          <div className={`rounded-2xl shadow-2xl p-6 w-full max-w-md relative my-4 max-h-[90vh] overflow-y-auto ${colorScheme === 'dark' ? 'bg-[#1a1f2e] border border-[#2d3748]' : 'bg-white/95 backdrop-blur-md border border-blue-200'}`}>
+          <div className={`rounded-xl shadow-card p-6 w-full max-w-md relative my-4 max-h-[90vh] overflow-y-auto ${colorScheme === 'dark' ? 'bg-surface-800 border border-surface-700' : 'bg-white/95 backdrop-blur-md border border-blue-200'}`}>
             <button
-              className={`absolute top-2.5 right-3.5 rounded-full w-8 h-8 flex items-center justify-center text-xl font-bold transition-colors ${colorScheme === 'dark' ? 'text-[#94a3b8] hover:text-red-400 hover:bg-[#252d3d]' : 'text-red-400 hover:bg-red-50 border border-red-200'}`}
+              className={`absolute top-2.5 right-3.5 rounded-full w-8 h-8 flex items-center justify-center text-xl font-bold transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-700' : 'text-red-400 hover:bg-red-50 border border-red-200'}`}
               aria-label="Close"
               onClick={() => setShowModal(false)}
             >
               ×
             </button>
-            <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : 'text-blue-900'}`}><svg width="18" height="18" fill="currentColor" className={colorScheme === 'dark' ? 'text-[#3b82f6]' : 'text-blue-400'} viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>{t.newWorkOrder}</h2>
+            <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${colorScheme === 'dark' ? 'text-surface-100' : 'text-surface-900'}`}><svg width="18" height="18" fill="currentColor" className={colorScheme === 'dark' ? 'text-brand-500' : 'text-brand-400'} viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>{t.newWorkOrder}</h2>
             <form onSubmit={handleSubmit(onCreate)} className={styles.form + ' flex flex-col gap-4'}>
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.title}</label>
-                <input className={`${styles.input} ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : ''}`} {...register('title')} />
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-blue-800'}`}>{t.title}</label>
+                <input className={`${styles.input} ${colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : ''}`} {...register('title')} />
                 {errors.title && <div className={styles.errorMsg}>{errors.title.message}</div>}
               </div>
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.description}</label>
-                <textarea className={`${styles.input} ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : ''}`} rows={3} {...register('description')} />
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-blue-800'}`}>{t.description}</label>
+                <textarea className={`${styles.input} ${colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : ''}`} rows={3} {...register('description')} />
                 {errors.description && <div className={styles.errorMsg}>{errors.description.message}</div>}
               </div>
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.location}</label>
-                <select className={`${styles.input} ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : ''}`} {...register('location')}>
-                  <option value="" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>-- {t.selectLocation || 'Select Location'} --</option>
-                  <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Horizon Nature</option>
-                  <option value="inewa" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Inewa</option>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-blue-800'}`}>{t.location}</label>
+                <select className={`${styles.input} ${colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : ''}`} {...register('location')}>
+                  <option value="" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>-- {t.selectLocation || 'Select Location'} --</option>
+                  <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Horizon Nature</option>
+                  <option value="inewa" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Inewa</option>
                 </select>
                 {errors.location && <div className={styles.errorMsg}>{errors.location.message}</div>}
               </div>
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.priority}</label>
-                <select className={`${styles.input} ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : ''}`} {...register('priority')}>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-blue-800'}`}>{t.priority}</label>
+                <select className={`${styles.input} ${colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : ''}`} {...register('priority')}>
                   {priorityOptions.map(p => (
-                    <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>{getPriorityLabel(t, p)}</option>
+                    <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>{getPriorityLabel(t, p)}</option>
                   ))}
                 </select>
                 {errors.priority && <div className={styles.errorMsg}>{errors.priority.message}</div>}
               </div>
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.dueDate}</label>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-blue-800'}`}>{t.dueDate}</label>
                 <input
                   type="date"
-                  className={`${styles.input} cursor-pointer ${colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6] [color-scheme:dark]' : ''}`}
+                  className={`${styles.input} cursor-pointer ${colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500 [color-scheme:dark]' : ''}`}
                   {...register('dueDate')}
                   onClick={e => {
                     const input = e.target as HTMLInputElement;
@@ -664,16 +669,16 @@ function AdminWorkOrdersPage() {
               </div>
               {/* File/Photo Upload Section */}
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-[#94a3b8]' : 'text-blue-800'}`}>{t.attachments}</label>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-blue-800'}`}>{t.attachments}</label>
                 <input
                   type="file"
                   multiple
                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#e2e8f0] focus:ring-[#3b82f6]' : 'focus:ring-blue-400'}`}
+                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-blue-400'}`}
                   onChange={e => setValue('files', e.target.files)}
                   title={t.chooseFiles}
                 />
-                <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-[#64748b]' : 'text-gray-500'}`}>
+                <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-surface-500' : 'text-gray-500'}`}>
                   {files && files.length > 0
                     ? Array.from(files as File[]).map(f => f.name).join(', ')
                     : t.noFileChosen}
@@ -686,13 +691,13 @@ function AdminWorkOrdersPage() {
                           <img
                             src={URL.createObjectURL(file)}
                             alt={file.name}
-                            className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-[#2d3748]' : 'border'}`}
+                            className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-surface-700' : 'border'}`}
                             onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
                           />
                         ) : (
-                          <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-[#252d3d] border-[#2d3748] text-[#64748b]' : 'bg-gray-100 text-gray-500'}`}>File</span>
+                          <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-500' : 'bg-gray-100 text-gray-500'}`}>File</span>
                         )}
-                        <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-[#e2e8f0]' : ''}`}>{file.name}</span>
+                        <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
                       </div>
                     ))}
                   </div>
@@ -700,7 +705,7 @@ function AdminWorkOrdersPage() {
               </div>
               <button
                 type="submit"
-                className={`px-6 py-2 rounded-xl shadow-lg transition-all duration-200 font-semibold text-base mt-2 ${colorScheme === 'dark' ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]' : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:scale-105 hover:shadow-blue-400/40'}`}
+                className={`px-6 py-2 rounded-xl shadow-card transition-all duration-200 font-semibold text-base mt-2 ${colorScheme === 'dark' ? 'bg-brand-600 text-white hover:bg-brand-700' : 'bg-brand-600 text-white'}`}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? t.create : t.create}
@@ -711,15 +716,7 @@ function AdminWorkOrdersPage() {
       )}
       {/* New blue background wrapper starts here */}
       <div
-        className={styles.boardWrapper + ' ' + (
-          colorScheme === 'dark'
-            ? 'bg-[#1a1f2e] rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-[#2d3748]'
-            : colorScheme === 'performance'
-              ? 'bg-gray-100 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-gray-200'
-              : colorScheme === 'current'
-                ? 'bg-blue-50 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-blue-100'
-                : 'bg-blue-100/60 rounded-xl sm:rounded-3xl shadow-xl p-3 sm:p-6 lg:p-8 mb-8 border border-blue-200'
-        )}
+        className="mb-8"
       >
         {/* Modal for editing work order */}
         {editModal.open && (
@@ -746,36 +743,36 @@ function AdminWorkOrdersPage() {
             deleteLabel={t.delete}
           >
             <div>
-              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.title}</label>
-              <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('title')} />
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.title}</label>
+              <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('title')} />
               {editErrors.title && <div className={styles.errorMsg}>{editErrors.title.message}</div>}
             </div>
             <div>
-              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.description}</label>
-              <textarea className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('description')} />
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.description}</label>
+              <textarea className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('description')} />
               {editErrors.description && <div className={styles.errorMsg}>{editErrors.description.message}</div>}
             </div>
             <div>
-              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.location}</label>
-              <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('location')}>
-                <option value="" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>-- Select Location --</option>
-                <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Horizon Nature</option>
-                <option value="inewa" className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>Inewa</option>
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.location}</label>
+              <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('location')}>
+                <option value="" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>-- Select Location --</option>
+                <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Horizon Nature</option>
+                <option value="inewa" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Inewa</option>
               </select>
               {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
             </div>
             <div>
-              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.priority}</label>
-              <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('priority')}>
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.priority}</label>
+              <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('priority')}>
                 {priorityOptions.map((p: string) => (
-                  <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-[#252d3d]' : ''}>{getPriorityLabel(t, p)}</option>
+                  <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>{getPriorityLabel(t, p)}</option>
                 ))}
               </select>
               {editErrors.priority && <div className={styles.errorMsg}>{editErrors.priority.message}</div>}
             </div>
             <div>
-              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-[#94a3b8]' : '')}>{t.dueDate}</label>
-              <input type="date" className={styles.input + ' ' + (colorScheme === 'dark' ? '[color-scheme:dark] !bg-[#252d3d] !border-[#2d3748] !text-[#e2e8f0] focus:!border-[#3b82f6]' : '')} {...editRegister('dueDate')} />
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.dueDate}</label>
+              <input type="date" className={styles.input + ' ' + (colorScheme === 'dark' ? '[color-scheme:dark] !bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('dueDate')} />
               {editErrors.dueDate && <div className={styles.errorMsg}>{editErrors.dueDate.message}</div>}
             </div>
           </SharedEditModal>
@@ -816,10 +813,10 @@ function AdminWorkOrdersPage() {
               <button
                 className={
                   colorScheme === 'dark'
-                    ? 'bg-[#3b82f6] text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-lg hover:bg-[#2563eb] transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
+                    ? 'bg-brand-600 text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-card hover:bg-brand-700 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
                     : (colorScheme === 'performance' || colorScheme === 'default')
                       ? 'bg-white text-gray-800 border border-gray-300 border-b-0 px-3 sm:px-4 py-1 rounded-t-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-lg hover:scale-105 hover:shadow-blue-400/40 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
+                      : 'bg-brand-600 text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-card transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
                 }
                 onClick={() => setShowModal(true)}
               >
@@ -829,7 +826,7 @@ function AdminWorkOrdersPage() {
               <button
                 className={
                   colorScheme === 'dark'
-                    ? 'bg-[#252d3d] text-[#e2e8f0] border border-[#3b82f6] px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-[#374151] transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
+                    ? 'bg-surface-700 text-surface-100 border border-brand-500 px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-surface-600 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
                     : (colorScheme === 'performance' || colorScheme === 'default')
                       ? 'bg-gray-100 text-gray-700 border border-gray-300 px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-gray-200 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
                       : 'bg-white/80 text-purple-700 border border-purple-300 px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-purple-50 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
@@ -871,6 +868,7 @@ function AdminWorkOrdersPage() {
             SortableCard={SortableCard}
             onOpenMaterials={handleOpenMaterials}
             onDeleted={handleCardDeleted}
+            onArchived={handleCardArchived}
             onCardClick={handleCardClick}
           />
         )}
@@ -880,13 +878,13 @@ function AdminWorkOrdersPage() {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className={colorScheme === 'dark' ? 'px-4 py-1.5 rounded-lg bg-[#252d3d] text-[#e2e8f0] border border-[#2d3748] hover:bg-[#374151] disabled:opacity-50 disabled:cursor-not-allowed transition-colors' : styles.paginationBtn}
+              className={colorScheme === 'dark' ? 'px-4 py-1.5 rounded-lg bg-surface-700 text-surface-100 border border-surface-700 hover:bg-surface-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors' : styles.paginationBtn}
             >{t.prev}</button>
-            <span className={colorScheme === 'dark' ? 'text-[#94a3b8]' : styles.paginationText}>{t.page} {data ? data.number + 1 : 1} {t.of} {data ? data.totalPages : 1}</span>
+            <span className={colorScheme === 'dark' ? 'text-surface-400' : styles.paginationText}>{t.page} {data ? data.number + 1 : 1} {t.of} {data ? data.totalPages : 1}</span>
             <button
               onClick={() => setPage(p => (data && p < data.totalPages - 1 ? p + 1 : p))}
               disabled={data ? page >= data.totalPages - 1 : true}
-              className={colorScheme === 'dark' ? 'px-4 py-1.5 rounded-lg bg-[#252d3d] text-[#e2e8f0] border border-[#2d3748] hover:bg-[#374151] disabled:opacity-50 disabled:cursor-not-allowed transition-colors' : styles.paginationBtn}
+              className={colorScheme === 'dark' ? 'px-4 py-1.5 rounded-lg bg-surface-700 text-surface-100 border border-surface-700 hover:bg-surface-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors' : styles.paginationBtn}
             >{t.next}</button>
           </div>
         )}

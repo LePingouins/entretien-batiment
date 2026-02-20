@@ -34,7 +34,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
 
@@ -45,19 +44,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String role = claims.get("role", String.class);
                 String userId = claims.getSubject(); // keep it if you want
 
-                log.info("JWT Auth: email={}, role={}, userId={}", email, role, userId);
-
-                var auth = new UsernamePasswordAuthenticationToken(
-                        email, // ✅ principal is email now
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                );
-
-                // Optional: store userId in details for later use
-                auth.setDetails(userId);
-
-                log.info("Setting authorities: {}", auth.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                if (email != null && role != null) {
+                    log.info("JWT Auth: email={}, role={}, userId={}", email, role, userId);
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            email, // ✅ principal is email now
+                            null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    );
+                    auth.setDetails(userId);
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                } else {
+                    SecurityContextHolder.clearContext();
+                }
 
             } catch (Exception ex) {
                 log.warn("JWT Auth failed: {}", ex.toString());

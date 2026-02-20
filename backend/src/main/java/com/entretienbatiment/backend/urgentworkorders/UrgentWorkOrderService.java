@@ -12,12 +12,51 @@ public class UrgentWorkOrderService {
         this.repository = repository;
     }
 
-    public List<UrgentWorkOrder> findAll() {
-        return repository.findAll();
-    }
-
     public Optional<UrgentWorkOrder> findById(Long id) {
         return repository.findById(id);
+    }
+
+    public List<UrgentWorkOrder> findAll() {
+        return repository.findByArchivedFalse();
+    }
+
+    public List<UrgentWorkOrder> findAllActiveFiltered(String q, String status, String location) {
+        org.springframework.data.jpa.domain.Specification<UrgentWorkOrder> spec =
+            UrgentWorkOrderSpecifications.archivedEquals(false)
+            .and(UrgentWorkOrderSpecifications.textOrIdSearch(q))
+            .and(UrgentWorkOrderSpecifications.statusEquals(status))
+            .and(UrgentWorkOrderSpecifications.locationEquals(location));
+        return repository.findAll(spec);
+    }
+
+    public List<UrgentWorkOrder> findAllArchived(String q, String status, String location) {
+        org.springframework.data.jpa.domain.Specification<UrgentWorkOrder> spec =
+            UrgentWorkOrderSpecifications.archivedEquals(true)
+            .and(UrgentWorkOrderSpecifications.textOrIdSearch(q))
+            .and(UrgentWorkOrderSpecifications.statusEquals(status))
+            .and(UrgentWorkOrderSpecifications.locationEquals(location));
+        return repository.findAll(spec);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional
+    public int archiveOldUrgentWorkOrders(java.time.LocalDateTime cutoffTime) {
+        List<UrgentWorkOrder> toArchive = repository.findUrgentWorkOrdersToArchive(
+                List.of("COMPLETED", "CANCELLED"),
+                cutoffTime
+        );
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        for (UrgentWorkOrder uwo : toArchive) {
+            uwo.setArchived(true);
+            uwo.setArchivedAt(now);
+        }
+
+        if (!toArchive.isEmpty()) {
+            repository.saveAll(toArchive);
+        }
+
+        return toArchive.size();
     }
 
     public UrgentWorkOrder save(UrgentWorkOrder urgentWorkOrder) {
@@ -26,6 +65,22 @@ public class UrgentWorkOrderService {
 
     public void deleteById(Long id) {
         repository.deleteById(id);
+    }
+
+    public void archive(Long id) {
+        repository.findById(id).ifPresent(wo -> {
+            wo.setArchived(true);
+            wo.setArchivedAt(java.time.LocalDateTime.now());
+            repository.save(wo);
+        });
+    }
+
+    public void unarchive(Long id) {
+        repository.findById(id).ifPresent(wo -> {
+            wo.setArchived(false);
+            wo.setArchivedAt(null);
+            repository.save(wo);
+        });
     }
 
     // Reorder urgent work orders within a single status column

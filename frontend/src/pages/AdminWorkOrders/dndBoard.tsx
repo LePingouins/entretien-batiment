@@ -119,15 +119,17 @@ type DndBoardProps = {
     activeId: string | null;
     onOpenMaterials: (wo: WorkOrderResponse) => void;
     onDeleted: (id: number) => void;
+    onArchived: (id: number) => void;
     onCardClick: (wo: WorkOrderResponse) => void;
   }>;
   onOpenMaterials: (wo: WorkOrderResponse) => void;
   onDeleted: (id: number) => void;
+  onArchived: (id: number) => void;
   onCardClick: (wo: WorkOrderResponse) => void;
   DragOverlayCard?: React.ComponentType<{ workOrder: any; colorScheme?: string }>;
 };
 
-export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activeWorkOrder, activeId, colorScheme, DroppableColumn, SortableCard, onOpenMaterials, onDeleted, onCardClick, DragOverlayCard }: DndBoardProps) {
+export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activeWorkOrder, activeId, colorScheme, DroppableColumn, SortableCard, onOpenMaterials, onDeleted, onArchived, onCardClick, DragOverlayCard }: DndBoardProps) {
   // Memoize sensors to prevent recreation
   const sensors = useDndSensors();
   
@@ -159,6 +161,7 @@ export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activ
                         activeId={activeId}
                         onOpenMaterials={onOpenMaterials}
                         onDeleted={onDeleted}
+                        onArchived={onArchived}
                         onCardClick={onCardClick}
                       />
                     ))
