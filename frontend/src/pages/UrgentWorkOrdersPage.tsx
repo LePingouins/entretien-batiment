@@ -18,6 +18,7 @@ import { FilterBar } from './AdminWorkOrders/FilterBar';
 import { MaterialsDrawer } from '../components/MaterialsDrawer';
 import { getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
 import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
+import PageHeader from '../components/PageHeader';
 
 // Reusable modal component for creating/updating
 const UrgentWorkOrderModal = ({
@@ -425,14 +426,12 @@ function UrgentWorkOrdersPage() {
         formData.append('location', data.location);
         if (data.priority) formData.append('priority', data.priority);
         // Ensure date is truncated or formatted correctly if needed
-        if (data.dueDate) formData.append('dueDate', data.dueDate);
+        if (data.dueDate) formData.append('dueDate', data.dueDate.length === 10 ? data.dueDate + 'T00:00:00' : data.dueDate);
         const filesArr = data.files instanceof FileList ? Array.from(data.files) : Array.isArray(data.files) ? data.files : [];
         for (let i = 0; i < filesArr.length; i++) {
           formData.append('files', filesArr[i]);
         }
-        await api.post('/api/urgent-work-orders', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.post('/api/urgent-work-orders', formData);
 
         reset();
         setShowModal(false);
@@ -577,7 +576,7 @@ function UrgentWorkOrdersPage() {
 
   return (
     <div className={(colorScheme === 'dark' ? 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8' : 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8')}>
-      <h1 className={`text-2xl font-bold mb-4 ${colorScheme === 'dark' ? 'text-surface-100' : 'text-surface-900'}`}>{t.urgentWorkOrders}</h1>
+      <PageHeader title={t.urgentWorkOrders || 'Urgent Work Orders'} />
       <div className="mb-8">
         <div className="w-full flex items-start gap-3 relative mb-4">
           <div className="flex-1 min-w-0 overflow-x-auto">

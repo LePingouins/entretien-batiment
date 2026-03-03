@@ -283,9 +283,7 @@ export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { 
       formData.append('files', payload.files[i]);
     }
   }
-  const res = await api.post('/api/urgent-work-orders', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const res = await api.post('/api/urgent-work-orders', formData);
   return res.data;
 }
 
@@ -303,9 +301,7 @@ export async function updateUrgentWorkOrder(id: number, data: Partial<UrgentWork
     for (let i = 0; i < filesArr.length; i++) {
       formData.append('files', filesArr[i]);
     }
-    const res = await api.patch(`/api/urgent-work-orders/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await api.patch(`/api/urgent-work-orders/${id}`, formData);
     return res.data;
   } else {
     const res = await api.patch<UrgentWorkOrderResponse>(`/api/urgent-work-orders/${id}`, data);

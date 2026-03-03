@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
 import { ColorSchemeContext } from '../components/AdminLayout';
 import api, { archiveMileageEntry, getUrgentWorkOrders } from '../lib/api';
+import PageHeader from '../components/PageHeader';
 import type { WorkOrderResponse, UrgentWorkOrderResponse } from '../types/api';
 
 interface MileageEntry {
@@ -256,10 +257,12 @@ const MileagePage: React.FC = () => {
 
   return (
     <main className={`${bg} flex flex-col w-full`}>
-      <div className="flex-1 w-full">
-        <div className="p-2 sm:p-6">
-          <div className="flex flex-col items-center justify-center mb-4 w-full">
-            <h1 className={`text-2xl sm:text-3xl font-bold text-center tracking-tight mb-2 ${colorScheme === 'dark' ? 'text-surface-100' : 'text-surface-900'}`}>{t.mileage}</h1>
+      <div className={(colorScheme === 'dark' ? 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8' : 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8')}>
+          <PageHeader
+            title={t.mileage}
+            subtitle={''}
+          />
+          <div className="flex justify-center mb-4">
             <button
               className={`mt-2 w-full sm:w-auto px-5 py-2.5 text-white rounded-lg shadow-sm font-semibold transition-colors duration-150 ${colorScheme === 'dark' ? 'bg-brand-600 hover:bg-brand-700' : 'bg-brand-600 hover:bg-brand-700'}`}
               onClick={handleCreate}
@@ -421,7 +424,6 @@ const MileagePage: React.FC = () => {
             ))}
           </div>
         </div>
-      </div>
     </main>
   );
 };

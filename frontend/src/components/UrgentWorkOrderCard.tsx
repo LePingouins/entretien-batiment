@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { UrgentWorkOrderResponse, WorkOrderPriority, UrgentWorkOrderStatus } from '../types/api';
 import { MaterialsButton } from './MaterialsButton';
 import { ColorSchemeContext } from './AdminLayout';
+import { PriorityBadge } from './WorkOrderCard';
 
 interface UrgentWorkOrderCardProps {
   workOrder: UrgentWorkOrderResponse;
@@ -29,18 +30,6 @@ const statusColorsLight: Record<UrgentWorkOrderStatus, string> = {
   CANCELLED: 'bg-red-50 text-red-700 ring-1 ring-red-200',
 };
 
-const priorityColorsDark: Record<WorkOrderPriority, string> = {
-  LOW: 'bg-green-500/15 text-green-300 ring-1 ring-green-500/25',
-  MEDIUM: 'bg-yellow-500/15 text-yellow-300 ring-1 ring-yellow-500/25',
-  HIGH: 'bg-orange-500/15 text-orange-300 ring-1 ring-orange-500/25',
-  URGENT: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/25',
-};
-const priorityColorsLight: Record<WorkOrderPriority, string> = {
-  LOW: 'bg-green-50 text-green-700 ring-1 ring-green-200',
-  MEDIUM: 'bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200',
-  HIGH: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
-  URGENT: 'bg-red-50 text-red-700 ring-1 ring-red-200',
-};
 
 export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOrder, colorScheme = 'default', onEdit, onDelete, onArchive }) => {
   const { colorScheme: effectiveColorScheme } = React.useContext(ColorSchemeContext);
@@ -88,16 +77,16 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
           >{workOrder.title}</a>
         </div>
       </div>
+      <p className={`text-sm line-clamp-2 ${effectiveColorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>{workOrder.description}</p>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
         <span className={`flex items-center gap-1.5 ${effectiveColorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="opacity-60"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           {workOrder.dueDate && typeof workOrder.dueDate === 'string' && workOrder.dueDate.trim() !== '' ? workOrder.dueDate.slice(0, 10) : 'No date'}
         </span>
-      </div>
-      <p className={`text-sm line-clamp-2 ${effectiveColorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>{workOrder.description}</p>
-      <div className={`flex items-center gap-1.5 text-xs ${effectiveColorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>
-        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="opacity-60"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        {workOrder.location || 'N/A'}
+        <span className={`flex items-center gap-1.5 ${effectiveColorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="opacity-60"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          {workOrder.location || 'N/A'}
+        </span>
       </div>
       {attachmentUrl && (
         <div className="mb-2" style={{ minHeight: isImage ? 32 : undefined }}>
@@ -150,7 +139,7 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
               onArchive?.(workOrder.id);
             }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" /><path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" /></svg>
           </button>
           <button
             title="Edit"

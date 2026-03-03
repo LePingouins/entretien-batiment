@@ -18,6 +18,7 @@ import { DragEndEvent } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
+import PageHeader from '../components/PageHeader';
 
 
 
@@ -261,16 +262,14 @@ function AdminWorkOrdersPage() {
         formData.append('description', data.description);
         formData.append('location', data.location);
         formData.append('priority', data.priority);
-        formData.append('dueDate', data.dueDate);
+        formData.append('dueDate', data.dueDate.length === 10 ? data.dueDate + 'T00:00:00' : data.dueDate);
         if (data.files && data.files.length > 0) {
           for (let i = 0; i < data.files.length; i++) {
             formData.append('files', data.files[i]);
           }
         }
         // Note: Backend must support multipart/form-data for this to work
-        await api.post('/api/admin/work-orders', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.post('/api/admin/work-orders', formData);
         setShowModal(false);
         reset();
         queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
@@ -599,7 +598,7 @@ function AdminWorkOrdersPage() {
 
   return (
     <div className={(colorScheme === 'dark' ? 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8' : 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8')}>
-      <h1 className={`text-2xl font-bold mb-4 ${colorScheme === 'dark' ? 'text-surface-100' : 'text-surface-900'}`}>{t.workOrders}</h1>
+      <PageHeader title={t.workOrders} />
       {/* Materials Drawer (should be at root, not inside cards) */}
       <MaterialsDrawer
         isOpen={materialsDrawer.open}
