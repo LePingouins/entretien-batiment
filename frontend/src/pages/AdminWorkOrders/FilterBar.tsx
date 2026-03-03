@@ -82,7 +82,7 @@ export function FilterBar({
         (colorScheme === 'dark' ? darkFilterItem : lightFilterItem)
       }>
         <span className={colorScheme === 'dark' ? 'text-brand-500' : 'text-brand-700'}><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 8h8v8H8z" fill="currentColor"/></svg></span>
-        <select value={status} onChange={e => setStatus(e.target.value)} className={`bg-transparent outline-none px-1 py-1 cursor-pointer text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>
+        <select value={status} onChange={e => setStatus(e.target.value)} className={`bg-transparent outline-none px-1 py-1 cursor-pointer text-sm min-w-[120px] ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>
           <option value="" className={colorScheme === 'dark' ? 'bg-surface-800 text-surface-100' : ''}>{t.allStatuses}</option>
           {statusOptions.map(s => <option key={s} value={s} className={colorScheme === 'dark' ? 'bg-surface-800 text-surface-100' : ''}>{getStatusLabel(t, s)}</option>)}
         </select>
@@ -93,7 +93,7 @@ export function FilterBar({
         (colorScheme === 'dark' ? darkFilterItem : lightFilterItem)
       }>
         <span className={colorScheme === 'dark' ? 'text-amber-400' : 'text-yellow-600'}><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>
-        <select value={priority} onChange={e => setPriority(e.target.value)} className={`bg-transparent outline-none px-1 py-1 cursor-pointer text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>
+        <select value={priority} onChange={e => setPriority(e.target.value)} className={`bg-transparent outline-none px-1 py-1 cursor-pointer text-sm min-w-[120px] ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>
           <option value="" className={colorScheme === 'dark' ? 'bg-surface-800 text-surface-100' : ''}>{t.allPriorities}</option>
           {priorityOptions.map(p => <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-surface-800 text-surface-100' : ''}>{getPriorityLabel(t, p)}</option>)}
         </select>
@@ -104,7 +104,7 @@ export function FilterBar({
         (colorScheme === 'dark' ? darkFilterItem : lightFilterItem)
       }>
         <span className={colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20v-2a4 4 0 014-4h8a4 4 0 014 4v2"/></svg></span>
-        <select value={technician} onChange={e => setTechnician(e.target.value)} className={`bg-transparent outline-none px-1 py-1 cursor-pointer text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>
+        <select value={technician} onChange={e => setTechnician(e.target.value)} className={`bg-transparent outline-none px-1 py-1 cursor-pointer text-sm min-w-[120px] ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>
           {technicianOptions.map(opt => <option key={opt.id} value={opt.id} className={colorScheme === 'dark' ? 'bg-surface-800 text-surface-100' : ''}>{opt.name}</option>)}
         </select>
       </div>
@@ -114,7 +114,7 @@ export function FilterBar({
         (colorScheme === 'dark' ? darkFilterItem : lightFilterItem)
       }>
         <span className={colorScheme === 'dark' ? 'text-brand-400' : 'text-brand-500'}><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
-        <select value={locationFilter} onChange={e => setLocationFilter(e.target.value)} className={`bg-transparent outline-none px-1 py-1 cursor-pointer text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>
+        <select value={locationFilter} onChange={e => setLocationFilter(e.target.value)} className={`bg-transparent outline-none px-1 py-1 cursor-pointer text-sm min-w-[140px] ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>
           {locationOptions.map(opt => <option key={opt.id} value={opt.id} className={colorScheme === 'dark' ? 'bg-surface-800 text-surface-100' : ''}>{opt.name}</option>)}
         </select>
       </div>
