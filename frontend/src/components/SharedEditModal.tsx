@@ -45,10 +45,60 @@ export const SharedEditModal: React.FC<EditModalProps> = ({
   const closeBtnClass = colorScheme === 'dark'
     ? 'text-surface-400 hover:text-red-400 bg-transparent'
     : '';
+  const modalRef = React.useRef<HTMLDivElement | null>(null);
+
+  // focus trap & initial focus
+  React.useEffect(() => {
+    if (!open || !modalRef.current) return;
+    const modal = modalRef.current;
+    const selector = [
+      'a[href]:not([tabindex="-1"])',
+      'button:not([disabled]):not([tabindex="-1"])',
+      'input:not([disabled]):not([tabindex="-1"])',
+      'select:not([disabled]):not([tabindex="-1"])',
+      'textarea:not([disabled]):not([tabindex="-1"])',
+      '[tabindex]:not([tabindex="-1"])'
+    ].join(',');
+
+    const getFocusables = () => Array.from(modal.querySelectorAll<HTMLElement>(selector)).filter(el => {
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      if (style.pointerEvents === 'none') return false;
+      if (el.hasAttribute('hidden')) return false;
+      if (el.getAttribute('aria-hidden') === 'true') return false;
+      if ((el as any).inert) return false;
+      return true;
+    });
+
+    const focusables = getFocusables();
+    if (focusables.length) focusables[0].focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const nodes = getFocusables();
+        if (!nodes.length) return;
+        const idx = nodes.indexOf(document.activeElement as HTMLElement);
+        let nextIdx = idx;
+        if (e.shiftKey) nextIdx = idx <= 0 ? nodes.length - 1 : idx - 1;
+        else nextIdx = idx === -1 || idx === nodes.length - 1 ? 0 : idx + 1;
+        e.preventDefault();
+        nodes[nextIdx].focus();
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
 
   return (
     <div className={`${styles.modalOverlay} ${overlayClass}`} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`${styles.modalContainer} ${containerClass}`}>
+      <div ref={modalRef} role="dialog" aria-modal="true" className={`${styles.modalContainer} ${containerClass}`}>
         <button
           className={`${styles.modalCloseBtn} ${closeBtnClass}`}
           onClick={onClose}

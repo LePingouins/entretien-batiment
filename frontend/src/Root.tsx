@@ -4,6 +4,8 @@ import { AuthProvider } from './context/AuthContext';
 import { LangProvider } from './context/LangContext';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import AppRouter from './routes/AppRouter';
+import NotificationsProvider from './context/NotificationsContext';
+import KeyboardNavigator from './lib/KeyboardNavigator';
 
 const queryClient = new QueryClient();
 
@@ -12,7 +14,10 @@ function Root() {
     <QueryClientProvider client={queryClient}>
       <LangProvider>
         <AuthProvider>
-          <AppRouter />
+          <KeyboardNavigator />
+          <NotificationsProvider>
+            <AppRouter />
+          </NotificationsProvider>
           <PWAUpdatePrompt />
         </AuthProvider>
       </LangProvider>

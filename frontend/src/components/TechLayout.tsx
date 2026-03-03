@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationsIcon from './NotificationsIcon';
 
 const TechLayout: React.FC = () => {
   const { logout } = useAuth();
@@ -23,6 +24,7 @@ const TechLayout: React.FC = () => {
           <nav className="flex items-center gap-2">
             <Link to="/tech" className="px-3 py-1.5 rounded-lg text-sm font-medium text-surface-600 hover:text-surface-900 hover:bg-surface-100 transition-colors">Dashboard</Link>
             <div className="w-px h-5 mx-1 bg-surface-200"></div>
+            <NotificationsIcon />
             <button onClick={handleLogout} className="px-3 py-1.5 rounded-lg text-sm font-medium text-surface-500 hover:text-red-600 hover:bg-red-50 transition-colors">Logout</button>
           </nav>
         </div>

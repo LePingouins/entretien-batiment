@@ -262,7 +262,10 @@ function AdminWorkOrdersPage() {
         formData.append('description', data.description);
         formData.append('location', data.location);
         formData.append('priority', data.priority);
-        formData.append('dueDate', data.dueDate.length === 10 ? data.dueDate + 'T00:00:00' : data.dueDate);
+        if (data.dueDate) {
+          // Regular work orders use LocalDate in backend, so we send just the date component 'YYYY-MM-DD'
+          formData.append('dueDate', data.dueDate.substring(0, 10));
+        }
         if (data.files && data.files.length > 0) {
           for (let i = 0; i < data.files.length; i++) {
             formData.append('files', data.files[i]);

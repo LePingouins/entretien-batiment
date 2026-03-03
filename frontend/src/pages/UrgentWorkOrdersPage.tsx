@@ -316,6 +316,16 @@ function UrgentWorkOrdersPage() {
       }
     }, [searchParams, setSearchParams]);
 
+    // Close create modal on Escape key
+    React.useEffect(() => {
+      if (!showModal) return;
+      const handleEsc = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setShowModal(false);
+      };
+      window.addEventListener('keydown', handleEsc);
+      return () => window.removeEventListener('keydown', handleEsc);
+    }, [showModal]);
+
     const [editModal, setEditModal] = React.useState<{ open: boolean; workOrder: UrgentWorkOrderResponse | null }>({ open: false, workOrder: null });
     const {
       register: editRegister,

@@ -88,6 +88,9 @@ public class SecurityConfig {
                 // Make files endpoint public for download
                 .requestMatchers("/api/files/workorders/**").permitAll()
                 
+                // Allow error page so that exceptions don't get masked as 403 Forbidden
+                .requestMatchers("/error").permitAll()
+                
                 // Admin endpoints - strict
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 

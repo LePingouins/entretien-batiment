@@ -38,6 +38,32 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
   const [editingDescription, setEditingDescription] = React.useState('');
   const [editingSupplier, setEditingSupplier] = React.useState('');
 
+  const drawerRef = React.useRef<HTMLDivElement | null>(null);
+  const firstInputRef = React.useRef<HTMLInputElement | null>(null);
+  const prevActiveRef = React.useRef<Element | null>(null);
+
+  // Focus management and Escape key to close
+  React.useEffect(() => {
+    if (!isOpen) {
+      // restore focus
+      try { (prevActiveRef.current as HTMLElement | null)?.focus?.(); } catch {}
+      return;
+    }
+    prevActiveRef.current = document.activeElement;
+    // Focus the first input when opening
+    setTimeout(() => {
+      try { firstInputRef.current?.focus(); } catch {}
+    }, 0);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   React.useEffect(() => {
     if (isOpen) {
       setLoading(true);
@@ -153,7 +179,11 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
     : 'bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600';
 
   return (
+    <>
+      {isOpen && <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />}
+    
     <div
+      ref={drawerRef}
       className={`${drawerClass} ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
       tabIndex={-1}
@@ -171,6 +201,7 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
               {/* Required fields */}
               <div className="flex gap-2">
                 <input
+                  ref={firstInputRef}
                   type="text"
                   className={`${requiredInputClass} flex-1`}
                   placeholder={`${t.addMaterialPlaceholder} *`}
@@ -324,5 +355,6 @@ export function MaterialsDrawer({ isOpen, workOrderId, workOrderTitle, onClose, 
         )}
       </div>
     </div>
+    </>
   );
 }

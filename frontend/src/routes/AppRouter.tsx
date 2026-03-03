@@ -10,6 +10,7 @@ import TechDashboard from '../pages/TechDashboard';
 import AdminWorkOrdersPage from '../pages/AdminWorkOrdersPage';
 import MileagePage from '../pages/MileagePage';
 import ArchivePage from '../pages/ArchivePage';
+import NotificationsPage from '../pages/NotificationsPage';
 
 import UrgentWorkOrdersPage from '../pages/UrgentWorkOrdersPage';
 import DashboardPage from '../pages/DashboardPage';
@@ -50,6 +51,10 @@ const router = createBrowserRouter([
                 element: React.createElement(React.lazy(() => import('../pages/WorkOrderDetailPage'))),
               },
               {
+                path: 'notifications',
+                element: <NotificationsPage />,
+              },
+              {
                 path: 'urgent-work-orders',
                 element: <UrgentWorkOrdersPage />,
               },
@@ -82,6 +87,10 @@ const router = createBrowserRouter([
               {
                 path: '',
                 element: <TechDashboard />,
+              },
+              {
+                path: 'notifications',
+                element: <NotificationsPage />,
               },
               // More tech pages can go here
             ],

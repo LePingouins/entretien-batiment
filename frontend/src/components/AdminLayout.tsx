@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
+import NotificationsIcon from './NotificationsIcon';
 
 // Add 'dark' to color scheme types
 type ColorSchemeType = 'current' | 'performance' | 'default' | 'dark';
@@ -36,6 +37,67 @@ const AdminLayout: React.FC = () => {
     }
   }, [colorScheme]);
 
+  const langToggleRef = React.useRef<HTMLInputElement | null>(null);
+  const langLabelRef = React.useRef<HTMLLabelElement | null>(null);
+  const modalRef = React.useRef<HTMLDivElement | null>(null);
+
+  const closeSettings = React.useCallback(() => {
+    setShowSettings(false);
+    // restore focus to language toggle after modal closes
+    setTimeout(() => {
+      try { langToggleRef.current?.focus(); } catch {}
+    }, 0);
+  }, []);
+
+  // Focus trap for settings modal
+  React.useEffect(() => {
+    if (!showSettings || !modalRef.current) return;
+    const modal = modalRef.current;
+    const selector = [
+      'a[href]:not([tabindex="-1"])',
+      'button:not([disabled]):not([tabindex="-1"])',
+      'input:not([disabled]):not([tabindex="-1"])',
+      'select:not([disabled]):not([tabindex="-1"])',
+      'textarea:not([disabled]):not([tabindex="-1"])',
+      '[tabindex]:not([tabindex="-1"])'
+    ].join(',');
+
+    const getFocusables = () => Array.from(modal.querySelectorAll<HTMLElement>(selector)).filter(el => {
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      if (style.pointerEvents === 'none') return false;
+      if (el.hasAttribute('hidden')) return false;
+      if (el.getAttribute('aria-hidden') === 'true') return false;
+      if ((el as any).inert) return false;
+      return true;
+    });
+
+    const focusables = getFocusables();
+    if (focusables.length) {
+      focusables[0].focus();
+    }
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeSettings();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const nodes = getFocusables();
+        if (!nodes.length) return;
+        const idx = nodes.indexOf(document.activeElement as HTMLElement);
+        let nextIdx = idx;
+        if (e.shiftKey) nextIdx = idx <= 0 ? nodes.length - 1 : idx - 1;
+        else nextIdx = idx === -1 || idx === nodes.length - 1 ? 0 : idx + 1;
+        e.preventDefault();
+        nodes[nextIdx].focus();
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showSettings, closeSettings]);
   return (
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
     <div className={`min-h-screen flex flex-col justify-between transition-colors overflow-x-hidden ${colorScheme === 'dark' ? 'dark bg-surface-950' : 'bg-slate-100'}`}>
@@ -65,14 +127,31 @@ const AdminLayout: React.FC = () => {
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.14.31.21.65.21 1v.09A1.65 1.65 0 0 0 21 12c0 .35-.07.69-.21 1v.09A1.65 1.65 0 0 0 19.4 15z" />
               </svg>
             </button>
+            <NotificationsIcon />
             <div className="flex items-center gap-1.5">
               <span className={`text-xs font-medium ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>{lang === 'en' ? 'EN' : 'FR'}</span>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label
+                ref={langLabelRef}
+                tabIndex={0}
+                role="button"
+                aria-pressed={lang === 'fr'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setLang(lang === 'fr' ? 'en' : 'fr');
+                    setTimeout(() => { try { langLabelRef.current?.focus(); } catch {} }, 0);
+                  }
+                }}
+                onClick={() => { setLang(lang === 'fr' ? 'en' : 'fr'); setTimeout(() => { try { langLabelRef.current?.focus(); } catch {} }, 0); }}
+                className="relative inline-flex items-center cursor-pointer"
+              >
                 <input
+                  ref={langToggleRef}
                   type="checkbox"
                   checked={lang === 'fr'}
                   onChange={e => setLang(e.target.checked ? 'fr' : 'en')}
                   className="sr-only peer"
+                  tabIndex={-1}
                 />
                 <div className={`w-9 h-5 rounded-full peer transition-all ${colorScheme === 'dark' ? 'bg-surface-700 peer-checked:bg-brand-600' : 'bg-surface-200 peer-checked:bg-brand-500'}`}> 
                   <div
@@ -87,11 +166,20 @@ const AdminLayout: React.FC = () => {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={(e) => e.target === e.currentTarget && setShowSettings(false)}>
-          <div className={`rounded-2xl shadow-modal p-6 w-full max-w-xs relative border ${colorScheme === 'dark' ? 'bg-surface-900 text-surface-100 border-surface-700' : 'bg-white text-surface-900 border-surface-200'}`}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+            onClick={(e) => e.target === e.currentTarget && setShowSettings(false)}
+          >
+            <div
+              ref={modalRef}
+              tabIndex={-1}
+              className={`rounded-2xl shadow-modal p-6 w-full max-w-xs relative border ${colorScheme === 'dark' ? 'bg-surface-900 text-surface-100 border-surface-700' : 'bg-white text-surface-900 border-surface-200'}`}
+            >
             <button
               className={`absolute top-3 right-3 p-1 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-white hover:bg-surface-800' : 'text-surface-400 hover:text-surface-700 hover:bg-surface-100'}`}
-              onClick={() => setShowSettings(false)}
+              onClick={() => closeSettings()}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -122,12 +210,12 @@ const AdminLayout: React.FC = () => {
                     <svg className={`ml-auto w-4 h-4 ${colorScheme === 'dark' ? 'text-brand-400' : 'text-brand-600'}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
                   )}
                 </label>
-              ))}
+                ))}
             </div>
           </div>
         </div>
       )}
-
+      
       <main className={`flex-1 transition-colors ${colorScheme === 'dark' ? 'bg-surface-950' : 'bg-surface-50'}`}>
         <Outlet context={{ colorScheme }} />
       </main>
