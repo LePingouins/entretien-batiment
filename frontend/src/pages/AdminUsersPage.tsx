@@ -78,6 +78,7 @@ const AdminUsersPage: React.FC = () => {
   const [userAccessLoading, setUserAccessLoading] = React.useState(true);
   const [savingAccessUserId, setSavingAccessUserId] = React.useState<number | null>(null);
   const [dirtyUserOverrideIds, setDirtyUserOverrideIds] = React.useState<Set<number>>(new Set());
+  const [expandedAccessUserId, setExpandedAccessUserId] = React.useState<number | null>(null);
 
   const isDark = colorScheme === 'dark';
 
@@ -125,6 +126,7 @@ const AdminUsersPage: React.FC = () => {
       const data = await getAdminUserPageAccessOverview();
       setUserAccessOverview(data);
       setDirtyUserOverrideIds(new Set());
+      setExpandedAccessUserId((prev) => (prev != null && data.some((it) => it.userId === prev) ? prev : null));
     } catch (err: any) {
       setError(err?.response?.data?.message || t.adminPageAccessLoadError || 'Failed to load page access rules.');
     } finally {
@@ -706,69 +708,90 @@ const AdminUsersPage: React.FC = () => {
               {userAccessOverview.map((overview) => {
                 const rowBusy = savingAccessUserId === overview.userId;
                 const rowDirty = dirtyUserOverrideIds.has(overview.userId);
+                const rowExpanded = expandedAccessUserId === overview.userId;
 
                 return (
                   <div key={overview.userId} className={`rounded-xl border p-4 ${isDark ? 'border-surface-800 bg-surface-950/40' : 'border-surface-200 bg-surface-50/70'}`}>
-                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                      <div>
-                        <div className={`font-semibold ${isDark ? 'text-surface-100' : 'text-surface-900'}`}>{overview.email}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isDark ? 'bg-brand-900/40 text-brand-300' : 'bg-brand-50 text-brand-700'}`}>
-                            {roleLabel(overview.role)}
-                          </span>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${overview.enabled ? (isDark ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-50 text-emerald-700') : (isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700')}`}>
-                            {overview.enabled
-                              ? (t.adminUsersStatusActive || 'Active')
-                              : (t.adminUsersStatusInactive || 'Inactive')}
-                          </span>
-                        </div>
-                      </div>
-
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                       <button
-                        onClick={() => handleSaveUserOverrides(overview)}
-                        disabled={rowBusy || !rowDirty}
-                        className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        type="button"
+                        onClick={() => setExpandedAccessUserId((prev) => (prev === overview.userId ? null : overview.userId))}
+                        className={`flex-1 min-w-[220px] text-left rounded-lg px-2 py-1 transition-colors ${isDark ? 'hover:bg-surface-900/60' : 'hover:bg-white/80'}`}
                       >
-                        {rowBusy ? (t.loading || 'Loading...') : (t.adminPageAccessSaveUser || 'Save User Overrides')}
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                      {PAGE_KEY_ORDER.map((pageKey) => {
-                        const page = overview.pages.find((item) => item.pageKey === pageKey);
-                        if (!page) return null;
-
-                        const effectiveAllowed = page.state === 'DEFAULT'
-                          ? roleDefaultAllowed(overview.role, page.pageKey)
-                          : page.effectiveAllowed;
-
-                        return (
-                          <div key={page.pageKey} className={`rounded-lg border p-3 ${isDark ? 'border-surface-800 bg-surface-900/60' : 'border-surface-200 bg-white'}`}>
-                            <div className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
-                              {pageLabel(page.pageKey)}
-                            </div>
-                            <div className="mt-2 flex items-center gap-2">
-                              <select
-                                value={page.state}
-                                disabled={rowBusy}
-                                onChange={(e) => updateUserOverride(overview.userId, page.pageKey, e.target.value as AccessOverrideState)}
-                                className={`flex-1 px-2 py-1.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${isDark ? 'bg-surface-950 border-surface-700 text-surface-100' : 'bg-white border-surface-200 text-surface-900'} ${rowBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
-                              >
-                                <option value="DEFAULT">{t.pageAccessDefault || 'Default'}</option>
-                                <option value="ALLOW">{t.pageAccessAllow || 'Allow'}</option>
-                                <option value="DENY">{t.pageAccessDeny || 'Deny'}</option>
-                              </select>
-
-                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${effectiveAllowed ? (isDark ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-50 text-emerald-700') : (isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700')}`}>
-                                {effectiveAllowed
-                                  ? (t.pageAccessAllowed || 'Allowed')
-                                  : (t.pageAccessDenied || 'Denied')}
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className={`font-semibold ${isDark ? 'text-surface-100' : 'text-surface-900'}`}>{overview.email}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isDark ? 'bg-brand-900/40 text-brand-300' : 'bg-brand-50 text-brand-700'}`}>
+                                {roleLabel(overview.role)}
                               </span>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${overview.enabled ? (isDark ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-50 text-emerald-700') : (isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700')}`}>
+                                {overview.enabled
+                                  ? (t.adminUsersStatusActive || 'Active')
+                                  : (t.adminUsersStatusInactive || 'Inactive')}
+                              </span>
+                              {rowDirty && (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${isDark ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'}`}>
+                                  {t.adminPageAccessPending || 'Pending'}
+                                </span>
+                              )}
                             </div>
                           </div>
-                        );
-                      })}
+                          <span className={`text-sm font-semibold ${isDark ? 'text-surface-300' : 'text-surface-600'}`}>
+                            {rowExpanded ? '▴' : '▾'}
+                          </span>
+                        </div>
+                      </button>
+
+                      {rowExpanded && (
+                        <button
+                          onClick={() => handleSaveUserOverrides(overview)}
+                          disabled={rowBusy || !rowDirty}
+                          className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {rowBusy ? (t.loading || 'Loading...') : (t.adminPageAccessSaveUser || 'Save User Overrides')}
+                        </button>
+                      )}
                     </div>
+
+                    {rowExpanded && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
+                        {PAGE_KEY_ORDER.map((pageKey) => {
+                          const page = overview.pages.find((item) => item.pageKey === pageKey);
+                          if (!page) return null;
+
+                          const effectiveAllowed = page.state === 'DEFAULT'
+                            ? roleDefaultAllowed(overview.role, page.pageKey)
+                            : page.effectiveAllowed;
+
+                          return (
+                            <div key={page.pageKey} className={`rounded-lg border p-3 ${isDark ? 'border-surface-800 bg-surface-900/60' : 'border-surface-200 bg-white'}`}>
+                              <div className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
+                                {pageLabel(page.pageKey)}
+                              </div>
+                              <div className="mt-2 flex items-center gap-2">
+                                <select
+                                  value={page.state}
+                                  disabled={rowBusy}
+                                  onChange={(e) => updateUserOverride(overview.userId, page.pageKey, e.target.value as AccessOverrideState)}
+                                  className={`flex-1 px-2 py-1.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${isDark ? 'bg-surface-950 border-surface-700 text-surface-100' : 'bg-white border-surface-200 text-surface-900'} ${rowBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                >
+                                  <option value="DEFAULT">{t.pageAccessDefault || 'Default'}</option>
+                                  <option value="ALLOW">{t.pageAccessAllow || 'Allow'}</option>
+                                  <option value="DENY">{t.pageAccessDeny || 'Deny'}</option>
+                                </select>
+
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${effectiveAllowed ? (isDark ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-50 text-emerald-700') : (isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700')}`}>
+                                  {effectiveAllowed
+                                    ? (t.pageAccessAllowed || 'Allowed')
+                                    : (t.pageAccessDenied || 'Denied')}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}

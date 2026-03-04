@@ -1,5 +1,5 @@
 import React from 'react';
-import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, createBroadcast } from '../lib/api';
+import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, createBroadcast, markBugReportAsRead, deleteBugReport } from '../lib/api';
 import { useAuth } from './AuthContext';
 import { createNotificationSocket } from '../lib/notificationSocket';
 
@@ -11,12 +11,14 @@ export type NotificationType = {
   read: boolean;
   href?: string;
   source?: string;
+  bugReportId?: number;
 };
 
 export type NotificationsContextType = {
   count: number;
   notifications: NotificationType[];
   broadcastNotifications: NotificationType[];
+  bugReportNotifications: NotificationType[];
   filters: Record<string, boolean>;
   setFilters: (f: Record<string, boolean>) => void;
   toggleFilter: (key: string) => void;
@@ -25,8 +27,10 @@ export type NotificationsContextType = {
   addBroadcastNotification: (id: string, title: string, message: string, href?: string) => void;
   removeNotification: (id: string) => void;
   removeBroadcastNotification: (id: string) => void; // Added to the type
+  removeBugReportNotification: (reportId: number) => void;
   markRead: (id: string) => void;
   markBroadcastRead: (id: string) => void;
+  markBugReportRead: (reportId: number) => void;
   refreshNotifications: () => void;
 };
  
@@ -35,6 +39,7 @@ export const NotificationsContext = React.createContext<NotificationsContextType
   count: 0,
   notifications: [],
   broadcastNotifications: [],
+  bugReportNotifications: [],
   filters: {
     'workorder-create': true,
     'workorder-delete': true,
@@ -49,6 +54,7 @@ export const NotificationsContext = React.createContext<NotificationsContextType
     'user-delete': true,
     'user-activate': true,
     'user-deactivate': true,
+    'bug-report-confirmed': true,
     'broadcast': true,
     other: true,
   },
@@ -58,9 +64,11 @@ export const NotificationsContext = React.createContext<NotificationsContextType
   markAllRead: () => {},
   addBroadcastNotification: () => {},
   removeBroadcastNotification: () => {},
+  removeBugReportNotification: () => {},
   removeNotification: () => {},
   markRead: () => {},
   markBroadcastRead: () => {},
+  markBugReportRead: () => {},
   refreshNotifications: () => {},
 });
 
@@ -68,14 +76,16 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   const { accessToken, userId } = useAuth();
   const [notifications, setNotifications] = React.useState<NotificationType[]>([]);
   const [broadcastNotifications, setBroadcastNotifications] = React.useState<NotificationType[]>([]);
+  const [bugReportNotifications, setBugReportNotifications] = React.useState<NotificationType[]>([]);
 
   const fetchNotifications = React.useCallback(async () => {
     if (!accessToken) return;
     try {
       const data = await getNotifications();
-      // split into regular and broadcast notifications based on source
-      setNotifications(data.filter(n => n.source !== 'broadcast'));
+      const bugReportSources = new Set(['bug-report-feature', 'bug-report-confirmed']);
+      setNotifications(data.filter(n => n.source !== 'broadcast' && !bugReportSources.has(n.source || '')));
       setBroadcastNotifications(data.filter(n => n.source === 'broadcast'));
+      setBugReportNotifications(data.filter(n => bugReportSources.has(n.source || '')));
     } catch (e) {
       console.error('Failed to fetch notifications', e);
     }
@@ -115,6 +125,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       'user-delete': true,
       'user-activate': true,
       'user-deactivate': true,
+      'bug-report-confirmed': true,
       'broadcast': true,
       other: true,
     };
@@ -135,6 +146,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       'user-delete': true,
       'user-activate': true,
       'user-deactivate': true,
+      'bug-report-confirmed': true,
       'broadcast': true,
       other: true,
     });
@@ -184,6 +196,15 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (e) {}
   }, []);
 
+  const removeBugReportNotification = React.useCallback(async (reportId: number) => {
+    if (!reportId) return;
+
+    setBugReportNotifications(prev => prev.filter(n => n.bugReportId !== reportId));
+    try {
+      await deleteBugReport(reportId);
+    } catch (e) {}
+  }, []);
+
   const markRead = React.useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     try {
@@ -198,9 +219,19 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (e) {}
   }, []);
 
+  const markBugReportRead = React.useCallback(async (reportId: number) => {
+    if (!reportId) return;
+
+    setBugReportNotifications(prev => prev.map(n => n.bugReportId === reportId ? { ...n, read: true } : n));
+    try {
+      await markBugReportAsRead(reportId);
+    } catch (e) {}
+  }, []);
+
   const markAllRead = React.useCallback(async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     setBroadcastNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setBugReportNotifications(prev => prev.map(n => ({ ...n, read: true })));
     try {
       await markAllNotificationsAsRead();
     } catch (e) {}
@@ -210,10 +241,30 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     setFilters(prev => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  const count = notifications.filter(n => !n.read).length + broadcastNotifications.filter(n => !n.read).length;
+  const count = notifications.filter(n => !n.read).length
+    + broadcastNotifications.filter(n => !n.read).length
+    + bugReportNotifications.filter(n => !n.read).length;
 
   return (
-    <NotificationsContext.Provider value={{ count, notifications, broadcastNotifications, filters, setFilters, toggleFilter, resetFilters, markAllRead, addBroadcastNotification, removeNotification, removeBroadcastNotification, markRead, markBroadcastRead, refreshNotifications: fetchNotifications }}>
+    <NotificationsContext.Provider value={{
+      count,
+      notifications,
+      broadcastNotifications,
+      bugReportNotifications,
+      filters,
+      setFilters,
+      toggleFilter,
+      resetFilters,
+      markAllRead,
+      addBroadcastNotification,
+      removeNotification,
+      removeBroadcastNotification,
+      removeBugReportNotification,
+      markRead,
+      markBroadcastRead,
+      markBugReportRead,
+      refreshNotifications: fetchNotifications,
+    }}>
       {children}
     </NotificationsContext.Provider>
   );

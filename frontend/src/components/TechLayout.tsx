@@ -5,6 +5,7 @@ import { useLang } from '../context/LangContext';
 import { usePageAccess } from '../context/PageAccessContext';
 import { ColorSchemeContext, ColorSchemeType } from '../context/ColorSchemeContext';
 import NotificationsIcon from './NotificationsIcon';
+import BugReportButton from './BugReportButton';
 import { getCurrentUser, updateUserSettings } from '../lib/api';
 import PasswordChangeSection from './PasswordChangeSection';
 
@@ -168,6 +169,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
             {canAccess('ANALYTICS') && (
               <Link to={pagePath('analytics')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.analyticsTitle || 'Analytics'}</Link>
             )}
+            <BugReportButton />
             
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>
             

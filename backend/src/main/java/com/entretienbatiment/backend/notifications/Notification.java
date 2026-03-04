@@ -33,6 +33,9 @@ public class Notification {
     @Column
     private String source;
 
+    @Column(name = "bug_report_id")
+    private Long bugReportId;
+
     @PrePersist
     public void ensureId() {
         if (id == null) {
@@ -59,4 +62,6 @@ public class Notification {
     public void setHref(String href) { this.href = href; }
     public String getSource() { return source; }
     public void setSource(String source) { this.source = source; }
+    public Long getBugReportId() { return bugReportId; }
+    public void setBugReportId(Long bugReportId) { this.bugReportId = bugReportId; }
 }

@@ -20,6 +20,29 @@ public interface NotificationRepository extends JpaRepository<Notification, Stri
     void markAsRead(Long userId, String notificationId);
 
     @Modifying
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.targetUserId = :userId AND n.bugReportId = :bugReportId")
+    void markBugReportAsRead(Long userId, Long bugReportId);
+
+    @Query("SELECT DISTINCT n.targetUserId FROM Notification n WHERE n.bugReportId = :bugReportId AND n.targetUserId IS NOT NULL")
+    List<Long> findDistinctTargetUserIdsByBugReportId(Long bugReportId);
+
+    @Modifying
+    @Query("UPDATE Notification n SET n.title = :title, n.message = :message, n.href = :href WHERE n.bugReportId = :bugReportId AND n.source = 'bug-report-feature'")
+    void updateBugReportFeaturePayload(Long bugReportId, String title, String message, String href);
+
+    @Modifying
     @Query("DELETE FROM Notification n WHERE n.targetUserId = :userId AND n.id = :notificationId")
     void deleteForUser(Long userId, String notificationId);
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.bugReportId = :bugReportId AND n.targetUserId = :userId")
+    void deleteBugReportForUser(Long bugReportId, Long userId);
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.bugReportId = :bugReportId AND n.targetUserId IN :userIds")
+    void deleteBugReportForUsers(Long bugReportId, List<Long> userIds);
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.bugReportId = :bugReportId")
+    void deleteAllForBugReport(Long bugReportId);
 }

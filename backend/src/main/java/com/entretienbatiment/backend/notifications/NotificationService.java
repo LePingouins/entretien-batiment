@@ -12,6 +12,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -67,8 +68,62 @@ public class NotificationService {
         notificationRepository.markAsRead(userId, notificationId);
     }
 
+    public void markBugReportAsRead(Long userId, Long bugReportId) {
+        if (userId == null || bugReportId == null) {
+            return;
+        }
+        notificationRepository.markBugReportAsRead(userId, bugReportId);
+        webSocketSender.sendNotificationUpdate(userId);
+    }
+
     public void deleteNotification(Long userId, String notificationId) {
         notificationRepository.deleteForUser(userId, notificationId);
+    }
+
+    public void refreshBugReportFeatureThread(Long bugReportId, String title, String message, String href) {
+        if (bugReportId == null) {
+            return;
+        }
+
+        List<Long> recipients = notificationRepository.findDistinctTargetUserIdsByBugReportId(bugReportId);
+        notificationRepository.updateBugReportFeaturePayload(bugReportId, title, message, href);
+        pushNotificationUpdates(recipients);
+    }
+
+    public void deleteBugReportNotificationsForUser(Long bugReportId, Long userId) {
+        if (bugReportId == null || userId == null) {
+            return;
+        }
+
+        notificationRepository.deleteBugReportForUser(bugReportId, userId);
+        webSocketSender.sendNotificationUpdate(userId);
+    }
+
+    public void deleteBugReportNotificationsForUsers(Long bugReportId, List<Long> userIds) {
+        if (bugReportId == null || userIds == null || userIds.isEmpty()) {
+            return;
+        }
+
+        List<Long> distinctUserIds = userIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (distinctUserIds.isEmpty()) {
+            return;
+        }
+
+        notificationRepository.deleteBugReportForUsers(bugReportId, distinctUserIds);
+        pushNotificationUpdates(distinctUserIds);
+    }
+
+    public void deleteAllBugReportNotifications(Long bugReportId) {
+        if (bugReportId == null) {
+            return;
+        }
+
+        List<Long> recipients = notificationRepository.findDistinctTargetUserIdsByBugReportId(bugReportId);
+        notificationRepository.deleteAllForBugReport(bugReportId);
+        pushNotificationUpdates(recipients);
     }
 
     public void createBroadcast(String title, String message, String href) {
@@ -88,6 +143,10 @@ public class NotificationService {
     }
 
     public void notifyAdmins(String title, String message, String href, String source) {
+        notifyAdmins(title, message, href, source, null);
+    }
+
+    public void notifyAdmins(String title, String message, String href, String source, Long bugReportId) {
         List<AppUser> admins = userRepository.findByRole(com.entretienbatiment.backend.auth.Role.ADMIN);
         for (AppUser admin : admins) {
             if (!admin.isEnabled() || admin.getRole() == null) {
@@ -103,12 +162,17 @@ public class NotificationService {
             n.setMessage(message);
             n.setHref(href);
             n.setSource(source);
+            n.setBugReportId(bugReportId);
             notificationRepository.save(n);
             webSocketSender.sendNotificationUpdate(admin.getId());
         }
     }
 
     public void notifyUser(Long targetUserId, String title, String message, String href, String source) {
+        notifyUser(targetUserId, title, message, href, source, null);
+    }
+
+    public void notifyUser(Long targetUserId, String title, String message, String href, String source, Long bugReportId) {
         if (targetUserId == null) {
             return;
         }
@@ -128,6 +192,7 @@ public class NotificationService {
         n.setMessage(message);
         n.setHref(href);
         n.setSource(source);
+        n.setBugReportId(bugReportId);
         notificationRepository.save(n);
         webSocketSender.sendNotificationUpdate(targetUserId);
     }
@@ -217,6 +282,17 @@ public class NotificationService {
         map.put("user-activate", EnumSet.of(Role.ADMIN));
         map.put("user-deactivate", EnumSet.of(Role.ADMIN));
         return map;
+    }
+
+    private void pushNotificationUpdates(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return;
+        }
+
+        userIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(webSocketSender::sendNotificationUpdate);
     }
 
     public record NotificationRecipientRuleDto(String source, boolean admin, boolean tech, boolean worker) {}

@@ -73,10 +73,20 @@ public class NotificationController {
             Instant date,
             boolean read,
             String href,
-            String source
+            String source,
+            Long bugReportId
     ) {
         public static NotificationDto from(Notification n) {
-            return new NotificationDto(n.getId(), n.getTitle(), n.getMessage(), n.getDate(), n.isRead(), n.getHref(), n.getSource());
+            return new NotificationDto(
+                    n.getId(),
+                    n.getTitle(),
+                    n.getMessage(),
+                    n.getDate(),
+                    n.isRead(),
+                    n.getHref(),
+                    n.getSource(),
+                    n.getBugReportId()
+            );
         }
     }
 }

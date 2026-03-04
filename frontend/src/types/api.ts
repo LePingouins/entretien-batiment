@@ -231,3 +231,18 @@ export interface AnalyticsStatsResponse {
   averageTasksPerDay: number;
   taskFrequencies: Array<{ taskName: string; count: number }>;
 }
+
+export interface BugReportCreatedResponse {
+  reportId: number;
+  createdAt: string;
+  nextAllowedAt: string;
+}
+
+export interface BugReportConfirmedResponse {
+  reportId: number;
+  confirmedAt: string;
+  confirmedBy: string;
+  reporterUserId: number;
+  reportTitle: string;
+  alreadyConfirmed: boolean;
+}

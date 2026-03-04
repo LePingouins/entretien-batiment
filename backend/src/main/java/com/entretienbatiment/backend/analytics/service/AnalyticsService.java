@@ -145,22 +145,31 @@ public class AnalyticsService {
         long overdueCompletedTasks = overdueCompletedNormal + overdueCompletedUrgent;
 
         // --- 6. Task Volume ---
-        long tasksCreatedThisWeek = allWorkOrders.stream().filter(wo -> wo.getCreatedAt().isAfter(startOfWeekInstant)).count()
-                                   + allUrgentWorkOrders.stream().filter(wo -> wo.getCreatedAt().isAfter(startOfWeek)).count();
+        long tasksCreatedThisWeek = allWorkOrders.stream()
+                .filter(wo -> isAfter(wo.getCreatedAt(), startOfWeekInstant))
+                .count()
+                                   + allUrgentWorkOrders.stream()
+                .filter(wo -> isAfter(wo.getCreatedAt(), startOfWeek))
+                .count();
 
-        long tasksCreatedThisMonth = allWorkOrders.stream().filter(wo -> wo.getCreatedAt().isAfter(startOfMonthInstant)).count()
-                                   + allUrgentWorkOrders.stream().filter(wo -> wo.getCreatedAt().isAfter(startOfMonthLDT)).count();
+        long tasksCreatedThisMonth = allWorkOrders.stream()
+                .filter(wo -> isAfter(wo.getCreatedAt(), startOfMonthInstant))
+                .count()
+                                   + allUrgentWorkOrders.stream()
+                .filter(wo -> isAfter(wo.getCreatedAt(), startOfMonthLDT))
+                .count();
 
         long tasksCancelledThisWeek = allWorkOrders.stream()
-                .filter(wo -> wo.getStatus() == WorkOrderStatus.CANCELLED && wo.getUpdatedAt().isAfter(startOfWeekInstant))
+                .filter(wo -> wo.getStatus() == WorkOrderStatus.CANCELLED && isAfter(wo.getUpdatedAt(), startOfWeekInstant))
                 .count();
 
         long tasksCancelledThisMonth = allWorkOrders.stream()
-                .filter(wo -> wo.getStatus() == WorkOrderStatus.CANCELLED && wo.getUpdatedAt().isAfter(startOfMonthInstant))
+                .filter(wo -> wo.getStatus() == WorkOrderStatus.CANCELLED && isAfter(wo.getUpdatedAt(), startOfMonthInstant))
                 .count();
 
         // --- 7. Status Distribution ---
         Map<String, Long> activeTasksByStatus = allWorkOrders.stream()
+                .filter(wo -> wo.getStatus() != null)
                 .filter(wo -> wo.getStatus() != WorkOrderStatus.COMPLETED && wo.getStatus() != WorkOrderStatus.CANCELLED)
                 .collect(Collectors.groupingBy(wo -> wo.getStatus().name(), Collectors.counting()));
         
@@ -177,9 +186,16 @@ public class AnalyticsService {
                 .sum();
                 
         long completedTasksThisMonth = allWorkOrders.stream()
-                .filter(wo -> wo.getStatus() == WorkOrderStatus.COMPLETED && wo.getUpdatedAt().isAfter(startOfMonthInstant)).count() 
+                                .filter(wo -> wo.getStatus() == WorkOrderStatus.COMPLETED && isAfter(wo.getUpdatedAt(), startOfMonthInstant)).count() 
                 + allUrgentWorkOrders.stream()
-                .filter(wo -> "COMPLETED".equalsIgnoreCase(wo.getStatus()) && (wo.getCompletedAt() != null ? wo.getCompletedAt() : wo.getUpdatedAt()).isAfter(startOfMonthLDT)).count();
+                                .filter(wo -> {
+                                        if (!"COMPLETED".equalsIgnoreCase(wo.getStatus())) {
+                                                return false;
+                                        }
+                                        LocalDateTime end = wo.getCompletedAt() != null ? wo.getCompletedAt() : wo.getUpdatedAt();
+                                        return isAfter(end, startOfMonthLDT);
+                                })
+                                .count();
                 
         Double averageMileagePerTask = completedTasksThisMonth > 0 ? (double) totalMileageThisMonth / completedTasksThisMonth : 0.0;
 
@@ -206,9 +222,16 @@ public class AnalyticsService {
         Instant thirtyDaysAgoInstant = thirtyDaysAgo.atZone(zoneId).toInstant();
         
         long completedLast30d = allWorkOrders.stream()
-                .filter(wo -> wo.getStatus() == WorkOrderStatus.COMPLETED && wo.getUpdatedAt().isAfter(thirtyDaysAgoInstant)).count()
+                                .filter(wo -> wo.getStatus() == WorkOrderStatus.COMPLETED && isAfter(wo.getUpdatedAt(), thirtyDaysAgoInstant)).count()
                 + allUrgentWorkOrders.stream()
-                .filter(wo -> "COMPLETED".equalsIgnoreCase(wo.getStatus()) && (wo.getCompletedAt() != null ? wo.getCompletedAt() : wo.getUpdatedAt()).isAfter(thirtyDaysAgo)).count();
+                                .filter(wo -> {
+                                        if (!"COMPLETED".equalsIgnoreCase(wo.getStatus())) {
+                                                return false;
+                                        }
+                                        LocalDateTime end = wo.getCompletedAt() != null ? wo.getCompletedAt() : wo.getUpdatedAt();
+                                        return isAfter(end, thirtyDaysAgo);
+                                })
+                                .count();
 
         Double averageTasksPerDay = completedLast30d / 30.0;
 
@@ -280,4 +303,12 @@ public class AnalyticsService {
             taskFrequencies
         );
     }
+
+        private boolean isAfter(Instant value, Instant boundary) {
+                return value != null && boundary != null && value.isAfter(boundary);
+        }
+
+        private boolean isAfter(LocalDateTime value, LocalDateTime boundary) {
+                return value != null && boundary != null && value.isAfter(boundary);
+        }
 }

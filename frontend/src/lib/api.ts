@@ -418,6 +418,32 @@ export async function createBroadcast(title: string, message: string, href?: str
   await api.post('/api/notifications/broadcast', { title, message, href });
 }
 
+export async function createBugReport(
+  title: string,
+  description: string
+): Promise<import('../types/api').BugReportCreatedResponse> {
+  const res = await api.post<import('../types/api').BugReportCreatedResponse>('/api/bug-reports', {
+    title,
+    description,
+  });
+  return res.data;
+}
+
+export async function confirmBugReport(
+  reportId: number
+): Promise<import('../types/api').BugReportConfirmedResponse> {
+  const res = await api.post<import('../types/api').BugReportConfirmedResponse>(`/api/bug-reports/${reportId}/confirm`);
+  return res.data;
+}
+
+export async function markBugReportAsRead(reportId: number): Promise<void> {
+  await api.put(`/api/bug-reports/${reportId}/read`);
+}
+
+export async function deleteBugReport(reportId: number): Promise<void> {
+  await api.delete(`/api/bug-reports/${reportId}`);
+}
+
 
 export async function getCurrentUser(): Promise<{ id: number; email: string; role: import('../types/api').UserRole; enabled: boolean; remindersEnabled: boolean }> {
   const res = await api.get('/api/users/me');
