@@ -2,22 +2,55 @@ package com.entretienbatiment.backend.notifications;
 
 import com.entretienbatiment.backend.auth.AppUser;
 import com.entretienbatiment.backend.auth.AppUserRepository;
+import com.entretienbatiment.backend.auth.Role;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class NotificationService {
 
+    private static final List<String> MANAGED_SOURCES = List.of(
+            "workorder-create",
+            "urgent-create",
+            "mileage-create",
+            "REMINDER",
+            "user-invite",
+            "user-welcome",
+            "user-reset-password",
+            "user-email-change",
+            "user-delete",
+            "user-activate",
+            "user-deactivate"
+    );
+
+    private static final EnumSet<Role> ALL_ROLES = EnumSet.of(Role.ADMIN, Role.TECH, Role.WORKER);
+
+    private static final Map<String, EnumSet<Role>> DEFAULT_ROLE_RULES = defaultRoleRules();
+
     private final NotificationRepository notificationRepository;
+    private final NotificationRecipientRuleRepository recipientRuleRepository;
     private final AppUserRepository userRepository;
     private final NotificationWebSocketSender webSocketSender;
 
-    public NotificationService(NotificationRepository notificationRepository, AppUserRepository userRepository, NotificationWebSocketSender webSocketSender) {
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            NotificationRecipientRuleRepository recipientRuleRepository,
+            AppUserRepository userRepository,
+            NotificationWebSocketSender webSocketSender
+    ) {
         this.notificationRepository = notificationRepository;
+        this.recipientRuleRepository = recipientRuleRepository;
         this.userRepository = userRepository;
         this.webSocketSender = webSocketSender;
     }
@@ -57,6 +90,12 @@ public class NotificationService {
     public void notifyAdmins(String title, String message, String href, String source) {
         List<AppUser> admins = userRepository.findByRole(com.entretienbatiment.backend.auth.Role.ADMIN);
         for (AppUser admin : admins) {
+            if (!admin.isEnabled() || admin.getRole() == null) {
+                continue;
+            }
+            if (!isRoleEnabledForSource(source, admin.getRole())) {
+                continue;
+            }
             Notification n = new Notification();
             n.setId(UUID.randomUUID().toString());
             n.setTargetUserId(admin.getId());
@@ -70,6 +109,18 @@ public class NotificationService {
     }
 
     public void notifyUser(Long targetUserId, String title, String message, String href, String source) {
+        if (targetUserId == null) {
+            return;
+        }
+
+        AppUser target = userRepository.findById(targetUserId).orElse(null);
+        if (target == null || !target.isEnabled() || target.getRole() == null) {
+            return;
+        }
+        if (!isRoleEnabledForSource(source, target.getRole())) {
+            return;
+        }
+
         Notification n = new Notification();
         n.setId(UUID.randomUUID().toString());
         n.setTargetUserId(targetUserId);
@@ -80,4 +131,95 @@ public class NotificationService {
         notificationRepository.save(n);
         webSocketSender.sendNotificationUpdate(targetUserId);
     }
+
+    @Transactional(readOnly = true)
+    public List<NotificationRecipientRuleDto> getRecipientRules() {
+        Map<String, Map<Role, NotificationRecipientRule>> bySource = recipientRuleRepository
+                .findBySourceIn(MANAGED_SOURCES)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        NotificationRecipientRule::getSource,
+                        Collectors.toMap(NotificationRecipientRule::getRole, Function.identity(), (a, b) -> b)
+                ));
+
+        return MANAGED_SOURCES.stream()
+                .map(source -> {
+                    Map<Role, NotificationRecipientRule> rules = bySource.get(source);
+                    return new NotificationRecipientRuleDto(
+                            source,
+                            resolveRule(source, Role.ADMIN, rules),
+                            resolveRule(source, Role.TECH, rules),
+                            resolveRule(source, Role.WORKER, rules)
+                    );
+                })
+                .toList();
+    }
+
+    public List<NotificationRecipientRuleDto> updateRecipientRules(List<NotificationRecipientRuleUpdateRequest> updates) {
+        if (updates == null || updates.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one rule is required");
+        }
+
+        for (NotificationRecipientRuleUpdateRequest update : updates) {
+            if (update.source() == null || !MANAGED_SOURCES.contains(update.source())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported notification source: " + update.source());
+            }
+
+            upsertRule(update.source(), Role.ADMIN, Boolean.TRUE.equals(update.admin()));
+            upsertRule(update.source(), Role.TECH, Boolean.TRUE.equals(update.tech()));
+            upsertRule(update.source(), Role.WORKER, Boolean.TRUE.equals(update.worker()));
+        }
+
+        return getRecipientRules();
+    }
+
+    private void upsertRule(String source, Role role, boolean enabled) {
+        NotificationRecipientRule rule = recipientRuleRepository.findBySourceAndRole(source, role)
+                .orElseGet(() -> {
+                    NotificationRecipientRule created = new NotificationRecipientRule();
+                    created.setSource(source);
+                    created.setRole(role);
+                    return created;
+                });
+        rule.setEnabled(enabled);
+        recipientRuleRepository.save(rule);
+    }
+
+    private boolean resolveRule(String source, Role role, Map<Role, NotificationRecipientRule> sourceRules) {
+        if (sourceRules != null && sourceRules.get(role) != null) {
+            return sourceRules.get(role).isEnabled();
+        }
+        return DEFAULT_ROLE_RULES.getOrDefault(source, ALL_ROLES).contains(role);
+    }
+
+    private boolean isRoleEnabledForSource(String source, Role role) {
+        if (source == null || source.isBlank() || role == null) {
+            return true;
+        }
+
+        return recipientRuleRepository.findBySourceAndRole(source, role)
+                .map(NotificationRecipientRule::isEnabled)
+                .orElse(DEFAULT_ROLE_RULES.getOrDefault(source, ALL_ROLES).contains(role));
+    }
+
+    private static Map<String, EnumSet<Role>> defaultRoleRules() {
+        Map<String, EnumSet<Role>> map = new LinkedHashMap<>();
+        map.put("workorder-create", EnumSet.of(Role.ADMIN, Role.TECH));
+        map.put("urgent-create", EnumSet.of(Role.ADMIN, Role.TECH));
+        map.put("mileage-create", EnumSet.of(Role.ADMIN));
+        map.put("REMINDER", EnumSet.of(Role.ADMIN, Role.TECH, Role.WORKER));
+
+        map.put("user-invite", EnumSet.of(Role.ADMIN));
+        map.put("user-welcome", EnumSet.of(Role.ADMIN, Role.TECH, Role.WORKER));
+        map.put("user-reset-password", EnumSet.of(Role.ADMIN));
+        map.put("user-email-change", EnumSet.of(Role.ADMIN));
+        map.put("user-delete", EnumSet.of(Role.ADMIN));
+        map.put("user-activate", EnumSet.of(Role.ADMIN));
+        map.put("user-deactivate", EnumSet.of(Role.ADMIN));
+        return map;
+    }
+
+    public record NotificationRecipientRuleDto(String source, boolean admin, boolean tech, boolean worker) {}
+
+    public record NotificationRecipientRuleUpdateRequest(String source, Boolean admin, Boolean tech, Boolean worker) {}
 }

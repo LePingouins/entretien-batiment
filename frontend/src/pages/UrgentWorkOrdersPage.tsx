@@ -7,12 +7,10 @@ import { DndContext, closestCenter, rectIntersection, PointerSensor, TouchSensor
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import api, { getUrgentWorkOrders, updateUrgentWorkOrder, deleteUrgentWorkOrder, archiveUrgentWorkOrder, createUrgentWorkOrder } from '../lib/api';
+import { getUrgentWorkOrders, updateUrgentWorkOrder, deleteUrgentWorkOrder, archiveUrgentWorkOrder, createUrgentWorkOrder, getTechnicians } from '../lib/api';
 import { UrgentWorkOrderResponse, UrgentWorkOrderRequest, UrgentWorkOrderStatus } from '../types/api';
 import { ColorSchemeType } from './AdminWorkOrders/colorSchemes';
 import { useLang } from '../context/LangContext';
-import { NotificationsContext } from '../context/NotificationsContext';
-import { WorkOrderCard } from '../components/WorkOrderCard';
 import { UrgentWorkOrderCard } from '../components/UrgentWorkOrderCard';
 import { SharedEditModal } from '../components/SharedEditModal';
 import { FilterBar } from './AdminWorkOrders/FilterBar';
@@ -62,6 +60,13 @@ const BOTTOM_ZONE_PREFIX = 'bottom-';
 const getBottomZoneId = (status: string) => `${BOTTOM_ZONE_PREFIX}${status}`;
 const isBottomZone = (id: string) => id.startsWith(BOTTOM_ZONE_PREFIX);
 const getStatusFromBottomZone = (id: string) => id.replace(BOTTOM_ZONE_PREFIX, '');
+
+const toFileArray = (files?: FileList | File[] | null): File[] => {
+  if (!files) return [];
+  if (files instanceof FileList) return Array.from(files);
+  if (Array.isArray(files)) return files;
+  return [];
+};
 
 // Use only rectIntersection for reliable column hitboxes
 const customCollisionDetection: CollisionDetection = rectIntersection;
@@ -295,7 +300,6 @@ const DroppableColumnComponent = ({ status, children, colorScheme }: DroppableCo
 
 
 function UrgentWorkOrdersPage() {
-    const { markAllRead } = React.useContext(NotificationsContext);
     const [searchParams, setSearchParams] = useSearchParams();
     // Modal state for creating urgent work order
     const [showModal, setShowModal] = React.useState(false);
@@ -324,6 +328,29 @@ function UrgentWorkOrdersPage() {
     }, [showModal]);
 
     const [editModal, setEditModal] = React.useState<{ open: boolean; workOrder: UrgentWorkOrderResponse | null }>({ open: false, workOrder: null });
+    const [technicians, setTechnicians] = React.useState<Array<{ id: number; email: string }>>([]);
+
+    React.useEffect(() => {
+      let cancelled = false;
+      getTechnicians()
+        .then((users) => {
+          if (cancelled) return;
+          const techs = users
+            .filter((u) => u.role === 'TECH' && u.enabled)
+            .sort((a, b) => a.email.localeCompare(b.email))
+            .map((u) => ({ id: u.id, email: u.email }));
+          setTechnicians(techs);
+        })
+        .catch(() => {
+          if (!cancelled) setTechnicians([]);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }, []);
+
+    type UrgentWorkOrderFormValues = UrgentWorkOrderRequest & { dueDate?: string; priority?: string; assignedToUserId?: string };
     const {
       register: editRegister,
       handleSubmit: handleEditSubmit,
@@ -331,36 +358,61 @@ function UrgentWorkOrdersPage() {
       formState: { errors: editErrors, isSubmitting: isEditSubmitting },
       setValue: setEditValue,
       watch: editWatch,
-    } = useForm<UrgentWorkOrderRequest & { dueDate?: string; priority?: string }>({});
+    } = useForm<UrgentWorkOrderFormValues>({});
 
     const editFiles = editWatch('files');
+    const editFileArray = React.useMemo(() => toFileArray(editFiles as FileList | File[] | null | undefined), [editFiles]);
+    const [removeEditAttachment, setRemoveEditAttachment] = React.useState(false);
+    const existingEditAttachmentUrl = React.useMemo(() => {
+      if (!editModal.workOrder) return undefined;
+      return editModal.workOrder.attachmentDownloadUrl || (editModal.workOrder.attachmentFilename ? `/api/files/workorders/${editModal.workOrder.attachmentFilename}` : undefined);
+    }, [editModal.workOrder]);
+
+    const handleEditFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const nextFiles = event.target.files ? Array.from(event.target.files) : undefined;
+      setEditValue('files', nextFiles as any);
+      if (nextFiles && nextFiles.length > 0) {
+        setRemoveEditAttachment(false);
+      }
+    };
+
+    const removeEditSelectedFileAt = (indexToRemove: number) => {
+      const nextFiles = editFileArray.filter((_, index) => index !== indexToRemove);
+      setEditValue('files', (nextFiles.length > 0 ? nextFiles : undefined) as any);
+    };
 
     const handleEdit = (workOrder: UrgentWorkOrderResponse) => {
       setEditModal({ open: true, workOrder });
+      setRemoveEditAttachment(false);
       editReset({
         title: workOrder.title,
         description: workOrder.description,
         location: workOrder.location,
+        assignedToUserId: workOrder.assignedToUserId ? workOrder.assignedToUserId.toString() : '',
         // files is not set here
       });
       setEditValue('priority' as any, workOrder.priority);
       setEditValue('dueDate' as any, workOrder.dueDate?.slice(0, 10) || '');
     };
 
-    const onEdit: SubmitHandler<UrgentWorkOrderRequest & { dueDate?: string; priority?: string }> = async (data) => {
+    const onEdit: SubmitHandler<UrgentWorkOrderFormValues> = async (data) => {
       if (!editModal.workOrder) return;
       try {
         // Preserve previous sortIndex
         const prevSortIndex = editModal.workOrder.sortIndex;
         const prevStatus = editModal.workOrder.status;
-        const updated = await updateUrgentWorkOrder(editModal.workOrder.id, {
+        const payload: Parameters<typeof updateUrgentWorkOrder>[1] = {
           title: data.title,
           description: data.description,
           location: data.location,
           dueDate: data.dueDate || '',
           files: data.files,
-        });
+          removeAttachment: removeEditAttachment,
+        };
+        payload.assignedToUserId = data.assignedToUserId ? Number(data.assignedToUserId) : null;
+        const updated = await updateUrgentWorkOrder(editModal.workOrder.id, payload);
         setEditModal({ open: false, workOrder: null });
+        setRemoveEditAttachment(false);
         editReset();
         // Optimistically update only the edited card, preserving order
         setOptimisticUrgentData((urgentData || []).map(wo =>
@@ -413,33 +465,56 @@ function UrgentWorkOrdersPage() {
     watch,
     formState: { errors, isSubmitting },
     setValue
-  } = useForm<UrgentWorkOrderRequest & { dueDate?: string; priority?: string }>();
+  } = useForm<UrgentWorkOrderFormValues>();
 
   const files = watch('files');
+  const createFileArray = React.useMemo(() => toFileArray(files as FileList | File[] | null | undefined), [files]);
+  const createAssignedToUserId = watch('assignedToUserId');
+
+  const handleCreateFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFiles = event.target.files ? Array.from(event.target.files) : undefined;
+    setValue('files', nextFiles as any);
+  };
+
+  const removeCreateSelectedFileAt = (indexToRemove: number) => {
+    const nextFiles = createFileArray.filter((_, index) => index !== indexToRemove);
+    setValue('files', (nextFiles.length > 0 ? nextFiles : undefined) as any);
+  };
+
+  const defaultTechnicianId = React.useMemo(() => {
+    const andre = technicians.find((tech) => tech.email.toLowerCase().startsWith('andre@'));
+    return andre ? andre.id.toString() : '';
+  }, [technicians]);
+
+  React.useEffect(() => {
+    if (!showModal || !defaultTechnicianId) return;
+    if (!createAssignedToUserId) {
+      setValue('assignedToUserId', defaultTechnicianId as any);
+    }
+  }, [showModal, defaultTechnicianId, createAssignedToUserId, setValue]);
 
   const handleCreate = () => {
     reset();
     setValue('priority', 'URGENT');
+    if (defaultTechnicianId) {
+      setValue('assignedToUserId', defaultTechnicianId as any);
+    }
     setShowModal(true);
   };
 
 
 
-    const onSubmit: SubmitHandler<UrgentWorkOrderRequest & { dueDate?: string; priority?: string }> = async (data) => {
+    const onSubmit: SubmitHandler<UrgentWorkOrderFormValues> = async (data) => {
       try {
-        const formData = new FormData();
-        formData.append('title', data.title);
-        formData.append('description', data.description);
-        formData.append('location', data.location);
-        if (data.priority) formData.append('priority', data.priority);
-        // Ensure date is truncated or formatted correctly if needed
-        if (data.dueDate) formData.append('dueDate', data.dueDate.length === 10 ? data.dueDate + 'T00:00:00' : data.dueDate);
-        const filesArr = data.files instanceof FileList ? Array.from(data.files) : Array.isArray(data.files) ? data.files : [];
-        for (let i = 0; i < filesArr.length; i++) {
-          formData.append('files', filesArr[i]);
-        }
-        const res = await api.post('/api/urgent-work-orders', formData);
-        const created = res.data;
+        await createUrgentWorkOrder({
+          title: data.title,
+          description: data.description,
+          location: data.location,
+          dueDate: data.dueDate,
+          priority: data.priority,
+          assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : undefined,
+          files: data.files,
+        });
 
         reset();
         setShowModal(false);
@@ -451,9 +526,10 @@ function UrgentWorkOrdersPage() {
 
 
     // Example options (customize as needed)
-    const technicianOptions = [
+    const technicianOptions = React.useMemo(() => [
       { id: '', name: t.allTechnicians || 'All Technicians' },
-    ];
+      ...technicians.map((tech) => ({ id: tech.id.toString(), name: tech.email })),
+    ], [technicians, t.allTechnicians]);
     // Dynamically extract unique locations from urgentData
     const locationOptions = React.useMemo(() => {
       const locations = Array.isArray(urgentData)
@@ -624,7 +700,7 @@ function UrgentWorkOrdersPage() {
                     ? 'bg-white text-gray-800 border border-gray-300 px-3 sm:px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
                     : 'bg-brand-600 text-white px-3 sm:px-4 py-2 rounded-lg shadow-card transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
               }
-              onClick={() => setShowModal(true)}
+              onClick={handleCreate}
             >
               <span className="align-middle">New Urgent Work Order</span>
             </button>
@@ -820,6 +896,17 @@ function UrgentWorkOrdersPage() {
                 </select>
                 {errors.location && <div className="text-red-500 text-xs">{errors.location.message}</div>}
               </div>
+              <div>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.assignedTechnician}</label>
+                <select className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`} {...register('assignedToUserId')}>
+                  {!defaultTechnicianId && <option value="" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Default technician (André)</option>}
+                  {technicians.map((tech) => (
+                    <option key={tech.id} value={tech.id.toString()} className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>
+                      {tech.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {/* Due Date field (always use dueDate) - moved below Location */}
               <div>
                 <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>Due Date</label>
@@ -841,17 +928,17 @@ function UrgentWorkOrdersPage() {
                   multiple
                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
                   className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`}
-                  onChange={e => setValue('files', e.target.files ?? undefined)}
+                  onChange={handleCreateFilesChange}
                   title={t.chooseFiles || 'Choose files'}
                 />
                 <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-surface-500' : 'text-gray-500'}`}>
-                  {files && files.length > 0
-                    ? Array.from(files as File[]).map(f => f.name).join(', ')
+                  {createFileArray.length > 0
+                    ? createFileArray.map(f => f.name).join(', ')
                     : t.noFileChosen || 'No file chosen'}
                 </div>
-                {files && files.length > 0 && (
+                {createFileArray.length > 0 && (
                   <div className="mt-2 flex flex-col gap-2 max-h-32 overflow-y-auto">
-                    {Array.from(files as File[]).map((file, idx) => (
+                    {createFileArray.map((file, idx) => (
                       <div key={idx} className="flex items-center gap-2">
                         {file.type.startsWith('image/') ? (
                           <img
@@ -863,7 +950,15 @@ function UrgentWorkOrdersPage() {
                         ) : (
                           <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-500' : 'bg-gray-100 text-gray-500'}`}>File</span>
                         )}
-                        <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
+                        <span className={`truncate text-sm flex-1 ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
+                        <button
+                          type="button"
+                          className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                          aria-label={`Remove ${file.name}`}
+                          onClick={() => removeCreateSelectedFileAt(idx)}
+                        >
+                          ×
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -924,6 +1019,17 @@ function UrgentWorkOrdersPage() {
             <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('location')} />
             {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
           </div>
+          <div>
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.assignedTechnician}</label>
+            <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('assignedToUserId')}>
+              <option value="" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>{t.unassigned || 'Unassigned'}</option>
+              {technicians.map((tech) => (
+                <option key={tech.id} value={tech.id.toString()} className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>
+                  {tech.email}
+                </option>
+              ))}
+            </select>
+          </div>
           {/* No Priority field for UrgentWorkOrders */}
           <div>
             <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.dueDate}</label>
@@ -933,22 +1039,54 @@ function UrgentWorkOrdersPage() {
           {/* File/Photo Upload Section */}
           <div>
             <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.attachments || 'Attachments'}</label>
+            {existingEditAttachmentUrl && !removeEditAttachment && (
+              <div className={`mb-2 flex items-center gap-2 p-2 rounded ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-gray-50 border border-gray-200'}`}>
+                <a
+                  href={existingEditAttachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-sm truncate underline ${colorScheme === 'dark' ? 'text-brand-300' : 'text-brand-700'}`}
+                >
+                  {editModal.workOrder?.attachmentFilename || 'Current attachment'}
+                </a>
+                <button
+                  type="button"
+                  className={`ml-auto rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-600' : 'text-gray-600 hover:bg-gray-200'}`}
+                  aria-label="Remove current attachment"
+                  onClick={() => setRemoveEditAttachment(true)}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {removeEditAttachment && (
+              <div className={`mb-2 text-xs flex items-center gap-2 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-gray-600'}`}>
+                <span>Attachment will be removed on save.</span>
+                <button
+                  type="button"
+                  className={`underline ${colorScheme === 'dark' ? 'text-brand-300' : 'text-brand-700'}`}
+                  onClick={() => setRemoveEditAttachment(false)}
+                >
+                  Undo
+                </button>
+              </div>
+            )}
             <input
               type="file"
               multiple
               accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
               className={styles.input + ' cursor-pointer ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')}
-              onChange={e => setEditValue('files', e.target.files ?? undefined)}
+              onChange={handleEditFilesChange}
               title={t.chooseFiles || 'Choose files'}
             />
             <div className={"text-xs mt-1 " + (colorScheme === 'dark' ? 'text-surface-500' : 'text-gray-500')}>
-              {editFiles && editFiles.length > 0
-                ? Array.from(editFiles as File[]).map(f => f.name).join(', ')
+              {editFileArray.length > 0
+                ? editFileArray.map(f => f.name).join(', ')
                 : t.noFileChosen || 'No file chosen'}
             </div>
-            {editFiles && editFiles.length > 0 && (
+            {editFileArray.length > 0 && (
               <div className="mt-2 flex flex-col gap-2 max-h-32 overflow-y-auto">
-                {Array.from(editFiles as File[]).map((file, idx) => (
+                {editFileArray.map((file, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     {file.type.startsWith('image/') ? (
                       <img
@@ -960,7 +1098,15 @@ function UrgentWorkOrdersPage() {
                     ) : (
                       <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-500' : 'bg-gray-100 text-gray-500'}`}>File</span>
                     )}
-                    <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
+                    <span className={`truncate text-sm flex-1 ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
+                    <button
+                      type="button"
+                      className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                      aria-label={`Remove ${file.name}`}
+                      onClick={() => removeEditSelectedFileAt(idx)}
+                    >
+                      ×
+                    </button>
                   </div>
                 ))}
               </div>

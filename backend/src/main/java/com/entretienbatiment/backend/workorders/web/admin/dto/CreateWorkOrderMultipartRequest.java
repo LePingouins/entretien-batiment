@@ -22,6 +22,7 @@ public class CreateWorkOrderMultipartRequest {
     private WorkOrderPriority priority;
     private LocalDate requestedDate;
     private LocalDate dueDate;
+    private Long assignedToUserId;
 
     private List<MultipartFile> files;
 
@@ -38,6 +39,8 @@ public class CreateWorkOrderMultipartRequest {
     public void setRequestedDate(LocalDate requestedDate) { this.requestedDate = requestedDate; }
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+    public Long getAssignedToUserId() { return assignedToUserId; }
+    public void setAssignedToUserId(Long assignedToUserId) { this.assignedToUserId = assignedToUserId; }
     public List<MultipartFile> getFiles() { return files; }
     public void setFiles(List<MultipartFile> files) { this.files = files; }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getDashboardStats } from '../lib/api';
 import { DashboardStats } from '../types/api';
@@ -7,7 +7,7 @@ import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
 import { useBroadcast } from '../context/BroadcastContext';
 import { NotificationsContext, NotificationsContextType } from '../context/NotificationsContext';
-import { useContext } from 'react';
+import { ColorSchemeContext } from '../context/ColorSchemeContext';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -15,6 +15,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   // Add translation hook
   const { t } = useLang();
+  const { colorScheme } = useContext(ColorSchemeContext);
+  const isDark = colorScheme === 'dark';
   
   const ctx = useContext(NotificationsContext) as NotificationsContextType;
   const reminders = ctx.notifications.filter(n => n.source === 'REMINDER');
@@ -31,9 +33,9 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
+      <div className={`flex items-center justify-center min-h-[50vh] ${isDark ? 'text-surface-300' : ''}`}>
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-        <span className="ml-4 text-lg text-slate-600">{t.dashboardLoading}</span>
+        <span className={`ml-4 text-lg ${isDark ? 'text-surface-300' : 'text-slate-600'}`}>{t.dashboardLoading}</span>
       </div>
     );
   }
@@ -41,7 +43,7 @@ export default function DashboardPage() {
   if (error || !stats) {
     return (
       <div className="p-8 text-center">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg inline-block">
+        <div className={`p-4 rounded-lg inline-block ${isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-600'}`}>
           {error || t.dashboardNoData}
         </div>
         <button 
@@ -64,12 +66,12 @@ export default function DashboardPage() {
     : 0;
 
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
+    <div className={`p-6 md:p-8 space-y-8 max-w-7xl mx-auto ${isDark ? 'text-surface-100' : ''}`}>
       <header className="mb-8">
-        <h1 className="text-3xl font-extrabold text-slate-900 sm:text-4xl tracking-tight">
+        <h1 className={`text-3xl font-extrabold sm:text-4xl tracking-tight ${isDark ? 'text-surface-100' : 'text-slate-900'}`}>
           {t.dashboardTitle}
         </h1>
-        <p className="mt-2 text-lg text-slate-600">
+        <p className={`mt-2 text-lg ${isDark ? 'text-surface-400' : 'text-slate-600'}`}>
           {t.dashboardDescription}
         </p>
       </header>
@@ -86,6 +88,7 @@ export default function DashboardPage() {
           accentColor="bg-blue-600"
           percent={woPercent}
           link="/admin/work-orders"
+          isDark={isDark}
         />
 
         {/* Urgent Work Orders Card */}
@@ -98,6 +101,7 @@ export default function DashboardPage() {
           accentColor="bg-red-600"
           percent={uwoPercent}
           link="/admin/urgent-work-orders"
+          isDark={isDark}
         />
 
         {/* Mileage Card */}
@@ -107,15 +111,16 @@ export default function DashboardPage() {
           icon={<TruckIcon className="h-8 w-8 text-green-600" />}
           accentColor="text-green-600"
           link="/admin/mileage"
+          isDark={isDark}
         />
         
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
         {/* Quick Actions Panel */}
-        <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6">
+        <div className={`rounded-xl shadow-md border p-6 ${isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-slate-100'}`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <h2 className={`text-xl font-bold flex items-center gap-2 ${isDark ? 'text-surface-100' : 'text-slate-900'}`}>
               <QuickActionIcon className="h-5 w-5 text-yellow-500" />
               {t.dashboardQuickActions}
             </h2>
@@ -123,57 +128,57 @@ export default function DashboardPage() {
             <AdminBroadcastControls />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-             <Link to="/admin/work-orders?action=create" className="flex flex-col items-center justify-center p-4 rounded-lg bg-slate-50 hover:bg-blue-50 transition-colors group border border-slate-100">
-                <div className="p-3 rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-200 transition-colors mb-2">
+             <Link to="/admin/work-orders?action=create" className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-blue-50'}`}>
+                <div className={`p-3 rounded-full text-blue-600 transition-colors mb-2 ${isDark ? 'bg-blue-900/30 group-hover:bg-blue-900/50' : 'bg-blue-100 group-hover:bg-blue-200'}`}>
                   <PlusIcon className="h-6 w-6" />
                 </div>
-                <span className="font-medium text-slate-700 text-sm text-center">{t.dashboardNewWorkOrder}</span>
+                <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardNewWorkOrder}</span>
              </Link>
-             <Link to="/admin/urgent-work-orders?action=create" className="flex flex-col items-center justify-center p-4 rounded-lg bg-slate-50 hover:bg-red-50 transition-colors group border border-slate-100">
-                <div className="p-3 rounded-full bg-red-100 text-red-600 group-hover:bg-red-200 transition-colors mb-2">
+             <Link to="/admin/urgent-work-orders?action=create" className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-red-50'}`}>
+                <div className={`p-3 rounded-full text-red-600 transition-colors mb-2 ${isDark ? 'bg-red-900/30 group-hover:bg-red-900/50' : 'bg-red-100 group-hover:bg-red-200'}`}>
                   <PlusIcon className="h-6 w-6" />
                 </div>
-                <span className="font-medium text-slate-700 text-sm text-center">{t.dashboardNewUrgentOrder}</span>
+                <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardNewUrgentOrder}</span>
              </Link>
-             <Link to="/admin/mileage?action=create" className="flex flex-col items-center justify-center p-4 rounded-lg bg-slate-50 hover:bg-green-50 transition-colors group border border-slate-100">
-                <div className="p-3 rounded-full bg-green-100 text-green-600 group-hover:bg-green-200 transition-colors mb-2">
+             <Link to="/admin/mileage?action=create" className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-green-50'}`}>
+                <div className={`p-3 rounded-full text-green-600 transition-colors mb-2 ${isDark ? 'bg-green-900/30 group-hover:bg-green-900/50' : 'bg-green-100 group-hover:bg-green-200'}`}>
                   <PlusIcon className="h-6 w-6" />
                 </div>
-                <span className="font-medium text-slate-700 text-sm text-center">{t.dashboardNewMileageEntry}</span>
+                <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardNewMileageEntry}</span>
              </Link>
           </div>
         </div>
 
         {/* System Status / Info Panel */}
-        <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 relative overflow-hidden">
+        <div className={`rounded-xl shadow-md border p-6 relative overflow-hidden ${isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-slate-100'}`}>
           
-          <h2 className="text-xl font-bold mb-2 relative z-10 text-slate-800">{t.dashboardSystemStatus}</h2>
-          <p className="text-slate-500 mb-6 relative z-10">{t.dashboardSystemStatusDesc}</p>
+          <h2 className={`text-xl font-bold mb-2 relative z-10 ${isDark ? 'text-surface-100' : 'text-slate-800'}`}>{t.dashboardSystemStatus}</h2>
+          <p className={`mb-6 relative z-10 ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardSystemStatusDesc}</p>
           
-          <div className="flex items-center justify-between relative z-10 bg-slate-50 rounded-lg p-4 border border-slate-100">
+          <div className={`flex items-center justify-between relative z-10 rounded-lg p-4 border ${isDark ? 'bg-surface-900 border-surface-700' : 'bg-slate-50 border-slate-100'}`}>
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{t.dashboardCurrentDate}</p>
-              <p className="text-lg font-mono font-bold text-slate-700">{new Date().toLocaleDateString()}</p>
+              <p className={`text-xs uppercase tracking-wider font-semibold ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardCurrentDate}</p>
+              <p className={`text-lg font-mono font-bold ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{new Date().toLocaleDateString()}</p>
             </div>
             <div className="text-right">
-               <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{t.dashboardActiveUsers}</p>
-               <p className="text-lg font-mono font-bold text-slate-700">--</p>
+               <p className={`text-xs uppercase tracking-wider font-semibold ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardActiveUsers}</p>
+               <p className={`text-lg font-mono font-bold ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>--</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Reminders Panel */}
-      <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 mt-8">
+      <div className={`rounded-xl shadow-md border p-6 mt-8 ${isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-slate-100'}`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <h2 className={`text-xl font-bold flex items-center gap-2 ${isDark ? 'text-surface-100' : 'text-slate-900'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             {t.remindersSectionTitle || 'Reminders'}
           </h2>
         </div>
         
         {reminders.length === 0 ? (
-          <p className="text-slate-500">{t.noReminders || 'No active reminders.'}</p>
+          <p className={isDark ? 'text-surface-400' : 'text-slate-500'}>{t.noReminders || 'No active reminders.'}</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {reminders.map(r => {
@@ -188,25 +193,25 @@ export default function DashboardPage() {
                 msg = msg.replace('{name}', '');
               }
               return (
-                <div key={r.id} className={`p-4 rounded-lg border ${!r.read ? 'bg-indigo-50/50 border-indigo-100' : 'bg-slate-50 border-slate-100'} flex flex-col justify-between`}>
+                <div key={r.id} className={`p-4 rounded-lg border flex flex-col justify-between ${!r.read ? (isDark ? 'bg-indigo-900/20 border-indigo-800' : 'bg-indigo-50/50 border-indigo-100') : (isDark ? 'bg-surface-900 border-surface-700' : 'bg-slate-50 border-slate-100')}`}>
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-slate-800">{title}</h4>
+                      <h4 className={`font-semibold ${isDark ? 'text-surface-100' : 'text-slate-800'}`}>{title}</h4>
                       {!r.read && <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>}
                     </div>
-                    <p className="text-sm text-slate-600 mb-4">{msg}</p>
+                    <p className={`text-sm mb-4 ${isDark ? 'text-surface-300' : 'text-slate-600'}`}>{msg}</p>
                   </div>
                   <div className="flex justify-end gap-2 mt-auto">
                     <button onClick={() => ctx.removeNotification(r.id)} className="text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors">
                       {t.delete || 'Delete'}
                     </button>
                     {!r.read && (
-                      <button onClick={() => ctx.markRead(r.id)} className="text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded transition-colors">
+                      <button onClick={() => ctx.markRead(r.id)} className={`text-xs px-2 py-1 rounded transition-colors ${isDark ? 'text-indigo-300 hover:text-indigo-200 bg-indigo-900/40 hover:bg-indigo-900/60' : 'text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100'}`}>
                         {t.markRead || 'Mark Read'}
                       </button>
                     )}
                     {r.href && (
-                      <Link to={r.href} className="text-xs text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded transition-colors">
+                      <Link to={r.href} className={`text-xs px-2 py-1 rounded transition-colors ${isDark ? 'text-surface-200 hover:text-surface-100 bg-surface-700 hover:bg-surface-600' : 'text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200'}`}>
                         {t.view || 'View'}
                       </Link>
                     )}
@@ -228,6 +233,8 @@ function AdminBroadcastControls() {
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState('');
   const { t } = useLang();
+  const { colorScheme } = useContext(ColorSchemeContext);
+  const isDark = colorScheme === 'dark';
 
   useEffect(() => {
     if (!open) return;
@@ -244,22 +251,27 @@ function AdminBroadcastControls() {
     <div className="flex items-center gap-2">
       {broadcast ? (
         <>
-          <button onClick={() => clearBroadcast()} className="px-3 py-1 text-sm bg-red-50 text-red-700 rounded">{t.clearBroadcast}</button>
-          <button onClick={() => setOpen(true)} className="px-3 py-1 text-sm bg-amber-50 text-amber-800 rounded">{t.edit}</button>
+          <button onClick={() => clearBroadcast()} className={`px-3 py-1 text-sm rounded ${isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700'}`}>{t.clearBroadcast}</button>
+          <button onClick={() => setOpen(true)} className={`px-3 py-1 text-sm rounded ${isDark ? 'bg-amber-900/30 text-amber-200' : 'bg-amber-50 text-amber-800'}`}>{t.edit}</button>
         </>
       ) : (
-        <button onClick={() => setOpen(true)} className="px-3 py-1 text-sm bg-amber-50 text-amber-800 rounded">{t.createBroadcastBtn}</button>
+        <button onClick={() => setOpen(true)} className={`px-3 py-1 text-sm rounded ${isDark ? 'bg-amber-900/30 text-amber-200' : 'bg-amber-50 text-amber-800'}`}>{t.createBroadcastBtn}</button>
       )}
 
       {open && createPortal(
         <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 99999 }}>
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} style={{ zIndex: 99990 }} />
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg" style={{ zIndex: 99999 }}>
-            <h3 className="text-lg font-bold mb-2">{t.createBroadcastTitle}</h3>
-            <textarea value={msg} onChange={(e) => setMsg(e.target.value)} className="w-full min-h-[120px] p-2 border rounded mb-4" />
+          <div className={`rounded-lg shadow-lg p-6 w-full max-w-lg ${isDark ? 'bg-surface-900 border border-surface-700 text-surface-100' : 'bg-white'} `} style={{ zIndex: 99999 }}>
+            <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-surface-100' : ''}`}>{t.createBroadcastTitle}</h3>
+            <textarea 
+              value={msg} 
+              onChange={(e) => setMsg(e.target.value)} 
+              className={`w-full min-h-[120px] p-2 border rounded mb-4 ${isDark ? 'bg-surface-800 border-surface-700 text-surface-100 placeholder-surface-400' : ''}`}
+              placeholder={t.broadcastPlaceholder || ''}
+            />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setOpen(false)} className="px-4 py-2 rounded bg-slate-100">{t.cancel}</button>
-              <button onClick={() => { createBroadcast(msg || ''); setMsg(''); setOpen(false); }} className="px-4 py-2 rounded bg-amber-500 text-white">{t.save}</button>
+              <button onClick={() => setOpen(false)} className={`px-4 py-2 rounded ${isDark ? 'bg-surface-800 text-surface-200 hover:bg-surface-700' : 'bg-slate-100'}`}>{t.cancel}</button>
+              <button onClick={() => { createBroadcast(msg || ''); setMsg(''); setOpen(false); }} className={`px-4 py-2 rounded ${isDark ? 'bg-amber-700 text-white hover:bg-amber-800' : 'bg-amber-500 text-white'}`}>{t.save}</button>
             </div>
           </div>
         </div>,
@@ -280,33 +292,34 @@ function DashboardCard({
   gradient, 
   accentColor, 
   percent,
-  link 
+  link,
+  isDark
 }: any) {
   const { t } = useLang();
   return (
-    <Link to={link || '#'} className="relative overflow-hidden rounded-2xl shadow-md border border-slate-100 bg-white p-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.01] group">
+    <Link to={link || '#'} className={`relative overflow-hidden rounded-2xl shadow-md border p-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.01] group ${isDark ? 'border-surface-700 bg-surface-800 hover:border-surface-600' : 'border-slate-100 bg-white'}`}>
       <div className="flex justify-between items-start mb-4">
         <div>
-            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{title}</h3>
+            <h3 className={`text-sm font-semibold uppercase tracking-wider ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{title}</h3>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-4xl font-extrabold text-slate-900 tracking-tight">{active}</span>
-              <span className="text-sm text-slate-500 font-medium">{t.dashboardActive}</span>
+              <span className={`text-4xl font-extrabold tracking-tight ${isDark ? 'text-surface-100' : 'text-slate-900'}`}>{active}</span>
+              <span className={`text-sm font-medium ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardActive}</span>
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-sm text-slate-700 font-medium">{active} / {total} {t.dashboardTotal}</span>
+              <span className={`text-sm font-medium ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>{active} / {total} {t.dashboardTotal}</span>
             </div>
         </div>
-        <div className="p-3 bg-slate-50 rounded-xl shadow-sm border border-slate-100">
+        <div className={`p-3 rounded-xl shadow-sm border ${isDark ? 'bg-surface-900 border-surface-700' : 'bg-slate-50 border-slate-100'}`}>
           {icon}
         </div>
       </div>
       
       <div className="space-y-2">
-        <div className="flex justify-between text-xs font-bold text-slate-500">
+        <div className={`flex justify-between text-xs font-bold ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>
           <span>{activeLabel}</span>
           <span>{percent}%</span>
         </div>
-        <div className="relative h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+        <div className={`relative h-2 w-full rounded-full overflow-hidden ${isDark ? 'bg-surface-700' : 'bg-slate-100'}`}>
           <div 
             className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out ${accentColor}`} 
             style={{ width: `${percent}%` }}
@@ -317,21 +330,21 @@ function DashboardCard({
   );
 }
 
-function SimpleStatCard({ title, value, icon, gradient, accentColor, link }: any) {
+function SimpleStatCard({ title, value, icon, gradient, accentColor, link, isDark }: any) {
   const { t } = useLang();
   return (
-    <Link to={link || '#'} className="relative overflow-hidden rounded-2xl shadow-md border border-slate-100 bg-white p-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.01] group flex flex-col justify-between">
+    <Link to={link || '#'} className={`relative overflow-hidden rounded-2xl shadow-md border p-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.01] group flex flex-col justify-between ${isDark ? 'border-surface-700 bg-surface-800 hover:border-surface-600' : 'border-slate-100 bg-white'}`}>
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{title}</h3>
+          <h3 className={`text-sm font-semibold uppercase tracking-wider ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{title}</h3>
           <p className={`mt-2 text-4xl font-extrabold ${accentColor}`}>{value}</p>
         </div>
-        <div className="p-3 bg-slate-50 rounded-xl shadow-sm border border-slate-100">
+        <div className={`p-3 rounded-xl shadow-sm border ${isDark ? 'bg-surface-900 border-surface-700' : 'bg-slate-50 border-slate-100'}`}>
           {icon}
         </div>
       </div>
       <div className="mt-4">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-800'}`}>
           {t.dashboardViewAll}
         </span>
       </div>

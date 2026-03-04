@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { WorkOrderStatus, WorkOrderPriority, WorkOrderResponse } from '../types/api';
 import { MaterialsButton } from './MaterialsButton';
 import { useLang } from '../context/LangContext';
-import { ColorSchemeContext } from './AdminLayout';
-import { NotificationsContext } from '../context/NotificationsContext';
+import { ColorSchemeContext } from '../context/ColorSchemeContext';
 
 // Global image cache to prevent flashing when components remount (e.g., during drag)
 const loadedImagesCache = new Set<string>();
@@ -81,7 +80,7 @@ interface WorkOrderCardComponentProps {
 
 const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchived }: WorkOrderCardComponentProps) => {
   const { colorScheme } = React.useContext(ColorSchemeContext);
-  const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
+  const { t } = useLang();
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
   // Use relative URL for attachments (works with proxy in dev/preview)
   const attachmentUrl = workOrder.attachmentDownloadUrl
@@ -143,6 +142,28 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchi
     : 'rounded-xl bg-white p-4 flex flex-col gap-2.5 border border-surface-200 shadow-card transition-all duration-200 hover:shadow-card-hover hover:border-surface-300 cursor-pointer w-full overflow-hidden';
 
   const cardShadow = undefined;
+
+  const formatUserName = (rawName?: string | null, fallbackId?: number | null) => {
+    if (rawName && rawName.trim()) {
+      const base = rawName.includes('@') ? rawName.split('@')[0] : rawName;
+      return base
+        .replace(/[._-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    if (fallbackId) {
+      return `${t.user} #${fallbackId}`;
+    }
+
+    return t.unassigned;
+  };
+
+  const assigneeName = workOrder.assignedToUserId
+    ? formatUserName(workOrder.assignedToName, workOrder.assignedToUserId)
+    : t.unassigned;
+  const creatorName = formatUserName(workOrder.createdByName, workOrder.createdByUserId);
 
   return (
     <div
@@ -218,18 +239,26 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchi
 
       <div className={`flex items-center gap-2 pt-2 mt-1 border-t ${colorScheme === 'dark' ? 'border-surface-700' : 'border-surface-100'}`}>
         <div className="flex items-center -space-x-1.5">
-          <img
-            src={avatarUrl(workOrder.assignedToUserId || 0)}
-            alt="Assignee"
-            className={`w-6 h-6 rounded-full ring-2 ${colorScheme === 'dark' ? 'ring-surface-800' : 'ring-white'}`}
-            title="Assignee"
-          />
-          <img
-            src={avatarUrl(workOrder.createdByUserId)}
-            alt="Creator"
-            className={`w-6 h-6 rounded-full ring-2 ${colorScheme === 'dark' ? 'ring-surface-800' : 'ring-white'}`}
-            title="Creator"
-          />
+          <span
+            className={`w-6 h-6 rounded-full ring-2 inline-flex items-center justify-center ${colorScheme === 'dark' ? 'ring-surface-800 bg-surface-700 text-surface-300' : 'ring-white bg-surface-100 text-surface-500'}`}
+            title={`${t.assignedTechnician}: ${assigneeName}`}
+            aria-label={`${t.assignedTechnician}: ${assigneeName}`}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 20a6 6 0 00-12 0" />
+              <circle cx="12" cy="9" r="3" />
+            </svg>
+          </span>
+          <span
+            className={`w-6 h-6 rounded-full ring-2 inline-flex items-center justify-center ${colorScheme === 'dark' ? 'ring-surface-800 bg-surface-700 text-surface-300' : 'ring-white bg-surface-100 text-surface-500'}`}
+            title={`${t.createdBy}: ${creatorName}`}
+            aria-label={`${t.createdBy}: ${creatorName}`}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 20a6 6 0 00-12 0" />
+              <circle cx="12" cy="9" r="3" />
+            </svg>
+          </span>
         </div>
         <div className="flex-1" />
         <span className="flex gap-1">

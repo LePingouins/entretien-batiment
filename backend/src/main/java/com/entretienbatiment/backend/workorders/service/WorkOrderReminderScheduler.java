@@ -55,11 +55,11 @@ public class WorkOrderReminderScheduler {
             String title = "REMINDER_TOMORROW";
             String message = "The work order '" + wo.getTitle() + "' is due tomorrow.";
             if (assignedTo != null && assignedTo.isGetReminders() && assignedTo.isEnabled()) {
-                String href = (assignedTo.getRole().name().equals("TECH") ? "/tech/work-orders/" : "/admin/work-orders/") + wo.getId();
+                String href = workOrderHref(assignedTo, wo.getId());
                 notificationService.notifyUser(assignedTo.getId(), title, message, href, "REMINDER");
             }
             if (creator != null && creator.isGetReminders() && creator.isEnabled() && (assignedTo == null || !creator.getId().equals(assignedTo.getId()))) {
-                String href = (creator.getRole().name().equals("TECH") ? "/tech/work-orders/" : "/admin/work-orders/") + wo.getId();
+                String href = workOrderHref(creator, wo.getId());
                 notificationService.notifyUser(creator.getId(), title, message, href, "REMINDER");
             }
         }
@@ -79,7 +79,7 @@ public class WorkOrderReminderScheduler {
             if (assignedToUserId != null) {
                 userRepo.findById(assignedToUserId).ifPresent(user -> {
                     if (user.isGetReminders() && user.isEnabled()) {
-                        String href = (user.getRole().name().equals("TECH") ? "/tech/urgent-work-orders/" : "/admin/urgent-work-orders/") + uwo.getId();
+                        String href = urgentWorkOrderHref(user, uwo.getId());
                         notificationService.notifyUser(user.getId(), title, message, href, "REMINDER");
                     }
                 });
@@ -87,7 +87,7 @@ public class WorkOrderReminderScheduler {
             if (creatorUserId != null && (assignedToUserId == null || !creatorUserId.equals(assignedToUserId))) {
                 userRepo.findById(creatorUserId).ifPresent(user -> {
                     if (user.isGetReminders() && user.isEnabled()) {
-                        String href = (user.getRole().name().equals("TECH") ? "/tech/urgent-work-orders/" : "/admin/urgent-work-orders/") + uwo.getId();
+                        String href = urgentWorkOrderHref(user, uwo.getId());
                         notificationService.notifyUser(user.getId(), title, message, href, "REMINDER");
                     }
                 });
@@ -111,17 +111,11 @@ public class WorkOrderReminderScheduler {
             String title = wo.getDueDate().equals(today) ? "REMINDER_TODAY" : "REMINDER_TOMORROW";
             String message = "The work order '" + wo.getTitle() + "' is due " + (wo.getDueDate().equals(today) ? "today." : "tomorrow.");
             if (assignedTo != null && assignedTo.isGetReminders() && assignedTo.isEnabled()) {
-                String href = "/tech/work-orders/" + wo.getId();
-                if ("ADMIN".equalsIgnoreCase(assignedTo.getRole().name())) {
-                    href = "/admin/work-orders/" + wo.getId();
-                }
+                String href = workOrderHref(assignedTo, wo.getId());
                 notificationService.notifyUser(assignedTo.getId(), title, message, href, "REMINDER");
             }
             if (creator != null && creator.isGetReminders() && creator.isEnabled() && (assignedTo == null || !creator.getId().equals(assignedTo.getId()))) {
-                String href = "/tech/work-orders/" + wo.getId();
-                if ("ADMIN".equalsIgnoreCase(creator.getRole().name())) {
-                    href = "/admin/work-orders/" + wo.getId();
-                }
+                String href = workOrderHref(creator, wo.getId());
                 notificationService.notifyUser(creator.getId(), title, message, href, "REMINDER");
             }
         }
@@ -144,10 +138,7 @@ public class WorkOrderReminderScheduler {
             if (assignedToUserId != null) {
                 userRepo.findById(assignedToUserId).ifPresent(user -> {
                     if (user.isGetReminders() && user.isEnabled()) {
-                        String href = "/tech/urgent-work-orders/" + uwo.getId();
-                        if ("ADMIN".equalsIgnoreCase(user.getRole().name())) {
-                            href = "/admin/urgent-work-orders/" + uwo.getId();
-                        }
+                        String href = urgentWorkOrderHref(user, uwo.getId());
                         notificationService.notifyUser(user.getId(), title, message, href, "REMINDER");
                     }
                 });
@@ -155,14 +146,31 @@ public class WorkOrderReminderScheduler {
             if (creatorUserId != null && (assignedToUserId == null || !creatorUserId.equals(assignedToUserId))) {
                 userRepo.findById(creatorUserId).ifPresent(user -> {
                     if (user.isGetReminders() && user.isEnabled()) {
-                        String href = "/tech/urgent-work-orders/" + uwo.getId();
-                        if ("ADMIN".equalsIgnoreCase(user.getRole().name())) {
-                            href = "/admin/urgent-work-orders/" + uwo.getId();
-                        }
+                        String href = urgentWorkOrderHref(user, uwo.getId());
                         notificationService.notifyUser(user.getId(), title, message, href, "REMINDER");
                     }
                 });
             }
         }
+    }
+
+    private String basePath(AppUser user) {
+        if (user == null || user.getRole() == null) {
+            return "/tech";
+        }
+
+        return switch (user.getRole()) {
+            case ADMIN -> "/admin";
+            case WORKER -> "/worker";
+            default -> "/tech";
+        };
+    }
+
+    private String workOrderHref(AppUser user, Long workOrderId) {
+        return basePath(user) + "/work-orders/" + workOrderId;
+    }
+
+    private String urgentWorkOrderHref(AppUser user, Long urgentWorkOrderId) {
+        return basePath(user) + "/urgent-work-orders/" + urgentWorkOrderId;
     }
 }

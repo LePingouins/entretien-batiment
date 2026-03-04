@@ -2,16 +2,17 @@ package com.entretienbatiment.backend.mileage;
 
 import com.entretienbatiment.backend.notifications.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.entretienbatiment.backend.workorders.domain.WorkOrder;
 import com.entretienbatiment.backend.urgentworkorders.UrgentWorkOrder;
 import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/mileage")
+@PreAuthorize("@pageAccessService.canAccess(authentication, 'MILEAGE')")
 public class MileageEntryController {
     @Autowired
     private MileageEntryRepository repository;

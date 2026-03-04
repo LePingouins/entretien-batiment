@@ -17,7 +17,9 @@ public record WorkOrderResponse(
         WorkOrderStatus status,
 
         Long createdByUserId,
+        String createdByName,
         Long assignedToUserId,
+        String assignedToName,
 
         LocalDate requestedDate,
         LocalDate dueDate,

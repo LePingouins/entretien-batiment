@@ -18,5 +18,6 @@ public record UpdateWorkOrderRequest(
 
     WorkOrderPriority priority,
     WorkOrderStatus status,
-    LocalDate dueDate
+    LocalDate dueDate,
+    Long assignedToUserId
 ) {}

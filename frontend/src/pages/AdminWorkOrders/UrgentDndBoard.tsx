@@ -8,7 +8,7 @@ import { WorkOrderResponse, WorkOrderStatus, WorkOrderPriority } from '../../typ
 import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { WorkOrderCard } from '../../components/WorkOrderCard';
-import { ColorSchemeContext } from '../../components/AdminLayout';
+import { ColorSchemeContext } from '../../context/ColorSchemeContext';
 
 const STATUS_OPTIONS = [WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.COMPLETED];
 

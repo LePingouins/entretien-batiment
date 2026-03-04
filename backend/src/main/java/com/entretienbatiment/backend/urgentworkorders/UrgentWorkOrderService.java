@@ -24,12 +24,14 @@ public class UrgentWorkOrderService {
         return repository.findByArchivedFalse();
     }
 
-    public List<UrgentWorkOrder> findAllActiveFiltered(String q, String status, String location) {
+    public List<UrgentWorkOrder> findAllActiveFiltered(String q, String status, String location, String technician) {
+        Long technicianId = parseTechnicianId(technician);
         org.springframework.data.jpa.domain.Specification<UrgentWorkOrder> spec =
             UrgentWorkOrderSpecifications.archivedEquals(false)
             .and(UrgentWorkOrderSpecifications.textOrIdSearch(q))
             .and(UrgentWorkOrderSpecifications.statusEquals(status))
-            .and(UrgentWorkOrderSpecifications.locationEquals(location));
+            .and(UrgentWorkOrderSpecifications.locationEquals(location))
+            .and(UrgentWorkOrderSpecifications.assignedToUserIdEquals(technicianId));
         return repository.findAll(spec);
     }
 
@@ -126,5 +128,17 @@ public class UrgentWorkOrderService {
         }
 
         repository.saveAll(columnItems);
+    }
+
+    private Long parseTechnicianId(String technician) {
+        if (technician == null || technician.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Long.parseLong(technician.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 }

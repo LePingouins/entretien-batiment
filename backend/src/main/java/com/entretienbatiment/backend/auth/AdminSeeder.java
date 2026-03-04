@@ -20,6 +20,17 @@ public class AdminSeeder {
                 repo.save(admin);
                 System.out.println("✅ Seeded ADMIN: admin@entretien.local / ChangeMe123! (change ASAP)");
             }
+
+            if (repo.findByEmailIgnoreCase("andre@gmail.com").isEmpty()) {
+                AppUser technician = new AppUser();
+                technician.setEmail("andre@gmail.com");
+                technician.setRole(Role.TECH);
+                technician.setPasswordHash(encoder.encode("Horizon"));
+                technician.setEnabled(true);
+                technician.setGetReminders(true);
+                repo.save(technician);
+                System.out.println("✅ Seeded TECH: andre@gmail.com / Horizon");
+            }
         };
     }
 }

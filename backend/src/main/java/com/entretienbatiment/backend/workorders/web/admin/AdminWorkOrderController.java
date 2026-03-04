@@ -6,11 +6,13 @@ import com.entretienbatiment.backend.workorders.web.admin.dto.AssignWorkOrderReq
 import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.WorkOrderResponse;
 import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderMultipartRequest;
+import com.entretienbatiment.backend.workorders.web.admin.dto.UpdateWorkOrderMultipartRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.MoveWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.ReorderWorkOrdersRequest;
 import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import com.entretienbatiment.backend.workorders.domain.WorkOrderPriority;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 
 @RestController
 @RequestMapping("/api/admin/work-orders")
+@PreAuthorize("@pageAccessService.canAccess(authentication, 'WORK_ORDERS')")
 public class AdminWorkOrderController {
 
     private final WorkOrderService service;
@@ -84,7 +87,15 @@ public class AdminWorkOrderController {
     }
 
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public WorkOrderResponse updateMultipart(
+            @PathVariable Long id,
+            @ModelAttribute UpdateWorkOrderMultipartRequest req
+    ) {
+        return service.updateMultipart(id, req);
+    }
+
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public WorkOrderResponse update(
             @PathVariable Long id,
             @Valid @RequestBody UpdateWorkOrderRequest req

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
-import { ColorSchemeContext } from '../components/AdminLayout';
+import { useAuth } from '../context/AuthContext';
+import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import api, { archiveMileageEntry, getUrgentWorkOrders } from '../lib/api';
+import { getRoleBasePath } from '../lib/pageAccess';
 import { NotificationsContext } from '../context/NotificationsContext';
 import PageHeader from '../components/PageHeader';
 import type { WorkOrderResponse, UrgentWorkOrderResponse } from '../types/api';
@@ -36,8 +38,10 @@ const MileagePage: React.FC = () => {
   const [workOrders, setWorkOrders] = useState<WorkOrderResponse[]>([]);
   const [urgentWorkOrders, setUrgentWorkOrders] = useState<UrgentWorkOrderResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const { role } = useAuth();
   const { t, lang } = useLang();
   const { colorScheme } = useContext(ColorSchemeContext);
+  const basePath = getRoleBasePath(role);
 
   useEffect(() => {
     // If action=create, auto-create a new entry
@@ -377,7 +381,7 @@ const MileagePage: React.FC = () => {
                       </select>
                       {entry.workOrderId && (
                         <a
-                          href={`/admin/work-orders/${entry.workOrderId}`}
+                          href={`${basePath}/work-orders/${entry.workOrderId}`}
                           className="text-xs text-blue-600 underline mt-1 hover:text-blue-800"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -400,7 +404,7 @@ const MileagePage: React.FC = () => {
                       </select>
                       {entry.urgentWorkOrderId && (
                         <a
-                          href={`/admin/urgent-work-orders/${entry.urgentWorkOrderId}`}
+                          href={`${basePath}/urgent-work-orders/${entry.urgentWorkOrderId}`}
                           className="text-xs text-purple-600 underline mt-1 hover:text-purple-800"
                           target="_blank"
                           rel="noopener noreferrer"

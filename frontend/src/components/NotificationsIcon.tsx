@@ -2,11 +2,18 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { NotificationsContext } from '../context/NotificationsContext';
+import { usePageAccess } from '../context/PageAccessContext';
+import { getRoleBasePath } from '../lib/pageAccess';
 
 const NotificationsIcon: React.FC = () => {
   const { count } = React.useContext(NotificationsContext);
   const { role } = useAuth();
-  const base = role === 'TECH' ? '/tech' : '/admin';
+  const { canAccess } = usePageAccess();
+  const base = getRoleBasePath(role);
+
+  if (!canAccess('NOTIFICATIONS')) {
+    return null;
+  }
 
   return (
     <Link to={`${base}/notifications`} aria-label={`Notifications (${count})`} className="relative p-2 rounded-lg hover:bg-surface-100 transition-colors">

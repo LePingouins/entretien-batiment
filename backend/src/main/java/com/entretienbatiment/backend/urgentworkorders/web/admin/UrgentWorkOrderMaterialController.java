@@ -4,11 +4,13 @@ import com.entretienbatiment.backend.urgentworkorders.service.UrgentWorkOrderMat
 import com.entretienbatiment.backend.workorders.web.admin.dto.MaterialRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.MaterialResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/urgent-work-orders/{urgentWorkOrderId}/materials")
+@PreAuthorize("@pageAccessService.canAccess(authentication, 'URGENT_WORK_ORDERS')")
 public class UrgentWorkOrderMaterialController {
     private final UrgentWorkOrderMaterialService service;
 

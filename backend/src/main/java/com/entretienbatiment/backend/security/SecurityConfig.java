@@ -76,7 +76,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService, AppUserRepository appUserRepository) throws Exception {
         return http
             .cors(cors -> {}) // ✅ IMPORTANT: enables Spring Security CORS handling
             .csrf(csrf -> csrf.disable())
@@ -91,6 +91,11 @@ public class SecurityConfig {
                 
                 // Allow error page so that exceptions don't get masked as 403 Forbidden
                 .requestMatchers("/error").permitAll()
+
+                // Shared page APIs guarded by page access checks at controller level
+                .requestMatchers("/api/admin/work-orders/**").authenticated()
+                .requestMatchers("/api/admin/dashboard/**").authenticated()
+                .requestMatchers("/api/admin/analytics/**").authenticated()
                 
                 // Admin endpoints - strict
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -100,13 +105,13 @@ public class SecurityConfig {
 
                 // Common secured endpoints
                 // Explicitly allow archived endpoints if they are causing issues with authenticated()
-                .requestMatchers("/api/mileage/**").hasAnyRole("ADMIN", "TECH")
-                .requestMatchers("/api/urgent-work-orders/**").hasAnyRole("ADMIN", "TECH")
+                .requestMatchers("/api/mileage/**").authenticated()
+                .requestMatchers("/api/urgent-work-orders/**").authenticated()
                 
                 // Catch-all
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(new JwtAuthFilter(jwtService, appUserRepository), UsernamePasswordAuthenticationFilter.class)
             .build();
     }
 }

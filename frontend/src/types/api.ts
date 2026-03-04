@@ -38,7 +38,9 @@ export interface WorkOrderResponse {
   priority: WorkOrderPriority;
   status: WorkOrderStatus;
   createdByUserId: number;
+  createdByName?: string;
   assignedToUserId?: number;
+  assignedToName?: string;
   requestedDate: string;
   dueDate: string;
   createdAt: string;
@@ -64,9 +66,69 @@ export interface PageResponse<T> {
   size: number;
 }
 
+export type UserRole = 'ADMIN' | 'TECH' | 'WORKER';
+
+export interface AdminUserResponse {
+  id: number;
+  email: string;
+  role: UserRole;
+  enabled: boolean;
+  remindersEnabled: boolean;
+  getReminders: boolean;
+}
+
+export interface NotificationRecipientRule {
+  source: string;
+  admin: boolean;
+  tech: boolean;
+  worker: boolean;
+}
+
+export type PageKey =
+  | 'DASHBOARD'
+  | 'WORK_ORDERS'
+  | 'URGENT_WORK_ORDERS'
+  | 'MILEAGE'
+  | 'ARCHIVE'
+  | 'ANALYTICS'
+  | 'USERS'
+  | 'NOTIFICATIONS';
+
+export type AccessOverrideState = 'DEFAULT' | 'ALLOW' | 'DENY';
+
+export interface PageAccessEntry {
+  pageKey: PageKey;
+  allowed: boolean;
+}
+
+export interface MyPageAccessResponse {
+  pages: PageAccessEntry[];
+}
+
+export interface RolePageAccessRule {
+  pageKey: PageKey;
+  admin: boolean;
+  tech: boolean;
+  worker: boolean;
+}
+
+export interface UserPageAccessItem {
+  pageKey: PageKey;
+  state: AccessOverrideState;
+  effectiveAllowed: boolean;
+}
+
+export interface UserPageAccessOverview {
+  userId: number;
+  email: string;
+  role: UserRole;
+  enabled: boolean;
+  pages: UserPageAccessItem[];
+}
+
 export interface AuthResponse {
   accessToken: string;
-  role: 'ADMIN' | 'TECH';
+  role: UserRole;
   userId: number;
 }
 
@@ -88,7 +150,9 @@ export interface UrgentWorkOrderResponse {
   priority: WorkOrderPriority;
   status: UrgentWorkOrderStatus;
   createdByUserId: number;
+  createdByName?: string;
   assignedToUserId?: number;
+  assignedToName?: string;
   requestedDate: string;
   dueDate: string;
   createdAt: string;
@@ -108,6 +172,7 @@ export interface UrgentWorkOrderRequest {
   title: string;
   description: string;
   location: string;
+  assignedToUserId?: number | string | null;
   files?: FileList | File[];
 }
 

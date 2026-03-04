@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ColorSchemeContext } from './AdminLayout';
+import { ColorSchemeContext } from '../context/ColorSchemeContext';
 
 export const PageHeader: React.FC<{
   title: string;

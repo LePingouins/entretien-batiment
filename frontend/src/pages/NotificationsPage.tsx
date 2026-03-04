@@ -48,6 +48,50 @@ const getTranslatedNotification = (n: NotificationType, t: any) => {
     } else {
       message = message.replace('{name}', '');
     }
+  } else if (n.source === 'user-invite') {
+    title = t.notifTitleUserInvite || title;
+    const invitedMatch = n.message.match(/User\s+["']([^"']+)["']/i);
+    if (t.notifMsgUserInvite) {
+      message = t.notifMsgUserInvite.replace('{name}', invitedMatch?.[1] || '');
+    }
+  } else if (n.source === 'user-welcome') {
+    title = t.notifTitleUserWelcome || title;
+    if (t.notifMsgUserWelcome) {
+      message = t.notifMsgUserWelcome;
+    }
+  } else if (n.source === 'user-reset-password') {
+    title = t.notifTitleUserResetPassword || title;
+  } else if (n.source === 'user-email-change') {
+    title = t.notifTitleUserEmailChange || title;
+  } else if (n.source === 'user-delete') {
+    title = t.notifTitleUserDelete || title;
+  } else if (n.source === 'user-activate') {
+    title = t.notifTitleUserActivate || title;
+  } else if (n.source === 'user-deactivate') {
+    title = t.notifTitleUserDeactivate || title;
+  } else if (n.source === 'admin-settings-update') {
+    const actorMatch = n.message.match(/saved by\s+["']([^"']+)["']/i);
+    const actor = actorMatch?.[1] || 'admin';
+
+    if (/user access overrides updated/i.test(n.title)) {
+      title = t.notifTitleUserAccessOverridesUpdated || title;
+      const userIdMatch = n.message.match(/user\s+id\s+(\d+)/i);
+      if (t.notifMsgUserAccessOverridesUpdated) {
+        message = t.notifMsgUserAccessOverridesUpdated
+          .replace('{actor}', actor)
+          .replace('{userId}', userIdMatch?.[1] || '');
+      }
+    } else if (/page access roles updated/i.test(n.title)) {
+      title = t.notifTitlePageAccessRolesUpdated || title;
+      if (t.notifMsgPageAccessRolesUpdated) {
+        message = t.notifMsgPageAccessRolesUpdated.replace('{actor}', actor);
+      }
+    } else if (/notification rules updated/i.test(n.title)) {
+      title = t.notifTitleNotificationRulesUpdated || title;
+      if (t.notifMsgNotificationRulesUpdated) {
+        message = t.notifMsgNotificationRulesUpdated.replace('{actor}', actor);
+      }
+    }
   }
 
   return { title, message };
@@ -73,6 +117,15 @@ const NotificationsPage: React.FC = () => {
       { key: 'broadcast', label: t.filterBroadcast },
       { key: 'REMINDER', label: t.filterReminders || 'Reminders' },
       { key: 'other', label: t.filterOther },
+    ],
+    [t.filterUsersAdmin || 'Users & Admin']: [
+      { key: 'user-invite', label: t.filterUserInvite || 'User Invited' },
+      { key: 'user-welcome', label: t.filterUserWelcome || 'User Welcome' },
+      { key: 'user-reset-password', label: t.filterUserResetPassword || 'User Password Reset' },
+      { key: 'user-email-change', label: t.filterUserEmailChange || 'User Email Changed' },
+      { key: 'user-delete', label: t.filterUserDelete || 'User Deleted' },
+      { key: 'user-activate', label: t.filterUserActivate || 'User Activated' },
+      { key: 'user-deactivate', label: t.filterUserDeactivate || 'User Deactivated' },
     ]
   };
 
@@ -84,7 +137,8 @@ const NotificationsPage: React.FC = () => {
   const activeFiltersCount = Object.values(filters).filter(Boolean).length;
   const filteredNotifications = notifications.filter((n: NotificationType) => {
     const src = n.source || 'other';
-    return !!filters[src];
+    const key = Object.prototype.hasOwnProperty.call(filters, src) ? src : 'other';
+    return !!filters[key];
   });
 
   return (
@@ -173,6 +227,7 @@ const NotificationsPage: React.FC = () => {
                 {filteredNotifications.map((n: NotificationType) => {
                   const Icon = getNotificationIcon(n.source);
                   const { title, message } = getTranslatedNotification(n, t);
+                  const showFullMessage = n.source === 'user-welcome';
                   return (
                     <li
                       key={n.id}
@@ -208,7 +263,7 @@ const NotificationsPage: React.FC = () => {
                                   {title}
                                 </h4>
                               </div>
-                              <p className={`text-sm mt-1 line-clamp-2 ${
+                              <p className={`text-sm mt-1 ${showFullMessage ? 'whitespace-pre-wrap' : 'line-clamp-2'} ${
                                 !n.read ? 'text-surface-700 dark:text-surface-300' : 'text-surface-500 dark:text-surface-400'
                               }`}>
                                 {message}

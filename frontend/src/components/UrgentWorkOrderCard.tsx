@@ -4,8 +4,9 @@ import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { UrgentWorkOrderResponse, WorkOrderPriority, UrgentWorkOrderStatus } from '../types/api';
 import { MaterialsButton } from './MaterialsButton';
-import { ColorSchemeContext } from './AdminLayout';
+import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { PriorityBadge } from './WorkOrderCard';
+import { useLang } from '../context/LangContext';
 
 interface UrgentWorkOrderCardProps {
   workOrder: UrgentWorkOrderResponse;
@@ -33,9 +34,31 @@ const statusColorsLight: Record<UrgentWorkOrderStatus, string> = {
 
 export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOrder, colorScheme = 'default', onEdit, onDelete, onArchive }) => {
   const { colorScheme: effectiveColorScheme } = React.useContext(ColorSchemeContext);
-  const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
+  const { t } = useLang();
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
   const attachmentUrl = workOrder.attachmentDownloadUrl || (workOrder.attachmentFilename ? `/api/files/workorders/${workOrder.attachmentFilename}` : undefined);
+
+  const formatUserName = (rawName?: string | null, fallbackId?: number | null) => {
+    if (rawName && rawName.trim()) {
+      const base = rawName.includes('@') ? rawName.split('@')[0] : rawName;
+      return base
+        .replace(/[._-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    if (fallbackId) {
+      return `${t.user} #${fallbackId}`;
+    }
+
+    return t.unassigned;
+  };
+
+  const assigneeName = workOrder.assignedToUserId
+    ? formatUserName(workOrder.assignedToName, workOrder.assignedToUserId)
+    : t.unassigned;
+  const creatorName = formatUserName(workOrder.createdByName, workOrder.createdByUserId);
 
   // Match AdminWorkOrdersPage card style exactly
   const cardClass = effectiveColorScheme === 'dark'
@@ -69,12 +92,12 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
             <span className={`text-xs font-mono ${effectiveColorScheme === 'dark' ? 'text-surface-500' : 'text-surface-400'}`}>#{workOrder.id}</span>
             <span className={`px-2 py-0.5 rounded text-xs font-semibold ${effectiveColorScheme === 'dark' ? statusColorsDark[workOrder.status] : statusColorsLight[workOrder.status]}`}>{workOrder.status.replace('_',' ')}</span>
           </div>
-          <a
-            href={`/admin/urgent-work-orders/${workOrder.id}`}
+            <Link
+              to={`./${workOrder.id}`}
             className={`font-semibold text-sm sm:text-base truncate block ${effectiveColorScheme === 'dark' ? 'text-surface-100 hover:text-white' : 'text-surface-900 hover:text-brand-700'}`}
             onClick={(e) => e.stopPropagation()}
             title={workOrder.title}
-          >{workOrder.title}</a>
+          >{workOrder.title}</Link>
         </div>
       </div>
       <p className={`text-sm line-clamp-2 ${effectiveColorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>{workOrder.description}</p>
@@ -114,26 +137,34 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
           )}
         </div>
       )}
-      <div className={`flex items-center gap-2 pt-2 mt-1 border-t ${colorScheme === 'dark' ? 'border-surface-700' : 'border-surface-100'}`}>
+      <div className={`flex items-center gap-2 pt-2 mt-1 border-t ${effectiveColorScheme === 'dark' ? 'border-surface-700' : 'border-surface-100'}`}>
         <div className="flex items-center -space-x-1.5">
-          <img
-            src={avatarUrl(workOrder.assignedToUserId || 0)}
-            alt="Assignee"
-            className={`w-6 h-6 rounded-full ring-2 ${colorScheme === 'dark' ? 'ring-surface-800' : 'ring-white'}`}
-            title="Assignee"
-          />
-          <img
-            src={avatarUrl(workOrder.createdByUserId)}
-            alt="Creator"
-            className={`w-6 h-6 rounded-full ring-2 ${colorScheme === 'dark' ? 'ring-surface-800' : 'ring-white'}`}
-            title="Creator"
-          />
+          <span
+            className={`w-6 h-6 rounded-full ring-2 inline-flex items-center justify-center ${effectiveColorScheme === 'dark' ? 'ring-surface-800 bg-surface-700 text-surface-300' : 'ring-white bg-surface-100 text-surface-500'}`}
+            title={`${t.assignedTechnician}: ${assigneeName}`}
+            aria-label={`${t.assignedTechnician}: ${assigneeName}`}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 20a6 6 0 00-12 0" />
+              <circle cx="12" cy="9" r="3" />
+            </svg>
+          </span>
+          <span
+            className={`w-6 h-6 rounded-full ring-2 inline-flex items-center justify-center ${effectiveColorScheme === 'dark' ? 'ring-surface-800 bg-surface-700 text-surface-300' : 'ring-white bg-surface-100 text-surface-500'}`}
+            title={`${t.createdBy}: ${creatorName}`}
+            aria-label={`${t.createdBy}: ${creatorName}`}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 20a6 6 0 00-12 0" />
+              <circle cx="12" cy="9" r="3" />
+            </svg>
+          </span>
         </div>
         <div className="flex-1" />
         <span className="flex gap-1">
           <button
             title="Archive"
-            className={`p-1.5 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-500 hover:text-amber-400 hover:bg-surface-700' : 'text-surface-400 hover:text-amber-600 hover:bg-amber-50'}`}
+            className={`p-1.5 rounded-lg transition-colors ${effectiveColorScheme === 'dark' ? 'text-surface-500 hover:text-amber-400 hover:bg-surface-700' : 'text-surface-400 hover:text-amber-600 hover:bg-amber-50'}`}
             onClick={e => {
               e.stopPropagation();
               onArchive?.(workOrder.id);
@@ -143,7 +174,7 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
           </button>
           <button
             title="Edit"
-            className={`p-1.5 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-500 hover:text-brand-400 hover:bg-surface-700' : 'text-surface-400 hover:text-brand-600 hover:bg-brand-50'}`}
+            className={`p-1.5 rounded-lg transition-colors ${effectiveColorScheme === 'dark' ? 'text-surface-500 hover:text-brand-400 hover:bg-surface-700' : 'text-surface-400 hover:text-brand-600 hover:bg-brand-50'}`}
             onClick={e => {
               e.stopPropagation();
               onEdit?.(workOrder);
@@ -153,7 +184,7 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
           </button>
           <button
             title="Delete"
-            className={`p-1.5 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-500 hover:text-red-400 hover:bg-surface-700' : 'text-surface-400 hover:text-red-600 hover:bg-red-50'}`}
+            className={`p-1.5 rounded-lg transition-colors ${effectiveColorScheme === 'dark' ? 'text-surface-500 hover:text-red-400 hover:bg-surface-700' : 'text-surface-400 hover:text-red-600 hover:bg-red-50'}`}
             onClick={e => {
               e.stopPropagation();
               if (window.confirm('Are you sure you want to delete this urgent work order?')) {

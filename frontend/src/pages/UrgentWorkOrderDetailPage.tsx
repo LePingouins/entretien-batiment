@@ -5,14 +5,18 @@ import './printable.css';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
-import { ColorSchemeContext } from '../components/AdminLayout';
+import { getRoleBasePath } from '../lib/pageAccess';
+import { ColorSchemeContext } from '../context/ColorSchemeContext';
+import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import { UrgentWorkOrderResponse, WorkOrderPriority } from '../types/api';
 
 const UrgentWorkOrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { colorScheme } = React.useContext(ColorSchemeContext);
+  const { role } = useAuth();
   const { t } = useLang();
+  const basePath = getRoleBasePath(role);
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -33,6 +37,23 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
       case 'URGENT': return t.priorityUrgent;
       default: return priority;
     }
+  };
+
+  const formatUserName = (rawName?: string | null, fallbackId?: number | null) => {
+    if (rawName && rawName.trim()) {
+      const base = rawName.includes('@') ? rawName.split('@')[0] : rawName;
+      return base
+        .replace(/[._-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    if (fallbackId) {
+      return `${t.user} #${fallbackId}`;
+    }
+
+    return t.unassigned;
   };
 
   // Fetch urgent work order
@@ -66,7 +87,7 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
       <div>
         <h2 className="text-2xl font-bold mb-2">{t.errorLoading}</h2>
         <p>{error ? t.errorLoadingWorkOrder : t.workOrderNotFound}</p>
-        <Link to="/admin/urgent-work-orders" className="mt-4 inline-block text-brand-500 hover:underline">
+        <Link to={`${basePath}/urgent-work-orders`} className="mt-4 inline-block text-brand-500 hover:underline">
           &larr; {t.backToUrgentWorkOrders}
         </Link>
       </div>
@@ -74,6 +95,10 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
   );
 
   const isDark = colorScheme === 'dark';
+  const assignedDisplayName = workOrder.assignedToUserId
+    ? formatUserName(workOrder.assignedToName, workOrder.assignedToUserId)
+    : t.unassigned;
+  const createdByDisplayName = formatUserName(workOrder.createdByName, workOrder.createdByUserId);
   
   // Status Colors (Matching UrgentWorkOrderCard and WorkOrderDetailPage)
   const getStatusColor = (status: string) => {
@@ -102,7 +127,7 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
   const attachmentUrl = workOrder.attachmentDownloadUrl || (workOrder.attachmentFilename ? `/api/files/urgent-workorders/${workOrder.attachmentFilename}` : undefined);
 
   return (
-    <div className={`p-4 sm:p-6 lg:p-8 printable-content ${isDark ? 'bg-surface-950 text-surface-100' : 'bg-surface-50 text-gray-900'}`}>
+    <div className={`p-4 sm:p-6 lg:p-8 pb-10 sm:pb-12 printable-content ${isDark ? 'bg-surface-950 text-surface-100' : 'bg-surface-50 text-gray-900'}`}>
       {/* Printable layout styles */}
       <style>{`
         @media print {
@@ -115,7 +140,7 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <Link 
-            to="/admin/urgent-work-orders" 
+            to={`${basePath}/urgent-work-orders`} 
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium ${isDark ? 'text-brand-400 hover:bg-surface-800' : 'text-brand-600 hover:bg-white hover:shadow-sm'} no-print`} 
             data-html2canvas-ignore="true"
           >
@@ -260,7 +285,7 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
             </div>
 
             {/* Right Column (Details) */}
-            <div className={`p-6 sm:p-8 ${isDark ? 'bg-surface-800/50' : 'bg-gray-50/30'}`}>
+            <div className={`p-6 sm:p-8 pb-10 sm:pb-12 space-y-4 ${isDark ? 'bg-surface-800/50' : 'bg-gray-50/30'}`}>
               <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -293,9 +318,9 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
                 {workOrder.assignedToUserId ? (
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-700'}`}> 
-                      {workOrder.assignedToUserId}
+                      {assignedDisplayName.charAt(0)}
                     </div>
-                    <span className="font-medium">{t.user} #{workOrder.assignedToUserId}</span>
+                    <span className="font-medium">{assignedDisplayName}</span>
                   </div>
                 ) : (
                   <span className="text-sm opacity-50 italic">{t.unassigned}</span>
@@ -305,9 +330,9 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
                 <label className="block text-xs font-bold uppercase tracking-wider opacity-50 mb-1">{t.createdBy}</label>
                 <div className="flex items-center gap-2">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
-                    {workOrder.createdByUserId ? workOrder.createdByUserId : 1}
+                    {createdByDisplayName.charAt(0)}
                   </div>
-                  <span className="font-medium">{t.user} #{workOrder.createdByUserId ? workOrder.createdByUserId : 1}</span>
+                  <span className="font-medium">{createdByDisplayName}</span>
                 </div>
               </div>
               {/* Materials Section - if applicable for Urgent */}

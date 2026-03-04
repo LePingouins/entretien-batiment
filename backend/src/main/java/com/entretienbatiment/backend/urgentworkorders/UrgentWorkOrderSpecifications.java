@@ -15,6 +15,10 @@ public class UrgentWorkOrderSpecifications {
         return (root, query, cb) -> location == null ? cb.conjunction() : cb.equal(root.get("location"), location);
     }
 
+    public static Specification<UrgentWorkOrder> assignedToUserIdEquals(Long assignedToUserId) {
+        return (root, query, cb) -> assignedToUserId == null ? cb.conjunction() : cb.equal(root.get("assignedToUserId"), assignedToUserId);
+    }
+
     public static Specification<UrgentWorkOrder> textOrIdSearch(String q) {
         if (q == null || q.isBlank()) return (root, query, cb) -> cb.conjunction();
         String like = "%" + q.trim().toLowerCase() + "%";

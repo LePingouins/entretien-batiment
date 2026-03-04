@@ -1,11 +1,10 @@
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import api, { reorderWorkOrders, moveWorkOrder, reorderAllByPriority } from '../lib/api';
+import api, { getTechnicians, reorderWorkOrders, moveWorkOrder, reorderAllByPriority } from '../lib/api';
 import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority } from '../types/api';
 import { WorkOrderCard } from '../components/WorkOrderCard';
 import { MaterialsDrawer } from '../components/MaterialsDrawer';
 import { useLang } from '../context/LangContext';
-import { NotificationsContext } from '../context/NotificationsContext';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { ColorSchemeType, getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
 import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
@@ -192,9 +191,15 @@ const getStatusLabel = (t: any, s: string) => {
 const statusOptions = Object.values(WorkOrderStatus);
 const priorityOptions = Object.values(WorkOrderPriority);
 
+const toFileArray = (files?: FileList | File[] | null): File[] => {
+  if (!files) return [];
+  if (files instanceof FileList) return Array.from(files);
+  if (Array.isArray(files)) return files;
+  return [];
+};
+
 function AdminWorkOrdersPage() {
   const queryClient = useQueryClient();
-  const { markAllRead } = React.useContext(NotificationsContext);
   // Fix: Provide missing handlers if not already defined
   const handleMaterialsChanged = React.useCallback(() => {
     // Implement logic or leave empty if not needed
@@ -239,8 +244,42 @@ function AdminWorkOrdersPage() {
   // Get color scheme from context
   const outlet = useOutletContext<{ colorScheme: ColorSchemeType }>();
   const colorScheme: ColorSchemeType = outlet?.colorScheme || 'default';
+  const [technicians, setTechnicians] = React.useState<Array<{ id: number; email: string }>>([]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getTechnicians()
+      .then((users) => {
+        if (cancelled) return;
+        const techs = users
+          .filter((u) => u.role === 'TECH' && u.enabled)
+          .sort((a, b) => a.email.localeCompare(b.email))
+          .map((u) => ({ id: u.id, email: u.email }));
+        setTechnicians(techs);
+      })
+      .catch(() => {
+        if (!cancelled) setTechnicians([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const technicianOptions = React.useMemo(() => {
+    return [
+      { id: '', name: t.allTechnicians || 'All Technicians' },
+      ...technicians.map((tech) => ({ id: tech.id.toString(), name: tech.email })),
+    ];
+  }, [technicians, t.allTechnicians]);
+
+  const defaultTechnicianId = React.useMemo(() => {
+    const andre = technicians.find((tech) => tech.email.toLowerCase().startsWith('andre@'));
+    return andre ? andre.id.toString() : '';
+  }, [technicians]);
   // Modal state for editing work order
   const [editModal, setEditModal] = React.useState<{ open: boolean; workOrder: WorkOrderResponse | null }>({ open: false, workOrder: null });
+  const [removeEditAttachment, setRemoveEditAttachment] = React.useState(false);
 
 
 
@@ -256,6 +295,25 @@ function AdminWorkOrdersPage() {
 
     // Watch files for preview
     const files = watch('files');
+    const createFileArray = React.useMemo(() => toFileArray(files as FileList | File[] | null | undefined), [files]);
+    const createAssignedToUserId = watch('assignedToUserId');
+
+    const handleCreateFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const nextFiles = event.target.files ? Array.from(event.target.files) : undefined;
+      setValue('files', nextFiles as any);
+    };
+
+    const removeCreateSelectedFileAt = (indexToRemove: number) => {
+      const nextFiles = createFileArray.filter((_, index) => index !== indexToRemove);
+      setValue('files', (nextFiles.length > 0 ? nextFiles : undefined) as any);
+    };
+
+    React.useEffect(() => {
+      if (!showModal || !defaultTechnicianId) return;
+      if (!createAssignedToUserId) {
+        setValue('assignedToUserId', defaultTechnicianId);
+      }
+    }, [showModal, defaultTechnicianId, createAssignedToUserId, setValue]);
 
     const onCreate: SubmitHandler<WorkOrderFormType> = async (data) => {
       try {
@@ -265,6 +323,9 @@ function AdminWorkOrdersPage() {
         formData.append('description', data.description);
         formData.append('location', data.location);
         formData.append('priority', data.priority);
+        if (data.assignedToUserId) {
+          formData.append('assignedToUserId', data.assignedToUserId);
+        }
         if (data.dueDate) {
           // Regular work orders use LocalDate in backend, so we send just the date component 'YYYY-MM-DD'
           formData.append('dueDate', data.dueDate.substring(0, 10));
@@ -294,17 +355,40 @@ function AdminWorkOrdersPage() {
       reset: editReset,
       formState: { errors: editErrors, isSubmitting: isEditSubmitting },
       setValue: setEditValue,
+      watch: editWatch,
     } = useForm<WorkOrderFormType>({ resolver: zodResolver(workOrderSchema) });
+
+    const editFiles = editWatch('files');
+    const editFileArray = React.useMemo(() => toFileArray(editFiles as FileList | File[] | null | undefined), [editFiles]);
+    const existingEditAttachmentUrl = React.useMemo(() => {
+      if (!editModal.workOrder) return undefined;
+      return editModal.workOrder.attachmentDownloadUrl || (editModal.workOrder.attachmentFilename ? `/api/files/workorders/${editModal.workOrder.attachmentFilename}` : undefined);
+    }, [editModal.workOrder]);
+
+    const handleEditFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const nextFiles = event.target.files ? Array.from(event.target.files) : undefined;
+      setEditValue('files', nextFiles as any);
+      if (nextFiles && nextFiles.length > 0) {
+        setRemoveEditAttachment(false);
+      }
+    };
+
+    const removeEditSelectedFileAt = (indexToRemove: number) => {
+      const nextFiles = editFileArray.filter((_, index) => index !== indexToRemove);
+      setEditValue('files', (nextFiles.length > 0 ? nextFiles : undefined) as any);
+    };
 
     // Open edit modal and prefill form
     const openEditModal = (wo: WorkOrderResponse) => {
       setEditModal({ open: true, workOrder: wo });
+      setRemoveEditAttachment(false);
       editReset({
         title: wo.title,
         description: wo.description,
         location: wo.location,
         priority: wo.priority,
         dueDate: wo.dueDate?.slice(0, 10) || '',
+        assignedToUserId: wo.assignedToUserId ? wo.assignedToUserId.toString() : '',
       });
     };
 
@@ -312,8 +396,43 @@ function AdminWorkOrdersPage() {
     const onEdit: SubmitHandler<WorkOrderFormType> = async (data) => {
       if (!editModal.workOrder) return;
       try {
-        await api.put(`/api/admin/work-orders/${editModal.workOrder.id}`, data);
+        const hasFiles = editFileArray.length > 0;
+        if (hasFiles || removeEditAttachment) {
+          const formData = new FormData();
+          formData.append('title', data.title);
+          formData.append('description', data.description);
+          formData.append('location', data.location);
+          formData.append('priority', data.priority);
+          if (data.dueDate) {
+            formData.append('dueDate', data.dueDate.substring(0, 10));
+          }
+          if (data.assignedToUserId) {
+            formData.append('assignedToUserId', data.assignedToUserId);
+          }
+          if (removeEditAttachment) {
+            formData.append('removeAttachment', 'true');
+          }
+          for (let i = 0; i < editFileArray.length; i++) {
+            formData.append('files', editFileArray[i]);
+          }
+          await api.put(`/api/admin/work-orders/${editModal.workOrder.id}`, formData);
+        } else {
+          const payload: Record<string, any> = {
+            title: data.title,
+            description: data.description,
+            location: data.location,
+            priority: data.priority,
+            dueDate: data.dueDate,
+          };
+
+          if (data.assignedToUserId) {
+            payload.assignedToUserId = Number(data.assignedToUserId);
+          }
+
+          await api.put(`/api/admin/work-orders/${editModal.workOrder.id}`, payload);
+        }
         setEditModal({ open: false, workOrder: null });
+        setRemoveEditAttachment(false);
         queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
       } catch (err) {
         alert('Failed to update work order');
@@ -334,13 +453,6 @@ function AdminWorkOrdersPage() {
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
 
-  // Example: technician list and location list (replace with API data if available)
-  const technicianOptions = [
-    { id: '', name: t.allTechnicians || 'All Technicians' },
-    { id: '1', name: 'Tech 1' },
-    { id: '2', name: 'Tech 2' },
-    // ...add more or fetch from API
-  ];
   const locationOptions = [
     { id: '', name: t.allLocations || 'All Locations' },
     { id: 'horizon-nature', name: 'Horizon Nature' },
@@ -354,7 +466,7 @@ function AdminWorkOrdersPage() {
       if (status) params.status = status;
       if (priority) params.priority = priority;
       if (q) params.q = q;
-      if (technician) params.technician = technician;
+      if (technician) params.assignedToUserId = technician;
       if (locationFilter) params.location = locationFilter;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
@@ -661,6 +773,17 @@ function AdminWorkOrdersPage() {
                 {errors.priority && <div className={styles.errorMsg}>{errors.priority.message}</div>}
               </div>
               <div>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-blue-800'}`}>{t.assignedTechnician || 'Assignee'}</label>
+                <select className={`${styles.input} ${colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : ''}`} {...register('assignedToUserId')}>
+                  {!defaultTechnicianId && <option value="" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Default technician (André)</option>}
+                  {technicians.map((tech) => (
+                    <option key={tech.id} value={tech.id.toString()} className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>
+                      {tech.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-blue-800'}`}>{t.dueDate}</label>
                 <input
                   type="date"
@@ -681,17 +804,17 @@ function AdminWorkOrdersPage() {
                   multiple
                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
                   className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-blue-400'}`}
-                  onChange={e => setValue('files', e.target.files)}
+                  onChange={handleCreateFilesChange}
                   title={t.chooseFiles}
                 />
                 <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-surface-500' : 'text-gray-500'}`}>
-                  {files && files.length > 0
-                    ? Array.from(files as File[]).map(f => f.name).join(', ')
+                  {createFileArray.length > 0
+                    ? createFileArray.map(f => f.name).join(', ')
                     : t.noFileChosen}
                 </div>
-                {files && files.length > 0 && (
+                {createFileArray.length > 0 && (
                   <div className="mt-2 flex flex-col gap-2 max-h-32 overflow-y-auto">
-                    {Array.from(files as File[]).map((file, idx) => (
+                    {createFileArray.map((file, idx) => (
                       <div key={idx} className="flex items-center gap-2">
                         {file.type.startsWith('image/') ? (
                           <img
@@ -703,7 +826,15 @@ function AdminWorkOrdersPage() {
                         ) : (
                           <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-500' : 'bg-gray-100 text-gray-500'}`}>File</span>
                         )}
-                        <span className={`truncate text-sm ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
+                        <span className={`truncate text-sm flex-1 ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
+                        <button
+                          type="button"
+                          className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                          aria-label={`Remove ${file.name}`}
+                          onClick={() => removeCreateSelectedFileAt(idx)}
+                        >
+                          ×
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -782,9 +913,95 @@ function AdminWorkOrdersPage() {
               {editErrors.priority && <div className={styles.errorMsg}>{editErrors.priority.message}</div>}
             </div>
             <div>
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.assignedTechnician || 'Assignee'}</label>
+              <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('assignedToUserId')}>
+                <option value="" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>No change</option>
+                {technicians.map((tech) => (
+                  <option key={tech.id} value={tech.id.toString()} className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>
+                    {tech.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.dueDate}</label>
               <input type="date" className={styles.input + ' ' + (colorScheme === 'dark' ? '[color-scheme:dark] !bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('dueDate')} />
               {editErrors.dueDate && <div className={styles.errorMsg}>{editErrors.dueDate.message}</div>}
+            </div>
+            <div>
+              <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.attachments || 'Attachments'}</label>
+              {existingEditAttachmentUrl && !removeEditAttachment && (
+                <div className={`mb-2 flex items-center gap-2 p-2 rounded ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-gray-50 border border-gray-200'}`}>
+                  <a
+                    href={existingEditAttachmentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`text-sm truncate underline ${colorScheme === 'dark' ? 'text-brand-300' : 'text-brand-700'}`}
+                  >
+                    {editModal.workOrder?.attachmentFilename || 'Current attachment'}
+                  </a>
+                  <button
+                    type="button"
+                    className={`ml-auto rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-600' : 'text-gray-600 hover:bg-gray-200'}`}
+                    aria-label="Remove current attachment"
+                    onClick={() => setRemoveEditAttachment(true)}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              {removeEditAttachment && (
+                <div className={`mb-2 text-xs flex items-center gap-2 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-gray-600'}`}>
+                  <span>Attachment will be removed on save.</span>
+                  <button
+                    type="button"
+                    className={`underline ${colorScheme === 'dark' ? 'text-brand-300' : 'text-brand-700'}`}
+                    onClick={() => setRemoveEditAttachment(false)}
+                  >
+                    Undo
+                  </button>
+                </div>
+              )}
+              <input
+                type="file"
+                multiple
+                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+                className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-blue-400'}`}
+                onChange={handleEditFilesChange}
+                title={t.chooseFiles || 'Choose files'}
+              />
+              <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-surface-500' : 'text-gray-500'}`}>
+                {editFileArray.length > 0
+                  ? editFileArray.map(f => f.name).join(', ')
+                  : t.noFileChosen || 'No file chosen'}
+              </div>
+              {editFileArray.length > 0 && (
+                <div className="mt-2 flex flex-col gap-2 max-h-32 overflow-y-auto">
+                  {editFileArray.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      {file.type.startsWith('image/') ? (
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-surface-700' : 'border'}`}
+                          onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                        />
+                      ) : (
+                        <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-500' : 'bg-gray-100 text-gray-500'}`}>File</span>
+                      )}
+                      <span className={`truncate text-sm flex-1 ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
+                      <button
+                        type="button"
+                        className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                        aria-label={`Remove ${file.name}`}
+                        onClick={() => removeEditSelectedFileAt(idx)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </SharedEditModal>
         )}

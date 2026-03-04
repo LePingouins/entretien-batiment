@@ -8,6 +8,7 @@ export const workOrderSchema = z.object({
   location: z.string().min(1, 'Location is required'),
   priority: z.nativeEnum(WorkOrderPriority),
   dueDate: z.string().min(1, 'Due date is required'),
+  assignedToUserId: z.string().optional(),
   files: z.any().optional(),
 });
 

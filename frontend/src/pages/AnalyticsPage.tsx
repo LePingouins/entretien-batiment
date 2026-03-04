@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useLang } from '../context/LangContext';
-import { ColorSchemeContext } from '../components/AdminLayout';
+import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { getAnalyticsStats } from '../lib/api';
 import type { AnalyticsStatsResponse } from '../types/api';
 import PageHeader from '../components/PageHeader';
@@ -58,24 +58,25 @@ export default function AnalyticsPage() {
         <PageHeader 
             title={t.analyticsTitle}
             subtitle={t.analyticsSubtitle}
-            actions={
-                <button 
-                    onClick={handlePrint}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${isDark ? 'bg-surface-800 text-surface-200 hover:bg-surface-700' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm'}`}
-                >
-                    <FaPrint className="w-4 h-4" />
-                    <span>{t.print}</span>
-                </button>
-            }
         />
+
+        <div className="max-w-7xl mx-auto -mt-2 mb-6 flex justify-end">
+            <button 
+                onClick={handlePrint}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${isDark ? 'bg-surface-800 text-surface-200 hover:bg-surface-700' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm'}`}
+            >
+                <FaPrint className="w-4 h-4" />
+                <span>{t.print}</span>
+            </button>
+        </div>
         
-        <div className="max-w-7xl mx-auto space-y-8 mt-8">
+        <div className="max-w-7xl mx-auto space-y-8 mt-2">
             
             {/* 1. Hero Metrics - High Level Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Tasks Completed (Week) */}
-                <div className={`relative overflow-hidden rounded-2xl p-6 border ${cardBase}`}>
-                    <div className="absolute -top-8 right-0 p-4 opacity-10">
+                <div className={`relative overflow-hidden rounded-2xl p-6 border min-h-[200px] flex flex-col justify-between ${cardBase}`}>
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center opacity-10 pointer-events-none">
                         <svg className="w-24 h-24" fill="none" viewBox="0 0 24 24" stroke="#4ade80"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
                     <h3 className={`text-sm font-medium uppercase tracking-wider mb-1 ${textMuted}`}>{t.tasksCompletedThisWeek}</h3>
@@ -90,8 +91,8 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Completion Rate */}
-                <div className={`relative overflow-hidden rounded-2xl p-6 border ${cardBase}`}>
-                    <div className="absolute -top-5 right-0 p-4 opacity-10">
+                <div className={`relative overflow-hidden rounded-2xl p-6 border min-h-[200px] flex flex-col justify-between ${cardBase}`}>
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center opacity-10 pointer-events-none">
                         <svg className="w-24 h-24" fill="none" viewBox="0 0 24 24" stroke="#facc15"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                     </div>
                     <h3 className={`text-sm font-medium uppercase tracking-wider mb-1 ${textMuted}`}>{t.completionRate}</h3>
@@ -104,8 +105,8 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Urgent Tasks (Week) */}
-                <div className={`relative overflow-hidden rounded-2xl p-6 border ${cardBase}`}>
-                    <div className="absolute -top-8 right-0 p-4 opacity-10 text-red-500">
+                <div className={`relative overflow-hidden rounded-2xl p-6 border min-h-[200px] flex flex-col justify-between ${cardBase}`}>
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center opacity-10 text-red-500 pointer-events-none">
                          <svg className="w-24 h-24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                     </div>
                     <h3 className={`text-sm font-medium uppercase tracking-wider mb-1 ${textMuted}`}>{t.urgentTasksCompletedThisWeek}</h3>

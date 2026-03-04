@@ -6,6 +6,7 @@ import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import AppRouter from './routes/AppRouter';
 import NotificationsProvider from './context/NotificationsContext';
 import { BroadcastProvider } from './context/BroadcastContext';
+import { PageAccessProvider } from './context/PageAccessContext';
 import BroadcastOverlay from './components/BroadcastOverlay';
 import KeyboardNavigator from './lib/KeyboardNavigator';
 
@@ -16,13 +17,15 @@ function Root() {
     <QueryClientProvider client={queryClient}>
       <LangProvider>
         <AuthProvider>
-          <KeyboardNavigator />
-          <NotificationsProvider>
-            <BroadcastProvider>
-              <AppRouter />
-              <BroadcastOverlay />
-            </BroadcastProvider>
-          </NotificationsProvider>
+          <PageAccessProvider>
+            <KeyboardNavigator />
+            <NotificationsProvider>
+              <BroadcastProvider>
+                <AppRouter />
+                <BroadcastOverlay />
+              </BroadcastProvider>
+            </NotificationsProvider>
+          </PageAccessProvider>
           <PWAUpdatePrompt />
         </AuthProvider>
       </LangProvider>

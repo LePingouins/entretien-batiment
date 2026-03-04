@@ -20,6 +20,12 @@ public class UrgentWorkOrder {
     private Long createdByUserId;
     private Long assignedToUserId;
 
+    @Transient
+    private String createdByName;
+
+    @Transient
+    private String assignedToName;
+
     private LocalDateTime requestedDate;
     private LocalDateTime dueDate;
     private LocalDateTime createdAt;
@@ -65,8 +71,12 @@ public class UrgentWorkOrder {
     public void setStatus(String status) { this.status = status; }
     public Long getCreatedByUserId() { return createdByUserId; }
     public void setCreatedByUserId(Long createdByUserId) { this.createdByUserId = createdByUserId; }
+    public String getCreatedByName() { return createdByName; }
+    public void setCreatedByName(String createdByName) { this.createdByName = createdByName; }
     public Long getAssignedToUserId() { return assignedToUserId; }
     public void setAssignedToUserId(Long assignedToUserId) { this.assignedToUserId = assignedToUserId; }
+    public String getAssignedToName() { return assignedToName; }
+    public void setAssignedToName(String assignedToName) { this.assignedToName = assignedToName; }
     public LocalDateTime getRequestedDate() { return requestedDate; }
     public void setRequestedDate(LocalDateTime requestedDate) { this.requestedDate = requestedDate; }
     public LocalDateTime getDueDate() { return dueDate; }

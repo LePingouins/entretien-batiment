@@ -5,10 +5,12 @@ import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderMul
 import org.springframework.web.multipart.MultipartFile;
 import com.entretienbatiment.backend.auth.AppUser;
 import com.entretienbatiment.backend.auth.AppUserRepository;
+import com.entretienbatiment.backend.auth.Role;
 import com.entretienbatiment.backend.workorders.data.WorkOrderRepository;
 import com.entretienbatiment.backend.workorders.domain.WorkOrder;
 import com.entretienbatiment.backend.workorders.web.admin.dto.AssignWorkOrderRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.CreateWorkOrderRequest;
+import com.entretienbatiment.backend.workorders.web.admin.dto.UpdateWorkOrderMultipartRequest;
 import com.entretienbatiment.backend.workorders.web.admin.dto.WorkOrderResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -28,6 +30,8 @@ import java.util.List;
 @Service
 public class WorkOrderService {
 
+    private static final String DEFAULT_TECHNICIAN_EMAIL = "andre@gmail.com";
+
     private final WorkOrderRepository repo;
     private final AppUserRepository users;
     private final NotificationService notificationService;
@@ -45,7 +49,9 @@ public class WorkOrderService {
         AppUser creator = users.findById(createdByUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "createdBy user not found"));
 
-        WorkOrder saved = repo.save(new WorkOrder(
+        AppUser assignee = resolveAssigneeForCreate(req.assignedToUserId());
+
+        WorkOrder workOrder = new WorkOrder(
                 req.title(),
                 req.description(),
                 req.location(),
@@ -53,7 +59,13 @@ public class WorkOrderService {
                 creator,
                 req.requestedDate(),
                 req.dueDate()
-        ));
+        );
+
+        if (assignee != null) {
+            workOrder.assignTo(assignee);
+        }
+
+        WorkOrder saved = repo.save(workOrder);
 
         // Assign sortIndex for proper Kanban positioning based on priority
         assignSortIndexForNewWorkOrder(saved);
@@ -65,6 +77,17 @@ public class WorkOrderService {
                 "/admin/work-orders/" + saved.getId(),
                 "workorder-create"
         );
+
+        if (saved.getAssignedTo() != null) {
+            String assigneeHref = "/" + saved.getAssignedTo().getRole().name().toLowerCase() + "/work-orders/" + saved.getId();
+            notificationService.notifyUser(
+                saved.getAssignedTo().getId(),
+                "New Work Order Assigned",
+                "Work order \"" + saved.getTitle() + "\" was assigned to you.",
+                assigneeHref,
+                "workorder-create"
+            );
+        }
 
         reminderScheduler.checkAndSendReminder(saved);
 
@@ -539,6 +562,48 @@ public class WorkOrderService {
             wo.setStatus(req.status());
         }
         if (req.dueDate() != null) wo.setDueDate(req.dueDate());
+        if (req.assignedToUserId() != null) {
+            wo.assignTo(requireActiveTech(req.assignedToUserId()));
+        }
+
+        WorkOrder saved = repo.save(wo);
+        reminderScheduler.checkAndSendReminder(saved);
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public WorkOrderResponse updateMultipart(Long id, UpdateWorkOrderMultipartRequest req) {
+        WorkOrder wo = repo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "work order not found"));
+
+        if (req.getTitle() != null) {
+            wo.setTitle(req.getTitle());
+        }
+        if (req.getDescription() != null) {
+            wo.setDescription(req.getDescription());
+        }
+        if (req.getLocation() != null) {
+            wo.setLocation(req.getLocation());
+        }
+        if (req.getPriority() != null) {
+            wo.setPriority(req.getPriority());
+        }
+        if (req.getStatus() != null) {
+            wo.setStatus(req.getStatus());
+        }
+        if (req.getDueDate() != null) {
+            wo.setDueDate(req.getDueDate());
+        }
+        if (req.getAssignedToUserId() != null) {
+            wo.assignTo(requireActiveTech(req.getAssignedToUserId()));
+        }
+
+        boolean hasNewFile = req.getFiles() != null && !req.getFiles().isEmpty();
+        if (hasNewFile) {
+            replaceAttachment(wo, req.getFiles().get(0));
+        } else if (Boolean.TRUE.equals(req.getRemoveAttachment())) {
+            clearAttachment(wo);
+        }
 
         WorkOrder saved = repo.save(wo);
         reminderScheduler.checkAndSendReminder(saved);
@@ -585,6 +650,12 @@ public class WorkOrderService {
             req.getRequestedDate(),
             req.getDueDate()
         );
+
+        AppUser assignee = resolveAssigneeForCreate(req.getAssignedToUserId());
+        if (assignee != null) {
+            workOrder.assignTo(assignee);
+        }
+
         workOrder.setAttachmentFilename(attachmentFilename);
         workOrder.setAttachmentContentType(attachmentContentType);
         WorkOrder saved = repo.save(workOrder);
@@ -598,14 +669,71 @@ public class WorkOrderService {
             "/admin/work-orders/" + saved.getId(),
             "workorder-create"
         );
+
+        if (saved.getAssignedTo() != null) {
+            String assigneeHref = "/" + saved.getAssignedTo().getRole().name().toLowerCase() + "/work-orders/" + saved.getId();
+            notificationService.notifyUser(
+                    saved.getAssignedTo().getId(),
+                    "New Work Order Assigned",
+                    "Work order \"" + saved.getTitle() + "\" was assigned to you.",
+                    assigneeHref,
+                    "workorder-create"
+            );
+        }
         reminderScheduler.checkAndSendReminder(saved);
         // Return response with attachment info
         return toResponseWithAttachment(saved, attachmentFilename, attachmentContentType);
     }
+
+    private void replaceAttachment(WorkOrder workOrder, MultipartFile file) {
+        String previousFilename = workOrder.getAttachmentFilename();
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String ext = originalFilename != null && originalFilename.contains(".")
+                    ? originalFilename.substring(originalFilename.lastIndexOf('.'))
+                    : "";
+            String storedFilename = java.util.UUID.randomUUID() + ext;
+            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+            java.nio.file.Files.createDirectories(uploadDir);
+            java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
+            file.transferTo(filePath);
+
+            workOrder.setAttachmentFilename(storedFilename);
+            workOrder.setAttachmentContentType(file.getContentType());
+
+            if (previousFilename != null && !previousFilename.isBlank() && !previousFilename.equals(storedFilename)) {
+                deleteAttachmentFileQuietly(previousFilename);
+            }
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store file", e);
+        }
+    }
+
+    private void clearAttachment(WorkOrder workOrder) {
+        String previousFilename = workOrder.getAttachmentFilename();
+        workOrder.setAttachmentFilename(null);
+        workOrder.setAttachmentContentType(null);
+        deleteAttachmentFileQuietly(previousFilename);
+    }
+
+    private void deleteAttachmentFileQuietly(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return;
+        }
+
+        try {
+            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get("uploads", "workorders").resolve(filename));
+        } catch (Exception ignored) {
+            // Keep request successful even if stale file cannot be removed.
+        }
+    }
+
     // Helper to build response with attachment info
     private WorkOrderResponse toResponseWithAttachment(WorkOrder wo, String attachmentFilename, String attachmentContentType) {
         Long createdById = wo.getCreatedBy() != null ? wo.getCreatedBy().getId() : null;
+        String createdByName = wo.getCreatedBy() != null ? wo.getCreatedBy().getEmail() : null;
         Long assignedToId = wo.getAssignedTo() != null ? wo.getAssignedTo().getId() : null;
+        String assignedToName = wo.getAssignedTo() != null ? wo.getAssignedTo().getEmail() : null;
         String downloadUrl = (attachmentFilename != null)
             ? "/api/files/workorders/" + attachmentFilename
             : null;
@@ -629,7 +757,9 @@ public class WorkOrderService {
             wo.getPriority(),
             wo.getStatus(),
             createdById,
+            createdByName,
             assignedToId,
+            assignedToName,
             wo.getRequestedDate(),
             wo.getDueDate(),
             wo.getCreatedAt(),
@@ -648,7 +778,9 @@ public class WorkOrderService {
 
     private WorkOrderResponse toResponse(WorkOrder wo) {
         Long createdById = wo.getCreatedBy() != null ? wo.getCreatedBy().getId() : null;
+        String createdByName = wo.getCreatedBy() != null ? wo.getCreatedBy().getEmail() : null;
         Long assignedToId = wo.getAssignedTo() != null ? wo.getAssignedTo().getId() : null;
+        String assignedToName = wo.getAssignedTo() != null ? wo.getAssignedTo().getEmail() : null;
         String attachmentFilename = null;
         String attachmentContentType = null;
         String downloadUrl = null;
@@ -683,7 +815,9 @@ public class WorkOrderService {
             wo.getPriority(),
             wo.getStatus(),
             createdById,
+            createdByName,
             assignedToId,
+            assignedToName,
             wo.getRequestedDate(),
             wo.getDueDate(),
             wo.getCreatedAt(),
@@ -720,5 +854,31 @@ public class WorkOrderService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private AppUser resolveAssigneeForCreate(Long requestedAssigneeId) {
+        if (requestedAssigneeId != null) {
+            return requireActiveTech(requestedAssigneeId);
+        }
+
+        return users.findByEmailIgnoreCase(DEFAULT_TECHNICIAN_EMAIL)
+                .filter(AppUser::isEnabled)
+                .filter(user -> user.getRole() == Role.TECH)
+                .orElse(null);
+    }
+
+    private AppUser requireActiveTech(Long userId) {
+        AppUser tech = users.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "tech user not found"));
+
+        if (tech.getRole() != Role.TECH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "user is not a TECH");
+        }
+
+        if (!tech.isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tech user is disabled");
+        }
+
+        return tech;
     }
 }

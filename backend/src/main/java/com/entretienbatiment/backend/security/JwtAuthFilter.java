@@ -1,5 +1,7 @@
 package com.entretienbatiment.backend.security;
 
+import com.entretienbatiment.backend.auth.AppUser;
+import com.entretienbatiment.backend.auth.AppUserRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,9 +22,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
     private final JwtService jwtService;
+    private final AppUserRepository userRepository;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, AppUserRepository userRepository) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -41,17 +45,29 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.parseClaims(token);
 
                 String email = claims.get("email", String.class);
-                String role = claims.get("role", String.class);
-                String userId = claims.getSubject(); // keep it if you want
+                String userId = claims.getSubject();
 
-                if (email != null && role != null) {
-                    log.info("JWT Auth: email={}, role={}, userId={}", email, role, userId);
+                if (email != null) {
+                    AppUser user = userRepository.findByEmailIgnoreCase(email)
+                            .filter(AppUser::isEnabled)
+                            .orElse(null);
+
+                    if (user == null) {
+                        SecurityContextHolder.clearContext();
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+
+                    String effectiveUserId = user.getId() != null ? user.getId().toString() : userId;
+                    String effectiveRole = user.getRole().name();
+
+                    log.info("JWT Auth: email={}, role={}, userId={}", user.getEmail(), effectiveRole, effectiveUserId);
                     var auth = new UsernamePasswordAuthenticationToken(
-                            email, // ✅ principal is email now
+                            user.getEmail(),
                             null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                            List.of(new SimpleGrantedAuthority("ROLE_" + effectiveRole))
                     );
-                    auth.setDetails(userId);
+                    auth.setDetails(effectiveUserId);
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 } else {
                     SecurityContextHolder.clearContext();

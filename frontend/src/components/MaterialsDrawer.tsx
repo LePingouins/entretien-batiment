@@ -6,7 +6,7 @@ import {
   getUrgentMaterials, createUrgentMaterial, updateUrgentMaterial, setUrgentMaterialBought, deleteUrgentMaterial
 } from '../lib/api';
 import { useLang } from '../context/LangContext';
-import { ColorSchemeContext } from './AdminLayout';
+import { ColorSchemeContext } from '../context/ColorSchemeContext';
 
 
 interface MaterialsDrawerProps {

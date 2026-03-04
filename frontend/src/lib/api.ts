@@ -266,30 +266,51 @@ export async function getUrgentWorkOrders(params?: {
   });
 }
 
-export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { dueDate?: string; priority?: string; }) : Promise<UrgentWorkOrderResponse> {
-  const formData = new FormData();
-  formData.append('title', payload.title);
-  formData.append('description', payload.description);
-  formData.append('location', payload.location);
-  if (payload.dueDate) {
-    // Always send as ISO string
-    formData.append('dueDate', payload.dueDate.length === 10 ? payload.dueDate + 'T00:00:00' : payload.dueDate);
-  }
-  if (payload.priority) {
-    formData.append('priority', payload.priority);
-  }
+export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { dueDate?: string; priority?: string; assignedToUserId?: number | string | null }) : Promise<UrgentWorkOrderResponse> {
+  // If files are present, use FormData, else send JSON
   if (payload.files && payload.files.length > 0) {
+    const formData = new FormData();
+    formData.append('title', payload.title);
+    formData.append('description', payload.description);
+    formData.append('location', payload.location);
+    if (payload.dueDate) {
+      formData.append('dueDate', payload.dueDate.length === 10 ? payload.dueDate + 'T00:00:00' : payload.dueDate);
+    }
+    if (payload.priority) {
+      formData.append('priority', payload.priority);
+    }
+    if (payload.assignedToUserId !== undefined && payload.assignedToUserId !== null && payload.assignedToUserId !== '') {
+      formData.append('assignedToUserId', String(payload.assignedToUserId));
+    }
     for (let i = 0; i < payload.files.length; i++) {
       formData.append('files', payload.files[i]);
     }
+    const res = await api.post('/api/urgent-work-orders', formData);
+    return res.data;
+  } else {
+    // Send as JSON
+    const jsonPayload: any = {
+      title: payload.title,
+      description: payload.description,
+      location: payload.location,
+      dueDate: payload.dueDate ? (payload.dueDate.length === 10 ? payload.dueDate + 'T00:00:00' : payload.dueDate) : undefined,
+      priority: payload.priority,
+      assignedToUserId: payload.assignedToUserId !== undefined && payload.assignedToUserId !== null && payload.assignedToUserId !== '' ? payload.assignedToUserId : undefined,
+      status: (payload as any).status // in case status is passed
+    };
+    const res = await api.post('/api/urgent-work-orders', jsonPayload);
+    return res.data;
   }
-  const res = await api.post('/api/urgent-work-orders', formData);
-  return res.data;
 }
 
-export async function updateUrgentWorkOrder(id: number, data: Partial<UrgentWorkOrderRequest & { status: string; dueDate?: string; priority?: string }>): Promise<UrgentWorkOrderResponse> {
-  // If files are present, use FormData
-  if (data.files && (data.files instanceof FileList ? data.files.length > 0 : Array.isArray(data.files) && data.files.length > 0)) {
+export async function updateUrgentWorkOrder(
+  id: number,
+  data: Partial<UrgentWorkOrderRequest & { status: string; dueDate?: string; priority?: string; assignedToUserId?: number | string | null; removeAttachment?: boolean }>
+): Promise<UrgentWorkOrderResponse> {
+  const hasFiles = data.files && (data.files instanceof FileList ? data.files.length > 0 : Array.isArray(data.files) && data.files.length > 0);
+  const mustUseMultipart = !!hasFiles || data.removeAttachment === true;
+
+  if (mustUseMultipart) {
     const formData = new FormData();
     if (data.title !== undefined) formData.append('title', data.title);
     if (data.description !== undefined) formData.append('description', data.description);
@@ -297,6 +318,10 @@ export async function updateUrgentWorkOrder(id: number, data: Partial<UrgentWork
     if (data.dueDate !== undefined) formData.append('dueDate', data.dueDate.length === 10 ? data.dueDate + 'T00:00:00' : data.dueDate);
     if (data.priority !== undefined) formData.append('priority', data.priority);
     if (data.status !== undefined) formData.append('status', data.status);
+    if (data.assignedToUserId !== undefined) {
+      formData.append('assignedToUserId', data.assignedToUserId === null || data.assignedToUserId === '' ? '' : String(data.assignedToUserId));
+    }
+    if (data.removeAttachment === true) formData.append('removeAttachment', 'true');
     const filesArr = data.files instanceof FileList ? Array.from(data.files) : Array.isArray(data.files) ? data.files : [];
     for (let i = 0; i < filesArr.length; i++) {
       formData.append('files', filesArr[i]);
@@ -394,13 +419,103 @@ export async function createBroadcast(title: string, message: string, href?: str
 }
 
 
-export async function getCurrentUser(): Promise<{ id: number; email: string; role: string; enabled: boolean; remindersEnabled: boolean }> {
+export async function getCurrentUser(): Promise<{ id: number; email: string; role: import('../types/api').UserRole; enabled: boolean; remindersEnabled: boolean }> {
   const res = await api.get('/api/users/me');
+  return res.data;
+}
+
+export async function getTechnicians(): Promise<import('../types/api').AdminUserResponse[]> {
+  const res = await api.get<import('../types/api').AdminUserResponse[]>('/api/users/technicians');
   return res.data;
 }
 
 export async function updateUserSettings(remindersEnabled: boolean): Promise<any> {
   const res = await api.patch('/api/users/me/settings', { remindersEnabled });
+  return res.data;
+}
+
+export async function changeMyPassword(currentPassword: string, newPassword: string): Promise<void> {
+  await api.patch('/api/users/me/password', { currentPassword, newPassword });
+}
+
+export async function getAdminUsers(): Promise<import('../types/api').AdminUserResponse[]> {
+  const res = await api.get<import('../types/api').AdminUserResponse[]>('/api/admin/users');
+  return res.data;
+}
+
+export async function inviteAdminUser(email: string, role: import('../types/api').UserRole): Promise<import('../types/api').AdminUserResponse> {
+  const res = await api.post<import('../types/api').AdminUserResponse>('/api/admin/users/invite', { email, role });
+  return res.data;
+}
+
+export async function activateAdminUser(userId: number): Promise<import('../types/api').AdminUserResponse> {
+  const res = await api.patch<import('../types/api').AdminUserResponse>(`/api/admin/users/${userId}/activate`);
+  return res.data;
+}
+
+export async function deactivateAdminUser(userId: number): Promise<import('../types/api').AdminUserResponse> {
+  const res = await api.patch<import('../types/api').AdminUserResponse>(`/api/admin/users/${userId}/deactivate`);
+  return res.data;
+}
+
+export async function updateAdminUserRole(userId: number, role: import('../types/api').UserRole): Promise<import('../types/api').AdminUserResponse> {
+  const res = await api.patch<import('../types/api').AdminUserResponse>(`/api/admin/users/${userId}/role`, { role });
+  return res.data;
+}
+
+export async function resetAdminUserPassword(userId: number): Promise<import('../types/api').AdminUserResponse> {
+  const res = await api.patch<import('../types/api').AdminUserResponse>(`/api/admin/users/${userId}/reset-password`);
+  return res.data;
+}
+
+export async function deleteAdminUser(userId: number): Promise<void> {
+  await api.delete(`/api/admin/users/${userId}`);
+}
+
+export async function updateAdminUserEmail(userId: number, email: string): Promise<import('../types/api').AdminUserResponse> {
+  const res = await api.patch<import('../types/api').AdminUserResponse>(`/api/admin/users/${userId}/email`, { email });
+  return res.data;
+}
+
+export async function getAdminNotificationRecipientRules(): Promise<import('../types/api').NotificationRecipientRule[]> {
+  const res = await api.get<import('../types/api').NotificationRecipientRule[]>('/api/admin/notification-rules');
+  return res.data;
+}
+
+export async function updateAdminNotificationRecipientRules(
+  rules: import('../types/api').NotificationRecipientRule[]
+): Promise<import('../types/api').NotificationRecipientRule[]> {
+  const res = await api.put<import('../types/api').NotificationRecipientRule[]>('/api/admin/notification-rules', rules);
+  return res.data;
+}
+
+export async function getMyPageAccess(): Promise<import('../types/api').MyPageAccessResponse> {
+  const res = await api.get<import('../types/api').MyPageAccessResponse>('/api/page-access/me');
+  return res.data;
+}
+
+export async function getAdminRolePageAccessRules(): Promise<import('../types/api').RolePageAccessRule[]> {
+  const res = await api.get<import('../types/api').RolePageAccessRule[]>('/api/admin/page-access/roles');
+  return res.data;
+}
+
+export async function updateAdminRolePageAccessRules(
+  rules: import('../types/api').RolePageAccessRule[]
+): Promise<import('../types/api').RolePageAccessRule[]> {
+  const res = await api.put<import('../types/api').RolePageAccessRule[]>('/api/admin/page-access/roles', rules);
+  return res.data;
+}
+
+export async function getAdminUserPageAccessOverview(): Promise<import('../types/api').UserPageAccessOverview[]> {
+  const res = await api.get<import('../types/api').UserPageAccessOverview[]>('/api/admin/page-access/users');
+  return res.data;
+}
+
+export async function updateAdminUserPageAccessOverrides(
+  userId: number,
+  updates: Array<{ pageKey: import('../types/api').PageKey; state: import('../types/api').AccessOverrideState }>
+): Promise<import('../types/api').UserPageAccessOverview> {
+  const res = await api.put<import('../types/api').UserPageAccessOverview>(`/api/admin/page-access/users/${userId}`, updates);
   return res.data;
 }
 

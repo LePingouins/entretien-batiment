@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AuthResponse, ErrorResponse } from '../types/api';
 import { useLang } from '../context/LangContext';
+import { getRoleHomePath } from '../lib/pageAccess';
 
 const schema = z.object({
   email: z.string().email(),
@@ -41,10 +42,8 @@ function LoginPage() {
   };
 
   React.useEffect(() => {
-    if (role === 'ADMIN') {
-      navigate('/admin/work-orders', { replace: true });
-    } else if (role === 'TECH') {
-      navigate('/tech', { replace: true });
+    if (role) {
+      navigate(getRoleHomePath(role), { replace: true });
     }
   }, [role, navigate]);
 

@@ -19,5 +19,6 @@ public record CreateWorkOrderRequest(
         WorkOrderPriority priority,
 
         LocalDate requestedDate,
-        LocalDate dueDate
+        LocalDate dueDate,
+        Long assignedToUserId
 ) {}

@@ -2,14 +2,24 @@ import * as React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
+import { usePageAccess } from '../context/PageAccessContext';
+import { ColorSchemeContext, ColorSchemeType } from '../context/ColorSchemeContext';
 import NotificationsIcon from './NotificationsIcon';
 import { getCurrentUser, updateUserSettings } from '../lib/api';
+import PasswordChangeSection from './PasswordChangeSection';
 
-type ColorSchemeType = 'current' | 'performance' | 'default' | 'dark';
-export const ColorSchemeContext = React.createContext<{ colorScheme: ColorSchemeType, setColorScheme: (s: ColorSchemeType) => void }>({ colorScheme: 'default', setColorScheme: () => {} });
+const COLOR_SCHEME_OPTIONS: Array<{ value: ColorSchemeType; label: string; icon: string }> = [
+  { value: 'default', label: 'Light', icon: '☀️' },
+  { value: 'dark', label: 'Dark', icon: '🌙' },
+];
 
-const TechLayout: React.FC = () => {
+type TechLayoutProps = {
+  basePath?: '/tech' | '/worker';
+};
+
+const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
   const { logout } = useAuth();
+  const { canAccess } = usePageAccess();
   const { lang, setLang, t } = useLang();
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = React.useState(false);
@@ -35,11 +45,19 @@ const TechLayout: React.FC = () => {
   };
 
   const [colorScheme, setColorSchemeState] = React.useState<ColorSchemeType>(() => {
-    return (localStorage.getItem('colorScheme') as ColorSchemeType) || 'default';
+    const stored = localStorage.getItem('colorScheme');
+    if (stored === 'dark' || stored === 'default') {
+      return stored;
+    }
+    if (stored) {
+      localStorage.setItem('colorScheme', 'default');
+    }
+    return 'default';
   });
   const setColorScheme = React.useCallback((scheme: ColorSchemeType) => {
-    setColorSchemeState(scheme);
-    localStorage.setItem('colorScheme', scheme);
+    const normalized = scheme === 'dark' ? 'dark' : 'default';
+    setColorSchemeState(normalized);
+    localStorage.setItem('colorScheme', normalized);
   }, []);
 
   React.useEffect(() => {
@@ -118,6 +136,10 @@ const TechLayout: React.FC = () => {
     navigate('/login');
   };
 
+  const pagePath = React.useCallback((segment: '' | 'work-orders' | 'urgent-work-orders' | 'mileage' | 'archive' | 'analytics') => {
+    return segment ? `${basePath}/${segment}` : basePath;
+  }, [basePath]);
+
   return (
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
     <div className={`min-h-screen flex flex-col justify-between transition-colors overflow-x-hidden ${colorScheme === 'dark' ? 'dark bg-surface-950' : 'bg-slate-100'}`}>
@@ -128,7 +150,24 @@ const TechLayout: React.FC = () => {
             <span className={`font-bold text-base sm:text-lg tracking-tight ${colorScheme === 'dark' ? 'text-white' : 'text-surface-900'}`}>Entretien-Bâtiment</span>
           </div>
           <nav className="flex flex-wrap items-center gap-1 sm:gap-2 text-sm">
-            <Link to="/tech" className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.dashboardTitle}</Link>
+            {canAccess('DASHBOARD') && (
+              <Link to={pagePath('')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.dashboardTitle}</Link>
+            )}
+            {canAccess('WORK_ORDERS') && (
+              <Link to={pagePath('work-orders')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.workOrders}</Link>
+            )}
+            {canAccess('URGENT_WORK_ORDERS') && (
+              <Link to={pagePath('urgent-work-orders')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.urgentWorkOrders || 'Urgent'}</Link>
+            )}
+            {canAccess('MILEAGE') && (
+              <Link to={pagePath('mileage')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.mileage}</Link>
+            )}
+            {canAccess('ARCHIVE') && (
+              <Link to={pagePath('archive')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.archive}</Link>
+            )}
+            {canAccess('ANALYTICS') && (
+              <Link to={pagePath('analytics')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.analyticsTitle || 'Analytics'}</Link>
+            )}
             
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>
             
@@ -194,7 +233,7 @@ const TechLayout: React.FC = () => {
           <div
             role="dialog"
             aria-modal="true"
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
             onClick={(e) => e.target === e.currentTarget && setShowSettings(false)}
           >
             <div
@@ -228,12 +267,7 @@ const TechLayout: React.FC = () => {
                 </summary>
                 <div className="px-4 pb-4">
                   <div className="flex flex-col gap-1.5">
-                    {[
-                      { value: 'default', label: 'Light', icon: '☀️' },
-                      { value: 'dark', label: 'Dark', icon: '🌙' },
-                      { value: 'current', label: 'Vibrant', icon: '🎨' },
-                      { value: 'performance', label: 'Minimal', icon: '⚡' },
-                    ].map((scheme) => (
+                    {COLOR_SCHEME_OPTIONS.map((scheme) => (
                       <label key={scheme.value} className={`flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-xl transition-all ${
                         colorScheme === scheme.value 
                           ? (colorScheme === 'dark' ? 'bg-brand-600/20 border border-brand-500/30' : 'bg-brand-50 border border-brand-200')
@@ -281,6 +315,8 @@ const TechLayout: React.FC = () => {
                   </span>
                 </label>
               </div>
+
+              <PasswordChangeSection isDark={colorScheme === 'dark'} />
             </div>
           </div>
         </div>

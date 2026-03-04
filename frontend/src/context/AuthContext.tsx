@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AuthResponse } from '../types/api';
+import { AuthResponse, UserRole } from '../types/api';
 
 interface AuthContextType {
   accessToken: string | null;
-  role: 'ADMIN' | 'TECH' | null;
+  role: UserRole | null;
   userId: number | null;
   login: (data: AuthResponse) => void;
   logout: () => void;
@@ -12,14 +12,14 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Helper to validate and cast role from storage
-function parseRole(value: string | null): 'ADMIN' | 'TECH' | null {
-  if (value === 'ADMIN' || value === 'TECH') return value;
+function parseRole(value: string | null): UserRole | null {
+  if (value === 'ADMIN' || value === 'TECH' || value === 'WORKER') return value;
   return null;
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('accessToken'));
-  const [role, setRole] = useState<'ADMIN' | 'TECH' | null>(parseRole(localStorage.getItem('role')));
+  const [role, setRole] = useState<UserRole | null>(parseRole(localStorage.getItem('role')));
   const [userId, setUserId] = useState<number | null>(localStorage.getItem('userId') ? Number(localStorage.getItem('userId')) : null);
 
   // Sync state from localStorage on mount and when storage is updated (e.g., after token refresh)
