@@ -110,23 +110,20 @@ function UrgentDndBoard({ columns, workOrders, onMove, onOpenMaterials, onDelete
     setActiveId(null);
     setActiveWorkOrder(null);
     const { active, over } = event;
-    console.log('DnD handleDragEnd', { active, over });
     if (!over || active.id === over.id) return;
     const from = workOrders.find((wo: any) => wo.id.toString() === active.id);
     const overCard = workOrders.find((wo: any) => wo.id.toString() === over.id);
-    console.log('DnD debug', {
-      activeId: active.id,
-      overId: over.id,
-      from,
-      overCard,
-      STATUS_IDS,
-      isOverColumn: STATUS_IDS.includes(over.id),
-      isOverCard: !!overCard
-    });
+    // Handle drop on bottom zone (add at end)
+    if (isBottomZone(over.id)) {
+      const status = getStatusFromBottomZone(over.id);
+      if (from && from.status !== status) {
+        onMove(active.id, status, { atEnd: true });
+      }
+      return;
+    }
     // If dropped on a column header, move to top of that column if changing status
     if (STATUS_IDS.includes(over.id)) {
       if (from && from.status !== over.id) {
-        console.log('DnD: calling onMove for column', { activeId: active.id, overId: over.id });
         onMove(active.id, over.id, { atTop: true });
       }
       return;
@@ -135,11 +132,9 @@ function UrgentDndBoard({ columns, workOrders, onMove, onOpenMaterials, onDelete
     if (overCard && from) {
       if (from.status !== overCard.status) {
         // Move to top of new column
-        console.log('DnD: calling onMove for card (status change)', { activeId: active.id, overStatus: overCard.status });
         onMove(active.id, overCard.status, { atTop: true });
       } else {
         // Reorder within same column
-        console.log('DnD: calling onMove for card (reorder)', { activeId: active.id, overId: over.id });
         onMove(active.id, over.id, { reorder: true });
       }
       return;
@@ -647,22 +642,60 @@ function UrgentWorkOrdersPage() {
                 { id: 'COMPLETED', workOrders: grouped.COMPLETED, colorScheme },
               ]}
               workOrders={urgentData || []}
-              onMove={async (activeId: any, overId: any, opts?: { atTop?: boolean; reorder?: boolean }) => {
+              onMove={async (activeId: any, overId: any, opts?: { atTop?: boolean; atEnd?: boolean; reorder?: boolean }) => {
                 const from = (urgentData || []).find((wo) => wo.id.toString() === activeId);
                 if (!from) return;
                 // Handle status change (move to another column)
                 if (["IN_PROGRESS", "COMPLETED"].includes(overId)) {
                   if (from.status !== overId) {
-                    const newUrgentData = [
-                      { ...from, status: overId },
-                      ...((urgentData || []).filter((wo) => wo.status === overId && wo.id !== from.id)),
-                      ...((urgentData || []).filter((wo) => wo.status !== overId && wo.id !== from.id)),
-                    ];
+                    // Default: move to top unless atEnd is specified
+                    let newUrgentData;
+                    let newOrder;
+                    const others = (urgentData || []).filter((wo) => wo.status === overId && wo.id !== from.id);
+                    if (opts && opts.atEnd) {
+                      newUrgentData = [
+                        ...others,
+                        { ...from, status: overId as import('../types/api').UrgentWorkOrderStatus },
+                        ...((urgentData || []).filter((wo) => wo.status !== overId && wo.id !== from.id)),
+                      ];
+                      newOrder = [...others.map(wo => wo.id), from.id];
+                    } else {
+                      newUrgentData = [
+                        { ...from, status: overId as import('../types/api').UrgentWorkOrderStatus },
+                        ...others,
+                        ...((urgentData || []).filter((wo) => wo.status !== overId && wo.id !== from.id)),
+                      ];
+                      newOrder = [from.id, ...others.map(wo => wo.id)];
+                    }
                     setOptimisticUrgentData(newUrgentData);
                     try {
                       await updateUrgentWorkOrder(from.id, { status: overId });
-                      const newOrder = [from.id, ...((urgentData || []).filter((wo) => wo.status === overId && wo.id !== from.id)).map(wo => wo.id)];
                       await import('../lib/api').then(api => api.reorderUrgentWorkOrders(overId, newOrder));
+                      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] }), 300);
+                    } catch (e) {
+                      setOptimisticUrgentData(undefined);
+                    } finally {
+                      queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                    }
+                  }
+                  return;
+                }
+                // Handle drop on bottom zone (add at end)
+                if (isBottomZone(overId)) {
+                  const status = getStatusFromBottomZone(overId) as import('../types/api').UrgentWorkOrderStatus;
+                  if (from.status !== status) {
+                    // Move to end of new column
+                    const others = (urgentData || []).filter((wo) => wo.status === status && wo.id !== from.id);
+                    const newUrgentData = [
+                      ...others,
+                      { ...from, status },
+                      ...((urgentData || []).filter((wo) => wo.status !== status && wo.id !== from.id)),
+                    ];
+                    setOptimisticUrgentData(newUrgentData);
+                    try {
+                      await updateUrgentWorkOrder(from.id, { status });
+                      const newOrder = [...others.map(wo => wo.id), from.id];
+                      await import('../lib/api').then(api => api.reorderUrgentWorkOrders(status, newOrder));
                       setTimeout(() => queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] }), 300);
                     } catch (e) {
                       setOptimisticUrgentData(undefined);
