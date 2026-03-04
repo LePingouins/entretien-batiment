@@ -768,15 +768,6 @@ function UrgentWorkOrdersPage() {
             </button>
             <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${colorScheme === 'dark' ? 'text-surface-100' : 'text-surface-900'}`}>{t.urgentWorkOrders || 'Urgent Work Orders'}</h2>
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-              {/* Due Date field (always use dueDate) */}
-              <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>Due Date</label>
-                <input
-                  type="date"
-                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`}
-                  {...register('dueDate')}
-                />
-              </div>
               <div>
                 <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.title}</label>
                 <input className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`} {...register('title')} />
@@ -795,6 +786,19 @@ function UrgentWorkOrdersPage() {
                   <option value="inewa" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Inewa</option>
                 </select>
                 {errors.location && <div className="text-red-500 text-xs">{errors.location.message}</div>}
+              </div>
+              {/* Due Date field (always use dueDate) - moved below Location */}
+              <div>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>Due Date</label>
+                <input
+                  type="date"
+                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`}
+                  {...register('dueDate')}
+                  onClick={e => {
+                    const input = e.target as HTMLInputElement;
+                    if (typeof input.showPicker === 'function') input.showPicker();
+                  }}
+                />
               </div>
               {/* File/Photo Upload Section */}
               <div>
