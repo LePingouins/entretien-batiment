@@ -364,6 +364,11 @@ export async function getDashboardStats(): Promise<import('../types/api').Dashbo
   return res.data;
 }
 
+export async function getAnalyticsStats(): Promise<import('../types/api').AnalyticsStatsResponse> {
+  const res = await api.get('/api/admin/analytics');
+  return res.data;
+}
+
 // --- Notifications API ---
 import type { NotificationType } from '../context/NotificationsContext';
 

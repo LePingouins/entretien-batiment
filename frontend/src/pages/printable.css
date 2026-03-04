@@ -12,16 +12,59 @@
 		color: black !important;
 		box-shadow: none !important;
 		border: none !important;
-		font-size: 12pt !important;
+		font-size: 10pt !important;
 		overflow: visible !important;
-		/* Try to fit to one page */
 		zoom: 0.85;
-		page-break-inside: avoid;
+		padding-top: 0 !important;
+		margin-top: 0 !important;
 	}
+	
+	/* Hide navigation, sidebar, buttons */
+	nav, header, footer, button, .no-print, [role="dialog"] {
+		display: none !important;
+	}
+    
+    /* Ensure charts and content are visible */
+    body {
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
 	.printable-content > * {
 		page-break-inside: avoid;
 	}
 	.printable-content h1, .printable-content h2, .printable-content h3 {
 		page-break-after: avoid;
 	}
+
+    /* Print Header */
+    .print-only-header {
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 1rem;
+        page-break-after: avoid !important;
+    }
+}
+
+/* Hide print elements on screen */
+.print-only-header {
+    display: none;
+}
+
+.printable-content .max-w-7xl {
+	margin-top: 0 !important;
+	page-break-before: avoid !important;
+}
+
+.printable-content, .printable-content .max-w-7xl, .printable-content .mb-6, .printable-content .mt-8, .printable-content .space-y-8, .printable-content .p-6 {
+	margin-top: 0 !important;
+	margin-bottom: 0 !important;
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
 }

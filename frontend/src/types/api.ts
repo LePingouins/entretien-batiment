@@ -134,3 +134,35 @@ export interface DashboardStats {
   activeUrgentWorkOrders: number;
   mileageEntries: number;
 }
+
+// --- Analytics Types ---
+export interface TechnicianStats {
+  userId: number;
+  name: string;
+  completedTasks: number;
+}
+
+export interface AnalyticsStatsResponse {
+  tasksCompletedThisWeek: number;
+  urgentTasksCompletedThisWeek: number;
+  normalTasksCompletedThisWeek: number;
+  completionRate: number;
+  averageCompletionTimeHours: number;
+  averageCompletionTimeUrgent: number;
+  averageCompletionTimeNormal: number;
+  totalMileageThisMonth: number;
+  urgentCount: number;
+  normalCount: number;
+  urgentRatio: number;
+  overdueCompletedTasks: number;
+  overdueActiveTasks: number;
+  tasksCreatedThisWeek: number;
+  tasksCreatedThisMonth: number;
+  tasksCancelledThisWeek: number;
+  tasksCancelledThisMonth: number;
+  activeTasksByStatus: Record<string, number>;
+  averageMileagePerTask: number;
+  topTechnicians: TechnicianStats[];
+  averageTasksPerDay: number;
+  taskFrequencies: Array<{ taskName: string; count: number }>;
+}

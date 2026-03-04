@@ -14,6 +14,7 @@ import NotificationsPage from '../pages/NotificationsPage';
 
 import UrgentWorkOrdersPage from '../pages/UrgentWorkOrdersPage';
 import DashboardPage from '../pages/DashboardPage';
+import AnalyticsPage from '../pages/AnalyticsPage';
 
 import { Navigate } from 'react-router-dom';
 
@@ -69,6 +70,10 @@ const router = createBrowserRouter([
                 {
                   path: 'archive',
                   element: <ArchivePage />,
+                },
+                {
+                  path: 'analytics',
+                  element: <AnalyticsPage />,
                 },
               // More admin pages can go here
   // ...existing code...
