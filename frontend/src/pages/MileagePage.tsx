@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
 import { ColorSchemeContext } from '../components/AdminLayout';
 import api, { archiveMileageEntry, getUrgentWorkOrders } from '../lib/api';
+import { NotificationsContext } from '../context/NotificationsContext';
 import PageHeader from '../components/PageHeader';
 import type { WorkOrderResponse, UrgentWorkOrderResponse } from '../types/api';
 
@@ -37,6 +38,7 @@ const MileagePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { t, lang } = useLang();
   const { colorScheme } = useContext(ColorSchemeContext);
+  const { addNotification } = useContext(NotificationsContext);
 
   useEffect(() => {
     // If action=create, auto-create a new entry
@@ -63,6 +65,11 @@ const MileagePage: React.FC = () => {
             workOrderId: created.workOrderId,
             urgentWorkOrderId: created.urgentWorkOrderId,
           }]);
+            try {
+              addNotification('Mileage Entry Created', `Mileage entry "${created.id ? '#'+created.id : created.date}" was created.`, '/admin/mileage', 'mileage-create');
+            } catch (err) {
+              // ignore notification errors
+            }
           // Remove param
           setSearchParams(prev => {
             const next = new URLSearchParams(prev);
@@ -123,6 +130,11 @@ const MileagePage: React.FC = () => {
           workOrderId: created.workOrderId,
           urgentWorkOrderId: created.urgentWorkOrderId,
         }]);
+          try {
+            addNotification('Mileage Entry Created', `Mileage entry "${created.id ? '#'+created.id : created.date}" was created.`, '/admin/mileage', 'mileage-create');
+          } catch (err) {
+            // ignore
+          }
       });
   };
 
@@ -181,7 +193,14 @@ const MileagePage: React.FC = () => {
   const handleDelete = (id: number | undefined) => {
     if (!id) return;
     api.delete(`${API_URL}/${id}`)
-      .then(() => setEntries(entries.filter(e => e.id !== id)));
+      .then(() => {
+        setEntries(entries.filter(e => e.id !== id));
+        try {
+          addNotification('Mileage Entry Deleted', `Mileage entry #${id} was deleted.`, '/admin/mileage', 'mileage-delete');
+        } catch (err) {
+          // ignore
+        }
+      });
   };
 
   const handleArchive = (id: number | undefined) => {

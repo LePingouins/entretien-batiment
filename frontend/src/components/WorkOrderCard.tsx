@@ -4,6 +4,7 @@ import { WorkOrderStatus, WorkOrderPriority, WorkOrderResponse } from '../types/
 import { MaterialsButton } from './MaterialsButton';
 import { useLang } from '../context/LangContext';
 import { ColorSchemeContext } from './AdminLayout';
+import { NotificationsContext } from '../context/NotificationsContext';
 
 // Global image cache to prevent flashing when components remount (e.g., during drag)
 const loadedImagesCache = new Set<string>();
@@ -80,6 +81,7 @@ interface WorkOrderCardComponentProps {
 
 const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchived }: WorkOrderCardComponentProps) => {
   const { colorScheme } = React.useContext(ColorSchemeContext);
+  const { addNotification } = React.useContext(NotificationsContext);
   const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
   // Use relative URL for attachments (works with proxy in dev/preview)
@@ -274,6 +276,11 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchi
                 try {
                   const api = (await import('../lib/api')).default;
                   await api.delete(`/api/admin/work-orders/${workOrder.id}`);
+                  try {
+                    addNotification('Work Order Deleted', `Work order "${workOrder.title}" was deleted.`, '/admin/work-orders', 'workorder-delete');
+                  } catch (err) {
+                    // ignore notification errors
+                  }
                   if (onDeleted) onDeleted(workOrder.id);
                   else window.location.reload();
                 } catch {

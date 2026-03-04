@@ -443,11 +443,12 @@ function UrgentWorkOrdersPage() {
         for (let i = 0; i < filesArr.length; i++) {
           formData.append('files', filesArr[i]);
         }
-        await api.post('/api/urgent-work-orders', formData);
+        const res = await api.post('/api/urgent-work-orders', formData);
+        const created = res.data;
 
         reset();
         setShowModal(false);
-        addNotification('New Urgent Work Order', `Urgent work order "${data.title}" was created.`);
+        addNotification('New Urgent Work Order', `Urgent work order "${data.title}" was created.`, `/admin/urgent-work-orders/${created.id}`, 'urgent-create');
         queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
       } catch (err) {
         alert('Failed to create urgent work order');
@@ -702,18 +703,24 @@ function UrgentWorkOrdersPage() {
                 }
               }}
               onOpenMaterials={handleOpenMaterials}
-              onDeleted={async (id: number) => {
-                // Optimistically remove from UI
-                setOptimisticUrgentData((urgentData || []).filter((wo) => wo.id !== id));
-                try {
-                  await deleteUrgentWorkOrder(id);
-                } catch (e) {
-                  alert('Failed to delete urgent work order');
-                  setOptimisticUrgentData(undefined);
-                } finally {
-                  queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
-                }
-              }}
+                onDeleted={async (id: number) => {
+                  // Optimistically remove from UI
+                  const found = (urgentData || []).find((wo) => wo.id === id);
+                  setOptimisticUrgentData((urgentData || []).filter((wo) => wo.id !== id));
+                  try {
+                    await deleteUrgentWorkOrder(id);
+                    try {
+                      addNotification('Urgent Work Order Deleted', `Urgent work order "${found?.title || id}" was deleted.`, '/admin/urgent-work-orders', 'urgent-delete');
+                    } catch (err) {
+                      // ignore notification errors
+                    }
+                  } catch (e) {
+                    alert('Failed to delete urgent work order');
+                    setOptimisticUrgentData(undefined);
+                  } finally {
+                    queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                  }
+                }}
               onCardClick={() => {}}
               onEdit={handleEdit}
               onArchive={handleArchive}
@@ -851,8 +858,13 @@ function UrgentWorkOrdersPage() {
           onDelete={async () => {
             if (!editModal.workOrder) return;
             if (window.confirm(t.confirmDelete || 'Are you sure you want to delete this urgent work order?')) {
-              try {
+                try {
                 await deleteUrgentWorkOrder(editModal.workOrder.id);
+                try {
+                  addNotification('Urgent Work Order Deleted', `Urgent work order "${editModal.workOrder.title}" was deleted.`, '/admin/urgent-work-orders', 'urgent-delete');
+                } catch (err) {
+                  // ignore notification errors
+                }
                 setEditModal({ open: false, workOrder: null });
                 queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
               } catch (err) {

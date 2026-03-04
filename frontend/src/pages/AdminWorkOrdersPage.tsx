@@ -194,6 +194,7 @@ const priorityOptions = Object.values(WorkOrderPriority);
 
 function AdminWorkOrdersPage() {
   const queryClient = useQueryClient();
+  const { addNotification } = React.useContext(NotificationsContext);
   // Fix: Provide missing handlers if not already defined
   const handleMaterialsChanged = React.useCallback(() => {
     // Implement logic or leave empty if not needed
@@ -234,7 +235,7 @@ function AdminWorkOrdersPage() {
     return () => window.removeEventListener("keydown", handleEsc);
   }, [showModal]);
   const { t } = useLang();
-  const { addNotification } = React.useContext(NotificationsContext);
+  
   // Get color scheme from context
   const outlet = useOutletContext<{ colorScheme: ColorSchemeType }>();
   const colorScheme: ColorSchemeType = outlet?.colorScheme || 'default';
@@ -274,10 +275,11 @@ function AdminWorkOrdersPage() {
           }
         }
         // Note: Backend must support multipart/form-data for this to work
-        await api.post('/api/admin/work-orders', formData);
+        const res = await api.post('/api/admin/work-orders', formData);
+        const created = res.data;
         setShowModal(false);
         reset();
-        addNotification('New Work Order Created', `Work order "${data.title}" was successfully created.`);
+        addNotification('New Work Order Created', `Work order "${data.title}" was successfully created.`, `/admin/work-orders/${created.id}`, 'workorder-create');
         queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
       } catch (err) {
         alert('Failed to create work order');
@@ -738,6 +740,11 @@ function AdminWorkOrdersPage() {
               if (window.confirm(t.confirmDelete)) {
                 try {
                   await api.delete(`/api/admin/work-orders/${editModal.workOrder.id}`);
+                  try {
+                    addNotification('Work Order Deleted', `Work order "${editModal.workOrder.title}" was deleted.`, '/admin/work-orders', 'workorder-delete');
+                  } catch (err) {
+                    // ignore notification errors
+                  }
                   setEditModal({ open: false, workOrder: null });
                   queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
                 } catch (err) {
@@ -900,5 +907,3 @@ function AdminWorkOrdersPage() {
 }
 
 export default AdminWorkOrdersPage;
-
-// (moved above for correct hoisting)
