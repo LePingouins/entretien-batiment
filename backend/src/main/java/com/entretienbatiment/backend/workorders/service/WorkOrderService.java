@@ -31,11 +31,13 @@ public class WorkOrderService {
     private final WorkOrderRepository repo;
     private final AppUserRepository users;
     private final NotificationService notificationService;
+    private final WorkOrderReminderScheduler reminderScheduler;
 
-    public WorkOrderService(WorkOrderRepository repo, AppUserRepository users, NotificationService notificationService) {
+    public WorkOrderService(WorkOrderRepository repo, AppUserRepository users, NotificationService notificationService, WorkOrderReminderScheduler reminderScheduler) {
         this.repo = repo;
         this.users = users;
         this.notificationService = notificationService;
+        this.reminderScheduler = reminderScheduler;
     }
 
     @Transactional
@@ -64,6 +66,8 @@ public class WorkOrderService {
                 "workorder-create"
         );
 
+        reminderScheduler.checkAndSendReminder(saved);
+
         return toResponse(saved);
     }
 
@@ -88,6 +92,9 @@ public class WorkOrderService {
 
         wo.assignTo(tech);
         WorkOrder saved = repo.save(wo);
+
+        reminderScheduler.checkAndSendReminder(saved);
+
         return toResponse(saved);
     }
 
@@ -534,6 +541,7 @@ public class WorkOrderService {
         if (req.dueDate() != null) wo.setDueDate(req.dueDate());
 
         WorkOrder saved = repo.save(wo);
+        reminderScheduler.checkAndSendReminder(saved);
         return toResponse(saved);
     }
 
@@ -590,7 +598,7 @@ public class WorkOrderService {
             "/admin/work-orders/" + saved.getId(),
             "workorder-create"
         );
-
+        reminderScheduler.checkAndSendReminder(saved);
         // Return response with attachment info
         return toResponseWithAttachment(saved, attachmentFilename, attachmentContentType);
     }

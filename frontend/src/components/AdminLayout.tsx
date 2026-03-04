@@ -3,6 +3,7 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import NotificationsIcon from './NotificationsIcon';
+import { getCurrentUser, updateUserSettings } from '../lib/api';
 
 // Add 'dark' to color scheme types
 type ColorSchemeType = 'current' | 'performance' | 'default' | 'dark';
@@ -13,6 +14,27 @@ const AdminLayout: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = React.useState(false);
+  const [remindersEnabled, setRemindersEnabled] = React.useState(false);
+
+  React.useEffect(() => {
+    if (showSettings) {
+      getCurrentUser().then(user => {
+        setRemindersEnabled(user.remindersEnabled !== false);
+      }).catch(err => console.error('Failed to fetch user settings', err));
+    }
+  }, [showSettings]);
+
+  const handleReminderToggle = async (enabled: boolean) => {
+    setRemindersEnabled(enabled);
+    try {
+      await updateUserSettings(enabled);
+    } catch (err) {
+      console.error('Failed to update settings', err);
+      // Revert on failure
+      setRemindersEnabled(!enabled);
+    }
+  };
+
   // Persist color scheme in localStorage, default to 'default'
   const [colorScheme, setColorSchemeState] = React.useState<ColorSchemeType>(() => {
     return (localStorage.getItem('colorScheme') as ColorSchemeType) || 'default';
@@ -178,48 +200,93 @@ const AdminLayout: React.FC = () => {
           <div
             role="dialog"
             aria-modal="true"
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={(e) => e.target === e.currentTarget && setShowSettings(false)}
           >
             <div
               ref={modalRef}
               tabIndex={-1}
-              className={`rounded-2xl shadow-modal p-6 w-full max-w-xs relative border ${colorScheme === 'dark' ? 'bg-surface-900 text-surface-100 border-surface-700' : 'bg-white text-surface-900 border-surface-200'}`}
+              className={`rounded-2xl shadow-modal w-full max-w-md relative border max-h-[90vh] overflow-y-auto flex flex-col ${colorScheme === 'dark' ? 'bg-surface-900 text-surface-100 border-surface-700' : 'bg-white text-surface-900 border-surface-200'}`}
             >
-            <button
-              className={`absolute top-3 right-3 p-1 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-white hover:bg-surface-800' : 'text-surface-400 hover:text-surface-700 hover:bg-surface-100'}`}
-              onClick={() => closeSettings()}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-            <h2 className={`text-lg font-bold mb-4 ${colorScheme === 'dark' ? 'text-white' : 'text-surface-900'}`}>Appearance</h2>
-            <div className="flex flex-col gap-1.5">
-              {[
-                { value: 'default', label: 'Light', icon: '☀️' },
-                { value: 'dark', label: 'Dark', icon: '🌙' },
-                { value: 'current', label: 'Vibrant', icon: '🎨' },
-                { value: 'performance', label: 'Minimal', icon: '⚡' },
-              ].map((scheme) => (
-                <label key={scheme.value} className={`flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-xl transition-all ${
-                  colorScheme === scheme.value 
-                    ? (colorScheme === 'dark' ? 'bg-brand-600/20 border border-brand-500/30' : 'bg-brand-50 border border-brand-200')
-                    : (colorScheme === 'dark' ? 'hover:bg-surface-800 border border-transparent' : 'hover:bg-surface-50 border border-transparent')
-                }`}>
-                  <input
-                    type="radio"
-                    name="colorScheme"
-                    value={scheme.value}
-                    checked={colorScheme === scheme.value}
-                    onChange={() => setColorScheme(scheme.value as ColorSchemeType)}
-                    className="sr-only"
-                  />
-                  <span className="text-lg">{scheme.icon}</span>
-                  <span className={`font-medium ${colorScheme === scheme.value ? (colorScheme === 'dark' ? 'text-brand-300' : 'text-brand-700') : ''}`}>{scheme.label}</span>
-                  {colorScheme === scheme.value && (
-                    <svg className={`ml-auto w-4 h-4 ${colorScheme === 'dark' ? 'text-brand-400' : 'text-brand-600'}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                  )}
+            <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${colorScheme === 'dark' ? 'bg-surface-900/95 border-surface-800' : 'bg-white/95 border-surface-200'}`}>
+              <h2 className={`text-lg font-bold ${colorScheme === 'dark' ? 'text-white' : 'text-surface-900'}`}>{t.profileSettings}</h2>
+              <button
+                className={`p-1.5 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-white hover:bg-surface-800' : 'text-surface-400 hover:text-surface-700 hover:bg-surface-100'}`}
+                onClick={() => closeSettings()}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              {/* Appearance Section */}
+              <details className={`group rounded-xl border ${colorScheme === 'dark' ? 'border-surface-700 bg-surface-800/50' : 'border-surface-200 bg-surface-50'}`}>
+                <summary className={`flex items-center justify-between p-4 cursor-pointer font-medium list-none rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500`}>
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                    {lang === 'fr' ? 'Thème' : 'Color Scheme'}
+                  </div>
+                  <span className={`transition group-open:rotate-180 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>
+                    <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
+                  </span>
+                </summary>
+                <div className="px-4 pb-4">
+                  <div className="flex flex-col gap-1.5">
+                    {[
+                      { value: 'default', label: 'Light', icon: '☀️' },
+                      { value: 'dark', label: 'Dark', icon: '🌙' },
+                      { value: 'current', label: 'Vibrant', icon: '🎨' },
+                      { value: 'performance', label: 'Minimal', icon: '⚡' },
+                    ].map((scheme) => (
+                      <label key={scheme.value} className={`flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-xl transition-all ${
+                        colorScheme === scheme.value 
+                          ? (colorScheme === 'dark' ? 'bg-brand-600/20 border border-brand-500/30' : 'bg-brand-50 border border-brand-200')
+                          : (colorScheme === 'dark' ? 'hover:bg-surface-800 border border-transparent' : 'hover:bg-surface-50 border border-transparent')
+                      }`}>
+                        <input
+                          type="radio"
+                          name="colorScheme"
+                          value={scheme.value}
+                          checked={colorScheme === scheme.value}
+                          onChange={() => setColorScheme(scheme.value as ColorSchemeType)}
+                          className="sr-only"
+                        />
+                        <span className="text-lg">{scheme.icon}</span>
+                        <span className={`font-medium ${colorScheme === scheme.value ? (colorScheme === 'dark' ? 'text-brand-300' : 'text-brand-700') : ''}`}>{scheme.label}</span>
+                        {colorScheme === scheme.value && (
+                          <svg className={`ml-auto w-4 h-4 ${colorScheme === 'dark' ? 'text-brand-400' : 'text-brand-600'}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </details>
+
+              <hr className={`border-t ${colorScheme === 'dark' ? 'border-surface-700' : 'border-surface-200'}`} />
+
+              {/* Preferences Section - Reminders */}
+              <div className="px-2">
+                <label className="flex flex-col cursor-pointer p-3 rounded-xl border border-transparent hover:border-surface-200 dark:hover:border-surface-700 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`font-medium ${colorScheme === 'dark' ? 'text-surface-200' : 'text-surface-800'}`}>{t.remindersSectionTitle || 'Reminders'}</span>
+                    <div className="relative">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={remindersEnabled}
+                        onChange={(e) => handleReminderToggle(e.target.checked)}
+                      />
+                      <div className={`block w-10 h-6 rounded-full transition-colors peer-checked:bg-brand-600 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-300'}`}></div>
+                      <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4`}></div>
+                    </div>
+                  </div>
+                  <span className={`text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>
+                    {lang === 'fr' ? 'Envoyez-moi des notifications pour mes tâches à venir et les alertes urgentes.' : 'Send me notifications about my upcoming assignments and urgent alerts.'}
+                  </span>
                 </label>
-                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -228,6 +295,7 @@ const AdminLayout: React.FC = () => {
       <main className={`flex-1 transition-colors ${colorScheme === 'dark' ? 'bg-surface-950' : 'bg-surface-50'}`}>
         <Outlet context={{ colorScheme }} />
       </main>
+      
       <footer className={`w-full text-center py-3 text-xs border-t ${colorScheme === 'dark' ? 'bg-surface-900/50 border-surface-800 text-surface-500' : 'bg-white/50 border-surface-200 text-surface-400'}`}>
         <span className="font-medium">&copy; {new Date().getFullYear()} Horizon Nature</span>
       </footer>

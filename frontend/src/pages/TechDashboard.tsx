@@ -1,8 +1,13 @@
 import * as React from 'react';
 import { useLang } from '../context/LangContext';
+import { NotificationsContext, NotificationsContextType } from '../context/NotificationsContext';
+import { Link } from 'react-router-dom';
 
 const TechDashboard: React.FC = () => {
   const { t } = useLang();
+  const ctx = React.useContext(NotificationsContext) as NotificationsContextType;
+  const reminders = ctx.notifications.filter(n => n.source === 'REMINDER');
+
   return (
     <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center p-6">
       <div className="max-w-lg w-full text-center">
@@ -31,6 +36,58 @@ const TechDashboard: React.FC = () => {
             Recent Activity
           </h3>
           <p className="text-surface-400 text-sm">No recent activity to show. Check back later!</p>
+        </div>
+
+        {/* Reminders Panel */}
+        <div className="p-6 rounded-2xl bg-white border border-surface-200 shadow-card text-left mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-surface-700 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {t.remindersSectionTitle || 'Reminders'}
+            </h3>
+          </div>
+          
+          {reminders.length === 0 ? (
+            <p className="text-surface-400 text-sm">{t.noReminders || 'No active reminders.'}</p>
+          ) : (
+            <div className="space-y-4">
+              {reminders.map(r => {
+                let title = t.notifTitleReminder;
+                let msg = t.notifMsgReminder;
+                // Try to extract work order name from message if possible
+                const nameMatch = r.message.match(/work order '([^']+)'/i);
+                if (nameMatch && nameMatch[1]) {
+                  msg = msg.replace('{name}', nameMatch[1]);
+                } else {
+                  msg = msg.replace('{name}', '');
+                }
+                return (
+                  <div key={r.id} className={`p-4 rounded-xl border ${!r.read ? 'bg-indigo-50/50 border-indigo-100' : 'bg-surface-50 border-surface-100'} flex flex-col`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-surface-800 text-sm">{title}</h4>
+                      {!r.read && <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block flex-shrink-0"></span>}
+                    </div>
+                    <p className="text-sm text-surface-600 mb-3">{msg}</p>
+                    <div className="flex justify-end gap-2 mt-auto">
+                      <button onClick={() => ctx.removeNotification(r.id)} className="text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg transition-colors font-medium">
+                        {t.delete || 'Delete'}
+                      </button>
+                      {!r.read && (
+                        <button onClick={() => ctx.markRead(r.id)} className="text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors font-medium">
+                          {t.markRead || 'Mark Read'}
+                        </button>
+                      )}
+                      {r.href && (
+                        <Link to={r.href} className="text-xs text-surface-600 hover:text-surface-800 bg-surface-100 hover:bg-surface-200 px-2.5 py-1.5 rounded-lg transition-colors font-medium">
+                          {t.view || 'View'}
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

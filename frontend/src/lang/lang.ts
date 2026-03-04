@@ -1,4 +1,5 @@
 export const en = {
+    view: 'View',
   workOrders: 'Work Orders',
   urgentWorkOrders: 'Urgent Work Orders',
   mileage: 'Mileage',
@@ -187,9 +188,19 @@ export const en = {
   notifMsgWoCreate: 'Work order "{name}" was successfully created.',
   notifMsgUrgentCreate: 'Urgent work order "{name}" was created.',
   notifMsgMileageCreate: 'Mileage entry "{name}" was created.',
+  
+  getRemindersSetting: 'Enable Reminders',
+  profileSettings: 'User Settings',
+  saveSettings: 'Save Settings',
+  remindersSectionTitle: 'Reminders',
+  noReminders: 'No active reminders.',
+  notifTitleReminder: 'Due Soon',
+  notifMsgReminder: 'The work order "{name}" is due tomorrow.',
+  filterReminders: 'Reminders',
 };
 
 export const fr = {
+    view: 'Voir',
   workOrders: 'Ordres de travail',
   urgentWorkOrders: 'Ordres de travail urgents',
   mileage: 'Kilométrage',
@@ -378,4 +389,12 @@ export const fr = {
   notifMsgWoCreate: 'L\'ordre de travail "{name}" a été créé avec succès.',
   notifMsgUrgentCreate: 'L\'ordre de travail urgent "{name}" a été créé.',
   notifMsgMileageCreate: 'L\'entrée de kilométrage "{name}" a été créée.',
+  getRemindersSetting: 'Activer les rappels',
+  profileSettings: 'Paramètres',
+  saveSettings: 'Enregistrer',
+  remindersSectionTitle: 'Rappels',
+  noReminders: 'Aucun rappel actif.',
+  notifTitleReminder: 'Échéance imminente',
+  notifMsgReminder: 'Le bon de travail "{name}" arrive à échéance demain.',
+  filterReminders: 'Rappels',
 };

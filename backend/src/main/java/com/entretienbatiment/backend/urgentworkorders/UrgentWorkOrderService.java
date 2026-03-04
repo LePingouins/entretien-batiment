@@ -4,12 +4,16 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+import com.entretienbatiment.backend.workorders.service.WorkOrderReminderScheduler;
+
 @Service
 public class UrgentWorkOrderService {
     private final UrgentWorkOrderRepository repository;
+    private final WorkOrderReminderScheduler reminderScheduler;
 
-    public UrgentWorkOrderService(UrgentWorkOrderRepository repository) {
+    public UrgentWorkOrderService(UrgentWorkOrderRepository repository, WorkOrderReminderScheduler reminderScheduler) {       
         this.repository = repository;
+        this.reminderScheduler = reminderScheduler;
     }
 
     public Optional<UrgentWorkOrder> findById(Long id) {
@@ -60,7 +64,9 @@ public class UrgentWorkOrderService {
     }
 
     public UrgentWorkOrder save(UrgentWorkOrder urgentWorkOrder) {
-        return repository.save(urgentWorkOrder);
+        UrgentWorkOrder saved = repository.save(urgentWorkOrder);
+        reminderScheduler.checkAndSendReminder(saved);
+        return saved;
     }
 
     public void deleteById(Long id) {

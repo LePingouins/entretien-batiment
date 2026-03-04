@@ -2,7 +2,7 @@ import React from 'react';
 import PageHeader from '../components/PageHeader';
 import { NotificationsContext, NotificationType, NotificationsContextType } from '../context/NotificationsContext';
 import { useNavigate } from 'react-router-dom';
-import { RiFilter3Line, RiCheckDoubleLine, RiNotification4Line, RiCheckLine, RiDeleteBinLine, RiArrowRightLine, RiToolsLine, RiAlarmWarningLine, RiCarLine, RiBroadcastLine, RiInformationLine } from 'react-icons/ri';
+import { RiFilter3Line, RiCheckDoubleLine, RiNotification4Line, RiCheckLine, RiDeleteBinLine, RiArrowRightLine, RiToolsLine, RiAlarmWarningLine, RiCarLine, RiBroadcastLine, RiInformationLine, RiTimeLine } from 'react-icons/ri';
 import { useLang } from '../context/LangContext';
 
 const getNotificationIcon = (source?: string) => {
@@ -11,6 +11,7 @@ const getNotificationIcon = (source?: string) => {
   if (source.includes('urgent')) return RiAlarmWarningLine;
   if (source.includes('mileage')) return RiCarLine;
   if (source.includes('broadcast')) return RiBroadcastLine;
+  if (source.includes('REMINDER')) return RiTimeLine;
   return RiInformationLine;
 };
 
@@ -37,6 +38,16 @@ const getTranslatedNotification = (n: NotificationType, t: any) => {
     if (match) {
       if (t.notifMsgMileageCreate) message = t.notifMsgMileageCreate.replace('{name}', match[1]);
     }
+  } else if (n.source === 'REMINDER') {
+    title = t.notifTitleReminder;
+    message = t.notifMsgReminder;
+    // Try to extract work order name from message if possible
+    const nameMatch = n.message.match(/work order '([^']+)'/i);
+    if (nameMatch && nameMatch[1]) {
+      message = message.replace('{name}', nameMatch[1]);
+    } else {
+      message = message.replace('{name}', '');
+    }
   }
 
   return { title, message };
@@ -60,6 +71,7 @@ const NotificationsPage: React.FC = () => {
     ],
     [t.filterSystemOther]: [
       { key: 'broadcast', label: t.filterBroadcast },
+      { key: 'REMINDER', label: t.filterReminders || 'Reminders' },
       { key: 'other', label: t.filterOther },
     ]
   };

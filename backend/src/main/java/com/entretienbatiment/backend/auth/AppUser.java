@@ -23,6 +23,9 @@ public class AppUser {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Column(name = "get_reminders", nullable = false)
+    private boolean getReminders = true;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -40,4 +43,6 @@ public class AppUser {
     public void setRole(Role role) { this.role = role; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public boolean isGetReminders() { return getReminders; }
+    public void setGetReminders(boolean getReminders) { this.getReminders = getReminders; }
 }

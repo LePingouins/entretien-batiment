@@ -388,3 +388,14 @@ export async function createBroadcast(title: string, message: string, href?: str
   await api.post('/api/notifications/broadcast', { title, message, href });
 }
 
+
+export async function getCurrentUser(): Promise<{ id: number; email: string; role: string; enabled: boolean; remindersEnabled: boolean }> {
+  const res = await api.get('/api/users/me');
+  return res.data;
+}
+
+export async function updateUserSettings(remindersEnabled: boolean): Promise<any> {
+  const res = await api.patch('/api/users/me/settings', { remindersEnabled });
+  return res.data;
+}
+

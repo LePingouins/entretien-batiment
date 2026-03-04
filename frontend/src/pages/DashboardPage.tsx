@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
 import { useBroadcast } from '../context/BroadcastContext';
+import { NotificationsContext, NotificationsContextType } from '../context/NotificationsContext';
+import { useContext } from 'react';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -13,6 +15,9 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   // Add translation hook
   const { t } = useLang();
+  
+  const ctx = useContext(NotificationsContext) as NotificationsContextType;
+  const reminders = ctx.notifications.filter(n => n.source === 'REMINDER');
 
   useEffect(() => {
     getDashboardStats()
@@ -157,6 +162,62 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Reminders Panel */}
+      <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {t.remindersSectionTitle || 'Reminders'}
+          </h2>
+        </div>
+        
+        {reminders.length === 0 ? (
+          <p className="text-slate-500">{t.noReminders || 'No active reminders.'}</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {reminders.map(r => {
+              // Extract work order ID if present to make it clickable or display prettier
+              let title = t.notifTitleReminder;
+              let msg = t.notifMsgReminder;
+              // Try to extract work order name from message if possible
+              const nameMatch = r.message.match(/work order '([^']+)'/i);
+              if (nameMatch && nameMatch[1]) {
+                msg = msg.replace('{name}', nameMatch[1]);
+              } else {
+                msg = msg.replace('{name}', '');
+              }
+              return (
+                <div key={r.id} className={`p-4 rounded-lg border ${!r.read ? 'bg-indigo-50/50 border-indigo-100' : 'bg-slate-50 border-slate-100'} flex flex-col justify-between`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-slate-800">{title}</h4>
+                      {!r.read && <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>}
+                    </div>
+                    <p className="text-sm text-slate-600 mb-4">{msg}</p>
+                  </div>
+                  <div className="flex justify-end gap-2 mt-auto">
+                    <button onClick={() => ctx.removeNotification(r.id)} className="text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors">
+                      {t.delete || 'Delete'}
+                    </button>
+                    {!r.read && (
+                      <button onClick={() => ctx.markRead(r.id)} className="text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded transition-colors">
+                        {t.markRead || 'Mark Read'}
+                      </button>
+                    )}
+                    {r.href && (
+                      <Link to={r.href} className="text-xs text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded transition-colors">
+                        {t.view || 'View'}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

@@ -35,13 +35,13 @@ public class AdminUserController {
         user.setEnabled(true);
 
         AppUser saved = userRepo.save(user);
-        return new UserResponse(saved.getId(), saved.getEmail(), saved.getRole(), saved.isEnabled());
+        return new UserResponse(saved.getId(), saved.getEmail(), saved.getRole(), saved.isEnabled(), saved.isGetReminders(), saved.isGetReminders());
     }
 
     @GetMapping
     public List<UserResponse> list() {
         return userRepo.findAll().stream()
-                .map(u -> new UserResponse(u.getId(), u.getEmail(), u.getRole(), u.isEnabled()))
+                .map(u -> new UserResponse(u.getId(), u.getEmail(), u.getRole(), u.isEnabled(), u.isGetReminders(), u.isGetReminders()))
                 .toList();
     }
 
@@ -50,6 +50,6 @@ public class AdminUserController {
         AppUser user = userRepo.findById(id).orElseThrow();
         user.setEnabled(false);
         AppUser saved = userRepo.save(user);
-        return new UserResponse(saved.getId(), saved.getEmail(), saved.getRole(), saved.isEnabled());
+        return new UserResponse(saved.getId(), saved.getEmail(), saved.getRole(), saved.isEnabled(), saved.isGetReminders(), saved.isGetReminders());
     }
 }
