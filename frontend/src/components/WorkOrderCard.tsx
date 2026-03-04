@@ -81,7 +81,6 @@ interface WorkOrderCardComponentProps {
 
 const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchived }: WorkOrderCardComponentProps) => {
   const { colorScheme } = React.useContext(ColorSchemeContext);
-  const { addNotification } = React.useContext(NotificationsContext);
   const avatarUrl = (userId: number) => `https://api.dicebear.com/7.x/identicon/svg?seed=${userId}`;
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
   // Use relative URL for attachments (works with proxy in dev/preview)
@@ -277,7 +276,7 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchi
                   const api = (await import('../lib/api')).default;
                   await api.delete(`/api/admin/work-orders/${workOrder.id}`);
                   try {
-                    addNotification('Work Order Deleted', `Work order "${workOrder.title}" was deleted.`, '/admin/work-orders', 'workorder-delete');
+                    // notification removed
                   } catch (err) {
                     // ignore notification errors
                   }

@@ -1,5 +1,6 @@
 package com.entretienbatiment.backend.urgentworkorders;
 
+import com.entretienbatiment.backend.notifications.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -10,9 +11,11 @@ import java.util.List;
 @RequestMapping("/api/urgent-work-orders")
 public class UrgentWorkOrderController {
     private final UrgentWorkOrderService service;
+    private final NotificationService notificationService;
 
-    public UrgentWorkOrderController(UrgentWorkOrderService service) {
+    public UrgentWorkOrderController(UrgentWorkOrderService service, NotificationService notificationService) {
         this.service = service;
+        this.notificationService = notificationService;
     }
 
     @GetMapping
@@ -79,7 +82,16 @@ public class UrgentWorkOrderController {
                 throw new RuntimeException("Failed to store file", e);
             }
         }
-        return service.save(urgentWorkOrder);
+        UrgentWorkOrder saved = service.save(urgentWorkOrder);
+        
+        notificationService.notifyAdmins(
+                "New Urgent Work Order",
+                "Urgent work order \"" + saved.getTitle() + "\" was created.",
+                "/admin/urgent-work-orders/" + saved.getId(),
+                "urgent-create"
+        );
+
+        return saved;
     }
 
     @PatchMapping("/{id}")

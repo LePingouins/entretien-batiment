@@ -1,5 +1,6 @@
 package com.entretienbatiment.backend.mileage;
 
+import com.entretienbatiment.backend.notifications.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import com.entretienbatiment.backend.workorders.domain.WorkOrder;
@@ -17,6 +18,9 @@ public class MileageEntryController {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @GetMapping
     public List<MileageEntry> getAll() {
@@ -72,7 +76,15 @@ public class MileageEntryController {
             UrgentWorkOrder uwo = entityManager.find(UrgentWorkOrder.class, urgentWorkOrderId);
             entry.setUrgentWorkOrder(uwo);
         }
-        return repository.save(entry);
+        MileageEntry saved = repository.save(entry);
+        
+        notificationService.notifyAdmins(
+                "Mileage Entry Created",
+                "Mileage entry \"#" + saved.getId() + "\" was created.",
+                "/admin/mileage",
+                "mileage-create"
+        );
+        return saved;
     }
 
     @PutMapping("/{id}")

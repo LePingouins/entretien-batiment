@@ -38,7 +38,6 @@ const MileagePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { t, lang } = useLang();
   const { colorScheme } = useContext(ColorSchemeContext);
-  const { addNotification } = useContext(NotificationsContext);
 
   useEffect(() => {
     // If action=create, auto-create a new entry
@@ -66,7 +65,7 @@ const MileagePage: React.FC = () => {
             urgentWorkOrderId: created.urgentWorkOrderId,
           }]);
             try {
-              addNotification('Mileage Entry Created', `Mileage entry "${created.id ? '#'+created.id : created.date}" was created.`, '/admin/mileage', 'mileage-create');
+              // notification removed
             } catch (err) {
               // ignore notification errors
             }
@@ -131,7 +130,7 @@ const MileagePage: React.FC = () => {
           urgentWorkOrderId: created.urgentWorkOrderId,
         }]);
           try {
-            addNotification('Mileage Entry Created', `Mileage entry "${created.id ? '#'+created.id : created.date}" was created.`, '/admin/mileage', 'mileage-create');
+            // notification removed
           } catch (err) {
             // ignore
           }
@@ -196,7 +195,7 @@ const MileagePage: React.FC = () => {
       .then(() => {
         setEntries(entries.filter(e => e.id !== id));
         try {
-          addNotification('Mileage Entry Deleted', `Mileage entry #${id} was deleted.`, '/admin/mileage', 'mileage-delete');
+          // notification removed
         } catch (err) {
           // ignore
         }

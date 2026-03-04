@@ -22,7 +22,7 @@ const TechLayout: React.FC = () => {
             <span className="font-bold text-base sm:text-lg tracking-tight text-surface-900">Entretien-Bâtiment</span>
           </div>
           <nav className="flex items-center gap-2">
-            <Link to="/tech" className="px-3 py-1.5 rounded-lg text-sm font-medium text-surface-600 hover:text-surface-900 hover:bg-surface-100 transition-colors">Dashboard</Link>
+            <Link to="/tech" className="px-3 py-1.5 rounded-lg text-sm font-medium text-surface-600 hover:text-surface-900 hover:bg-surface-100 transition-colors">{t.dashboardTitle}</Link>
             <div className="w-px h-5 mx-1 bg-surface-200"></div>
             <NotificationsIcon />
             <button onClick={handleLogout} className="px-3 py-1.5 rounded-lg text-sm font-medium text-surface-500 hover:text-red-600 hover:bg-red-50 transition-colors">Logout</button>

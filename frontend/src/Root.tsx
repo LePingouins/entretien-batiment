@@ -5,6 +5,8 @@ import { LangProvider } from './context/LangContext';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import AppRouter from './routes/AppRouter';
 import NotificationsProvider from './context/NotificationsContext';
+import { BroadcastProvider } from './context/BroadcastContext';
+import BroadcastOverlay from './components/BroadcastOverlay';
 import KeyboardNavigator from './lib/KeyboardNavigator';
 
 const queryClient = new QueryClient();
@@ -16,7 +18,10 @@ function Root() {
         <AuthProvider>
           <KeyboardNavigator />
           <NotificationsProvider>
-            <AppRouter />
+            <BroadcastProvider>
+              <AppRouter />
+              <BroadcastOverlay />
+            </BroadcastProvider>
           </NotificationsProvider>
           <PWAUpdatePrompt />
         </AuthProvider>

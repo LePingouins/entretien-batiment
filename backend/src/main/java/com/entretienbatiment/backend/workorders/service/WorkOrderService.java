@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import com.entretienbatiment.backend.workorders.domain.WorkOrderStatus;
 import com.entretienbatiment.backend.workorders.domain.WorkOrderPriority;
+import com.entretienbatiment.backend.notifications.NotificationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -29,10 +30,12 @@ public class WorkOrderService {
 
     private final WorkOrderRepository repo;
     private final AppUserRepository users;
+    private final NotificationService notificationService;
 
-    public WorkOrderService(WorkOrderRepository repo, AppUserRepository users) {
+    public WorkOrderService(WorkOrderRepository repo, AppUserRepository users, NotificationService notificationService) {
         this.repo = repo;
         this.users = users;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -52,6 +55,14 @@ public class WorkOrderService {
 
         // Assign sortIndex for proper Kanban positioning based on priority
         assignSortIndexForNewWorkOrder(saved);
+
+        // Notify Admins
+        notificationService.notifyAdmins(
+                "New Work Order Created",
+                "Work order \"" + saved.getTitle() + "\" was successfully created.",
+                "/admin/work-orders/" + saved.getId(),
+                "workorder-create"
+        );
 
         return toResponse(saved);
     }
@@ -572,6 +583,13 @@ public class WorkOrderService {
 
         // Assign sortIndex for proper Kanban positioning based on priority
         assignSortIndexForNewWorkOrder(saved);
+
+        notificationService.notifyAdmins(
+            "New Work Order Created",
+            "A new base work order '" + saved.getTitle() + "' was triggered.",
+            "/admin/work-orders/" + saved.getId(),
+            "workorder-create"
+        );
 
         // Return response with attachment info
         return toResponseWithAttachment(saved, attachmentFilename, attachmentContentType);

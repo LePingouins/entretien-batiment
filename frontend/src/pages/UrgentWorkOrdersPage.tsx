@@ -300,7 +300,7 @@ const DroppableColumnComponent = ({ status, children, colorScheme }: DroppableCo
 
 
 function UrgentWorkOrdersPage() {
-    const { addNotification } = React.useContext(NotificationsContext);
+    const { markAllRead } = React.useContext(NotificationsContext);
     const [searchParams, setSearchParams] = useSearchParams();
     // Modal state for creating urgent work order
     const [showModal, setShowModal] = React.useState(false);
@@ -448,7 +448,6 @@ function UrgentWorkOrdersPage() {
 
         reset();
         setShowModal(false);
-        addNotification('New Urgent Work Order', `Urgent work order "${data.title}" was created.`, `/admin/urgent-work-orders/${created.id}`, 'urgent-create');
         queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
       } catch (err) {
         alert('Failed to create urgent work order');
@@ -710,7 +709,7 @@ function UrgentWorkOrdersPage() {
                   try {
                     await deleteUrgentWorkOrder(id);
                     try {
-                      addNotification('Urgent Work Order Deleted', `Urgent work order "${found?.title || id}" was deleted.`, '/admin/urgent-work-orders', 'urgent-delete');
+                      // notification removed
                     } catch (err) {
                       // ignore notification errors
                     }
@@ -861,7 +860,7 @@ function UrgentWorkOrdersPage() {
                 try {
                 await deleteUrgentWorkOrder(editModal.workOrder.id);
                 try {
-                  addNotification('Urgent Work Order Deleted', `Urgent work order "${editModal.workOrder.title}" was deleted.`, '/admin/urgent-work-orders', 'urgent-delete');
+                  // notification removed
                 } catch (err) {
                   // ignore notification errors
                 }

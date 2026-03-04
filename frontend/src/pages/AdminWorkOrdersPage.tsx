@@ -194,7 +194,7 @@ const priorityOptions = Object.values(WorkOrderPriority);
 
 function AdminWorkOrdersPage() {
   const queryClient = useQueryClient();
-  const { addNotification } = React.useContext(NotificationsContext);
+  const { markAllRead } = React.useContext(NotificationsContext);
   // Fix: Provide missing handlers if not already defined
   const handleMaterialsChanged = React.useCallback(() => {
     // Implement logic or leave empty if not needed
@@ -279,7 +279,6 @@ function AdminWorkOrdersPage() {
         const created = res.data;
         setShowModal(false);
         reset();
-        addNotification('New Work Order Created', `Work order "${data.title}" was successfully created.`, `/admin/work-orders/${created.id}`, 'workorder-create');
         queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
       } catch (err) {
         alert('Failed to create work order');
@@ -741,7 +740,7 @@ function AdminWorkOrdersPage() {
                 try {
                   await api.delete(`/api/admin/work-orders/${editModal.workOrder.id}`);
                   try {
-                    addNotification('Work Order Deleted', `Work order "${editModal.workOrder.title}" was deleted.`, '/admin/work-orders', 'workorder-delete');
+                    // notification removed here
                   } catch (err) {
                     // ignore notification errors
                   }

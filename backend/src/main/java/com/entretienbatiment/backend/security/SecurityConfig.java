@@ -85,6 +85,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // ✅ allow preflight
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/ws-notifications/**").permitAll()
                 // Make files endpoint public for download
                 .requestMatchers("/api/files/workorders/**").permitAll()
                 

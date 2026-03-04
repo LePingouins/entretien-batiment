@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getDashboardStats } from '../lib/api';
 import { DashboardStats } from '../types/api';
 import { Link } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
+import { useAuth } from '../context/AuthContext';
+import { useBroadcast } from '../context/BroadcastContext';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -106,10 +109,14 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
         {/* Quick Actions Panel */}
         <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6">
-          <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <QuickActionIcon className="h-5 w-5 text-yellow-500" />
-            {t.dashboardQuickActions}
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <QuickActionIcon className="h-5 w-5 text-yellow-500" />
+              {t.dashboardQuickActions}
+            </h2>
+            {/* Admin-only broadcast creation */}
+            <AdminBroadcastControls />
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
              <Link to="/admin/work-orders?action=create" className="flex flex-col items-center justify-center p-4 rounded-lg bg-slate-50 hover:bg-blue-50 transition-colors group border border-slate-100">
                 <div className="p-3 rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-200 transition-colors mb-2">
@@ -150,6 +157,53 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AdminBroadcastControls() {
+  const { role } = useAuth();
+  const { broadcast, createBroadcast, clearBroadcast } = useBroadcast();
+  const [open, setOpen] = useState(false);
+  const [msg, setMsg] = useState('');
+  const { t } = useLang();
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  if (role !== 'ADMIN') return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      {broadcast ? (
+        <>
+          <button onClick={() => clearBroadcast()} className="px-3 py-1 text-sm bg-red-50 text-red-700 rounded">{t.clearBroadcast}</button>
+          <button onClick={() => setOpen(true)} className="px-3 py-1 text-sm bg-amber-50 text-amber-800 rounded">{t.edit}</button>
+        </>
+      ) : (
+        <button onClick={() => setOpen(true)} className="px-3 py-1 text-sm bg-amber-50 text-amber-800 rounded">{t.createBroadcastBtn}</button>
+      )}
+
+      {open && createPortal(
+        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 99999 }}>
+          <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} style={{ zIndex: 99990 }} />
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg" style={{ zIndex: 99999 }}>
+            <h3 className="text-lg font-bold mb-2">{t.createBroadcastTitle}</h3>
+            <textarea value={msg} onChange={(e) => setMsg(e.target.value)} className="w-full min-h-[120px] p-2 border rounded mb-4" />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setOpen(false)} className="px-4 py-2 rounded bg-slate-100">{t.cancel}</button>
+              <button onClick={() => { createBroadcast(msg || ''); setMsg(''); setOpen(false); }} className="px-4 py-2 rounded bg-amber-500 text-white">{t.save}</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

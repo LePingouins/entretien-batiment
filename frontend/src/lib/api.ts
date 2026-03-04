@@ -363,3 +363,28 @@ export async function getDashboardStats(): Promise<import('../types/api').Dashbo
   const res = await api.get('/api/admin/dashboard');
   return res.data;
 }
+
+// --- Notifications API ---
+import type { NotificationType } from '../context/NotificationsContext';
+
+export async function getNotifications(): Promise<NotificationType[]> {
+  const res = await api.get<NotificationType[]>('/api/notifications');
+  return res.data;
+}
+
+export async function markNotificationAsRead(id: string): Promise<void> {
+  await api.put(`/api/notifications/${id}/read`);
+}
+
+export async function markAllNotificationsAsRead(): Promise<void> {
+  await api.put('/api/notifications/read');
+}
+
+export async function deleteNotification(id: string): Promise<void> {
+  await api.delete(`/api/notifications/${id}`);
+}
+
+export async function createBroadcast(title: string, message: string, href?: string): Promise<void> {
+  await api.post('/api/notifications/broadcast', { title, message, href });
+}
+
