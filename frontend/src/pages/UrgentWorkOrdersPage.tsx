@@ -11,6 +11,7 @@ import api, { getUrgentWorkOrders, updateUrgentWorkOrder, deleteUrgentWorkOrder,
 import { UrgentWorkOrderResponse, UrgentWorkOrderRequest, UrgentWorkOrderStatus } from '../types/api';
 import { ColorSchemeType } from './AdminWorkOrders/colorSchemes';
 import { useLang } from '../context/LangContext';
+import { NotificationsContext } from '../context/NotificationsContext';
 import { WorkOrderCard } from '../components/WorkOrderCard';
 import { UrgentWorkOrderCard } from '../components/UrgentWorkOrderCard';
 import { SharedEditModal } from '../components/SharedEditModal';
@@ -299,6 +300,7 @@ const DroppableColumnComponent = ({ status, children, colorScheme }: DroppableCo
 
 
 function UrgentWorkOrdersPage() {
+    const { addNotification } = React.useContext(NotificationsContext);
     const [searchParams, setSearchParams] = useSearchParams();
     // Modal state for creating urgent work order
     const [showModal, setShowModal] = React.useState(false);
@@ -445,6 +447,7 @@ function UrgentWorkOrdersPage() {
 
         reset();
         setShowModal(false);
+        addNotification('New Urgent Work Order', `Urgent work order "${data.title}" was created.`);
         queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
       } catch (err) {
         alert('Failed to create urgent work order');

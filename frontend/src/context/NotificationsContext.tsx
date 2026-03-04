@@ -1,31 +1,51 @@
 import React from 'react';
 
+export type NotificationType = {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+  read: boolean;
+};
+
 type NotificationsContextType = {
   count: number;
+  notifications: NotificationType[];
   markAllRead: () => void;
-  // For future: add function to fetch or push notifications
+  addNotification: (title: string, message: string) => void;
 };
 
 export const NotificationsContext = React.createContext<NotificationsContextType>({
   count: 0,
+  notifications: [],
   markAllRead: () => {},
+  addNotification: () => {},
 });
 
 export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [count, setCount] = React.useState<number>(0);
+  const [notifications, setNotifications] = React.useState<NotificationType[]>([]);
 
-  // Mock live updates: increment count every 10s by 0-2 items
-  React.useEffect(() => {
-    const id = setInterval(() => {
-      setCount((c) => c + Math.floor(Math.random() * 3));
-    }, 10000);
-    return () => clearInterval(id);
+  const addNotification = React.useCallback((title: string, message: string) => {
+    setNotifications(prev => [
+      {
+        id: Math.random().toString(36).substring(2, 9),
+        title,
+        message,
+        date: new Date().toISOString(),
+        read: false
+      },
+      ...prev
+    ]);
   }, []);
 
-  const markAllRead = React.useCallback(() => setCount(0), []);
+  const markAllRead = React.useCallback(() => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }, []);
+
+  const count = notifications.filter(n => !n.read).length;
 
   return (
-    <NotificationsContext.Provider value={{ count, markAllRead }}>
+    <NotificationsContext.Provider value={{ count, notifications, markAllRead, addNotification }}>
       {children}
     </NotificationsContext.Provider>
   );

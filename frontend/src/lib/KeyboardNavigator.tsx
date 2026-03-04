@@ -10,6 +10,22 @@ function isFormElement(el: Element | null) {
   return false;
 }
 
+function shouldSkipKeyboardNav(el: Element | null) {
+  if (!el) return false;
+  // Respect existing form element checks
+  if (isFormElement(el)) return true;
+
+  // Allow authors to opt-out on specific elements
+  if ((el as HTMLElement).hasAttribute('data-keyboard-skip')) return true;
+
+  // Skip common ARIA widgets that expect arrow keys
+  const role = (el as HTMLElement).getAttribute('role') || '';
+  const skipRoles = new Set(['slider', 'listbox', 'combobox', 'menu', 'tablist', 'tab', 'grid', 'tree']);
+  if (skipRoles.has(role)) return true;
+
+  return false;
+}
+
 function getFocusableElements(): HTMLElement[] {
   const selector = [
     'a[href]:not([tabindex="-1"])',
@@ -59,8 +75,8 @@ export default function KeyboardNavigator() {
     const onKeyDown = (e: KeyboardEvent) => {
       const active = document.activeElement as Element | null;
 
-      // Ignore when user is typing in form controls
-      if (isFormElement(active)) return;
+      // Ignore when user is typing in form controls or focused widget opted-out
+      if (shouldSkipKeyboardNav(active)) return;
       // If a modal/dialog with aria-modal is open, restrict focusables to that dialog
       let focusables = getFocusableElements();
       const modal = document.querySelector('[aria-modal="true"]');
@@ -93,18 +109,25 @@ export default function KeyboardNavigator() {
       const len = focusables.length;
 
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        const nextIdx = idx === -1 ? 0 : (idx + 1) % len;
+        // Only move focus when an existing focusable is active (don't steal arrows when nothing is focused)
+        if (idx === -1) return;
+        const nextIdx = (idx + 1) % len;
         const next = focusables[nextIdx];
-        next?.focus();
+        if (next) {
+          e.preventDefault();
+          next.focus();
+        }
         return;
       }
 
       if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        const prevIdx = idx === -1 ? len - 1 : (idx - 1 + len) % len;
+        if (idx === -1) return;
+        const prevIdx = (idx - 1 + len) % len;
         const prev = focusables[prevIdx];
-        prev?.focus();
+        if (prev) {
+          e.preventDefault();
+          prev.focus();
+        }
         return;
       }
 

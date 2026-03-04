@@ -128,8 +128,15 @@ const AdminLayout: React.FC = () => {
               </svg>
             </button>
             <NotificationsIcon />
-            <div className="flex items-center gap-1.5">
-              <span className={`text-xs font-medium ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>{lang === 'en' ? 'EN' : 'FR'}</span>
+            <div className="flex items-center gap-1.5 z-40">
+              <span
+                onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+                role="button"
+                tabIndex={0}
+                className={`text-xs font-medium cursor-pointer select-none ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}
+              >
+                {lang === 'en' ? 'EN' : 'FR'}
+              </span>
               <label
                 ref={langLabelRef}
                 tabIndex={0}
@@ -139,10 +146,12 @@ const AdminLayout: React.FC = () => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     setLang(lang === 'fr' ? 'en' : 'fr');
-                    setTimeout(() => { try { langLabelRef.current?.focus(); } catch {} }, 0);
                   }
                 }}
-                onClick={() => { setLang(lang === 'fr' ? 'en' : 'fr'); setTimeout(() => { try { langLabelRef.current?.focus(); } catch {} }, 0); }}
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  setLang(lang === 'fr' ? 'en' : 'fr'); 
+                }}
                 className="relative inline-flex items-center cursor-pointer"
               >
                 <input

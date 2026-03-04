@@ -5,6 +5,7 @@ import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority } f
 import { WorkOrderCard } from '../components/WorkOrderCard';
 import { MaterialsDrawer } from '../components/MaterialsDrawer';
 import { useLang } from '../context/LangContext';
+import { NotificationsContext } from '../context/NotificationsContext';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { ColorSchemeType, getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
 import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
@@ -233,6 +234,7 @@ function AdminWorkOrdersPage() {
     return () => window.removeEventListener("keydown", handleEsc);
   }, [showModal]);
   const { t } = useLang();
+  const { addNotification } = React.useContext(NotificationsContext);
   // Get color scheme from context
   const outlet = useOutletContext<{ colorScheme: ColorSchemeType }>();
   const colorScheme: ColorSchemeType = outlet?.colorScheme || 'default';
@@ -275,6 +277,7 @@ function AdminWorkOrdersPage() {
         await api.post('/api/admin/work-orders', formData);
         setShowModal(false);
         reset();
+        addNotification('New Work Order Created', `Work order "${data.title}" was successfully created.`);
         queryClient.invalidateQueries({ queryKey: ['adminWorkOrders'] });
       } catch (err) {
         alert('Failed to create work order');
