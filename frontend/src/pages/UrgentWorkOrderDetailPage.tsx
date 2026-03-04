@@ -65,7 +65,7 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
     <div className={`p-6 text-center py-20 flex items-center justify-center ${colorScheme === 'dark' ? 'bg-surface-950 text-red-400' : 'bg-surface-50 text-red-600'}`}>
       <div>
         <h2 className="text-2xl font-bold mb-2">{t.errorLoading}</h2>
-        <p>{error ? t.errorLoadingUrgentWorkOrder : t.urgentWorkOrderNotFound}</p>
+        <p>{error ? t.errorLoadingWorkOrder : t.workOrderNotFound}</p>
         <Link to="/admin/urgent-work-orders" className="mt-4 inline-block text-brand-500 hover:underline">
           &larr; {t.backToUrgentWorkOrders}
         </Link>
@@ -128,10 +128,10 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
 
         <div className={`rounded-xl shadow-card overflow-hidden border ${isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-gray-100'}`}>
           {/* Linked Mileage Section */}
-          {mileageEntries && mileageEntries.length > 0 && (
+          {mileageEntries && mileageEntries.filter((entry: any) => entry.urgentWorkOrderId === workOrder.id).length > 0 && (
             <div className="p-6 border-b border-dashed border-purple-200 bg-purple-50/50">
               <h2 className="text-xl font-bold mb-2 text-purple-700">{t.linkedMileageEntry}</h2>
-              {mileageEntries.map((entry: any) => (
+              {mileageEntries.filter((entry: any) => entry.urgentWorkOrderId === workOrder.id).map((entry: any) => (
                 <div key={entry.id} className="mb-2">
                   <div className="flex items-center flex-wrap gap-x-6 gap-y-1">
                     <span className="flex items-center gap-x-1"><span className="font-semibold">Date:</span><span>{entry.date}</span></span>

@@ -127,10 +127,10 @@ const WorkOrderDetailPage: React.FC = () => {
             <div className={`rounded-xl shadow-card overflow-hidden border ${isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-gray-100'}`}>
               {/* ...existing code... */}
               {/* Linked Mileage Section */}
-              {mileageEntries && mileageEntries.length > 0 && (
+              {mileageEntries && mileageEntries.filter((entry: any) => entry.workOrderId === workOrder.id).length > 0 && (
                 <div className="p-6 border-b border-dashed border-purple-200 bg-purple-50/50">
                   <h2 className="text-xl font-bold mb-2 text-purple-700">{t.linkedMileageEntry}</h2>
-                  {mileageEntries.map((entry: any) => (
+                  {mileageEntries.filter((entry: any) => entry.workOrderId === workOrder.id).map((entry: any) => (
                     <div key={entry.id} className="mb-2">
                       <div className="flex items-center flex-wrap gap-x-6 gap-y-1">
                         <span className="flex items-center gap-x-1"><span className="font-semibold">Date:</span><span>{entry.date}</span></span>
