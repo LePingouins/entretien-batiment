@@ -12,6 +12,7 @@ export async function reorderUrgentWorkOrders(status: string, orderedIds: number
   await api.patch('/api/urgent-work-orders/reorder', { status, orderedIds });
 }
 import axios from 'axios';
+import { clearStoredAuth, getRememberMePreference, getStoredAccessToken, getStoredAuth, setStoredAuth } from './authStorage';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '',
@@ -46,7 +47,7 @@ const processQueue = (error: any, token: string | null = null) => {
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = getStoredAccessToken();
     if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -80,15 +81,16 @@ api.interceptors.response.use(
       try {
         const res = await api.post('/api/auth/refresh');
         const { accessToken } = res.data;
-        // Decode the new token and update role/userId in localStorage
+        // Decode the new token and refresh stored role/user ID in the active auth storage.
         const decoded = decodeJwt(accessToken);
-        localStorage.setItem('accessToken', accessToken);
-        if (decoded.role) {
-          localStorage.setItem('role', decoded.role);
-        }
-        if (decoded.sub) {
-          localStorage.setItem('userId', decoded.sub);
-        }
+        const rememberMe = getRememberMePreference();
+        const previous = getStoredAuth();
+        setStoredAuth(
+          accessToken,
+          decoded.role || previous.role,
+          decoded.sub || previous.userId,
+          rememberMe
+        );
         // Dispatch a storage event so AuthContext can update its state
         window.dispatchEvent(new Event('auth-storage-update'));
         processQueue(null, accessToken);
@@ -96,9 +98,8 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('role');
-        localStorage.removeItem('userId');
+        clearStoredAuth();
+        window.dispatchEvent(new Event('auth-storage-update'));
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {
@@ -432,8 +433,13 @@ export async function deleteNotification(id: string): Promise<void> {
   await api.delete(`/api/notifications/${id}`);
 }
 
-export async function createBroadcast(title: string, message: string, href?: string): Promise<void> {
-  await api.post('/api/notifications/broadcast', { title, message, href });
+export async function createBroadcast(title: string, message: string, href?: string, targetUserId?: number | null): Promise<void> {
+  await api.post('/api/notifications/broadcast', {
+    title,
+    message,
+    href,
+    targetUserId: targetUserId ?? null,
+  });
 }
 
 export async function createBugReport(

@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthResponse, UserRole } from '../types/api';
+import { clearStoredAuth, getStoredAuth, setStoredAuth } from '../lib/authStorage';
 
 interface AuthContextType {
   accessToken: string | null;
   role: UserRole | null;
   userId: number | null;
-  login: (data: AuthResponse) => void;
+  login: (data: AuthResponse, rememberMe: boolean) => void;
   logout: () => void;
 }
 
@@ -18,16 +19,18 @@ function parseRole(value: string | null): UserRole | null {
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('accessToken'));
-  const [role, setRole] = useState<UserRole | null>(parseRole(localStorage.getItem('role')));
-  const [userId, setUserId] = useState<number | null>(localStorage.getItem('userId') ? Number(localStorage.getItem('userId')) : null);
+  const initial = getStoredAuth();
+  const [accessToken, setAccessToken] = useState<string | null>(initial.accessToken);
+  const [role, setRole] = useState<UserRole | null>(parseRole(initial.role));
+  const [userId, setUserId] = useState<number | null>(initial.userId ? Number(initial.userId) : null);
 
-  // Sync state from localStorage on mount and when storage is updated (e.g., after token refresh)
+  // Sync state from active auth storage on mount and when storage is updated.
   useEffect(() => {
     const syncFromStorage = () => {
-      setAccessToken(localStorage.getItem('accessToken'));
-      setRole(parseRole(localStorage.getItem('role')));
-      setUserId(localStorage.getItem('userId') ? Number(localStorage.getItem('userId')) : null);
+      const stored = getStoredAuth();
+      setAccessToken(stored.accessToken);
+      setRole(parseRole(stored.role));
+      setUserId(stored.userId ? Number(stored.userId) : null);
     };
 
     // Listen for custom event dispatched by api.ts after token refresh
@@ -41,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const login = (data: AuthResponse) => {
+  const login = (data: AuthResponse, rememberMe: boolean) => {
     const { accessToken } = data;
     // Decode JWT to extract role and userId
     function decodeJwt(token: string) {
@@ -60,19 +63,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAccessToken(accessToken);
     setRole(parseRole(decodedRole));
     setUserId(Number(decodedUserId) || null);
-    
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('role', String(decodedRole));
-    localStorage.setItem('userId', String(decodedUserId));
+
+    setStoredAuth(accessToken, String(decodedRole), String(decodedUserId), rememberMe);
+    window.dispatchEvent(new Event('auth-storage-update'));
   };
 
   const logout = () => {
     setAccessToken(null);
     setRole(null);
     setUserId(null);
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('role');
-    localStorage.removeItem('userId');
+    clearStoredAuth();
+    window.dispatchEvent(new Event('auth-storage-update'));
   };
 
   return (

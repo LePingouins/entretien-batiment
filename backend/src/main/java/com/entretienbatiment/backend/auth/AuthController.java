@@ -26,10 +26,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest req, HttpServletResponse res) {
-        AuthService.LoginResult result = authService.login(req.email(), req.password());
-
-        int maxAgeSeconds = refreshDays * 24 * 3600;
-        cookieUtil.setRefreshCookie(res, result.refreshTokenValue(), maxAgeSeconds);
+        AuthService.LoginResult result = authService.login(req.email(), req.password(), req.rememberMeEnabled());
+        writeRefreshCookie(res, result.refreshTokenValue(), result.persistent());
 
         return new LoginResponse(result.accessToken());
     }
@@ -38,9 +36,7 @@ public class AuthController {
     public LoginResponse refresh(HttpServletRequest request, HttpServletResponse res) {
         String cookieValue = readCookie(request, cookieUtil.getCookieName());
         AuthService.RefreshResult result = authService.refresh(cookieValue);
-
-        int maxAgeSeconds = refreshDays * 24 * 3600;
-        cookieUtil.setRefreshCookie(res, result.refreshTokenValue(), maxAgeSeconds);
+        writeRefreshCookie(res, result.refreshTokenValue(), result.persistent());
 
         return new LoginResponse(result.accessToken());
     }
@@ -59,5 +55,14 @@ public class AuthController {
             if (name.equals(c.getName())) return c.getValue();
         }
         return null;
+    }
+
+    private void writeRefreshCookie(HttpServletResponse res, String refreshTokenValue, boolean persistent) {
+        if (persistent) {
+            int maxAgeSeconds = refreshDays * 24 * 3600;
+            cookieUtil.setPersistentRefreshCookie(res, refreshTokenValue, maxAgeSeconds);
+            return;
+        }
+        cookieUtil.setSessionRefreshCookie(res, refreshTokenValue);
     }
 }

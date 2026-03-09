@@ -23,6 +23,9 @@ public class RefreshToken {
     @Column(nullable = false)
     private boolean revoked = false;
 
+    @Column(nullable = false)
+    private boolean persistent = false;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -35,4 +38,6 @@ public class RefreshToken {
     public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
     public boolean isRevoked() { return revoked; }
     public void setRevoked(boolean revoked) { this.revoked = revoked; }
+    public boolean isPersistent() { return persistent; }
+    public void setPersistent(boolean persistent) { this.persistent = persistent; }
 }

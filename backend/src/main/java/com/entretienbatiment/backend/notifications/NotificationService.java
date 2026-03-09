@@ -127,10 +127,32 @@ public class NotificationService {
         pushNotificationUpdates(recipients);
     }
 
-    public void createBroadcast(String title, String message, String href) {
-        // Create a notification for every user
+    public void createBroadcast(String title, String message, String href, Long targetUserId) {
+        if (targetUserId != null) {
+            AppUser targetUser = userRepository.findById(targetUserId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target user not found"));
+            if (!targetUser.isEnabled()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Target user is disabled");
+            }
+
+            Notification n = new Notification();
+            n.setId(UUID.randomUUID().toString());
+            n.setTargetUserId(targetUser.getId());
+            n.setTitle(title);
+            n.setMessage(message);
+            n.setHref(href);
+            n.setSource("broadcast");
+            notificationRepository.save(n);
+            webSocketSender.sendNotificationUpdate(targetUser.getId());
+            return;
+        }
+
+        // Create a notification for every enabled user
         List<AppUser> allUsers = userRepository.findAll();
         for (AppUser user : allUsers) {
+            if (!user.isEnabled()) {
+                continue;
+            }
             Notification n = new Notification();
             n.setId(UUID.randomUUID().toString());
             n.setTargetUserId(user.getId());

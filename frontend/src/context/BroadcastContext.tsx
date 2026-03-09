@@ -9,7 +9,7 @@ export type Broadcast = {
 
 type BroadcastContextType = {
   broadcast: Broadcast | null;
-  createBroadcast: (message: string) => void;
+  createBroadcast: (message: string, targetUserId?: number | null) => Promise<void>;
   clearBroadcast: () => void;
   dismissBroadcastForThisUser: () => void;
 };
@@ -32,10 +32,10 @@ export const BroadcastProvider = ({ children }: { children: ReactNode }) => {
     createdAt: active.date
   } : null;
 
-  const createBroadcast = async (message: string) => {
+  const createBroadcast = async (message: string, targetUserId?: number | null) => {
     try {
       if (notificationsCtx && typeof notificationsCtx.addBroadcastNotification === 'function') {
-        notificationsCtx.addBroadcastNotification('', 'Broadcast', message, '/notifications');
+        await notificationsCtx.addBroadcastNotification('', 'Broadcast', message, '/notifications', targetUserId);
       }
     } catch (e) {}
   };

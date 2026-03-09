@@ -23,15 +23,26 @@ public class CookieUtil {
         return cookieName;
     }
 
-    public void setRefreshCookie(HttpServletResponse res, String value, int maxAgeSeconds) {
+    public void setPersistentRefreshCookie(HttpServletResponse res, String value, int maxAgeSeconds) {
+        Cookie cookie = baseRefreshCookie(value);
+        cookie.setMaxAge(maxAgeSeconds);
+        res.addCookie(cookie);
+    }
+
+    public void setSessionRefreshCookie(HttpServletResponse res, String value) {
+        Cookie cookie = baseRefreshCookie(value);
+        // Session cookie: no explicit Max-Age, browser clears it on session end.
+        res.addCookie(cookie);
+    }
+
+    private Cookie baseRefreshCookie(String value) {
         Cookie cookie = new Cookie(cookieName, value);
         cookie.setHttpOnly(true);
         cookie.setSecure(secure);
         cookie.setPath("/api/auth");
-        cookie.setMaxAge(maxAgeSeconds);
         // SameSite is not directly supported by Cookie API in a portable way.
         // For local dev, this is fine. For prod, we can set SameSite=None via header if needed.
-        res.addCookie(cookie);
+        return cookie;
     }
 
     public void clearRefreshCookie(HttpServletResponse res) {

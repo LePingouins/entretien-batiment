@@ -16,22 +16,25 @@ public class AuthService {
     private final JwtService jwtService;
 
     private final int refreshDays;
+    private final int sessionRefreshHours;
 
     public AuthService(
             AppUserRepository userRepo,
             RefreshTokenRepository refreshRepo,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            @Value("${security.jwt.refresh-days}") int refreshDays
+            @Value("${security.jwt.refresh-days}") int refreshDays,
+            @Value("${security.jwt.session-refresh-hours:24}") int sessionRefreshHours
     ) {
         this.userRepo = userRepo;
         this.refreshRepo = refreshRepo;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshDays = refreshDays;
+        this.sessionRefreshHours = sessionRefreshHours;
     }
 
-    public LoginResult login(String email, String rawPassword) {
+    public LoginResult login(String email, String rawPassword, boolean rememberMe) {
         AppUser user = userRepo.findByEmailIgnoreCase(email)
                 .filter(AppUser::isEnabled)
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
@@ -50,11 +53,12 @@ public class AuthService {
         RefreshToken rt = new RefreshToken();
         rt.setUser(user);
         rt.setTokenHash(refreshHash);
-        rt.setExpiresAt(Instant.now().plusSeconds(refreshDays * 24L * 3600L));
+        rt.setPersistent(rememberMe);
+        rt.setExpiresAt(Instant.now().plusSeconds(refreshTtlSeconds(rememberMe)));
         rt.setRevoked(false);
         refreshRepo.save(rt);
 
-        return new LoginResult(accessToken, refreshValue);
+        return new LoginResult(accessToken, refreshValue, rememberMe);
     }
 
     public RefreshResult refresh(String refreshCookieValue) {
@@ -81,6 +85,7 @@ public class AuthService {
         if (!user.isEnabled()) {
             throw new RuntimeException("User disabled");
         }
+        boolean persistent = existing.isPersistent();
 
         String newAccessToken = jwtService.createAccessToken(user);
 
@@ -90,11 +95,12 @@ public class AuthService {
         RefreshToken rotated = new RefreshToken();
         rotated.setUser(user);
         rotated.setTokenHash(newRefreshHash);
-        rotated.setExpiresAt(Instant.now().plusSeconds(refreshDays * 24L * 3600L));
+        rotated.setPersistent(persistent);
+        rotated.setExpiresAt(Instant.now().plusSeconds(refreshTtlSeconds(persistent)));
         rotated.setRevoked(false);
         refreshRepo.save(rotated);
 
-        return new RefreshResult(newAccessToken, newRefreshValue);
+        return new RefreshResult(newAccessToken, newRefreshValue, persistent);
     }
 
     public void logout(String refreshCookieValue) {
@@ -108,6 +114,13 @@ public class AuthService {
         });
     }
 
-    public record LoginResult(String accessToken, String refreshTokenValue) {}
-    public record RefreshResult(String accessToken, String refreshTokenValue) {}
+    private long refreshTtlSeconds(boolean persistent) {
+        if (persistent) {
+            return refreshDays * 24L * 3600L;
+        }
+        return sessionRefreshHours * 3600L;
+    }
+
+    public record LoginResult(String accessToken, String refreshTokenValue, boolean persistent) {}
+    public record RefreshResult(String accessToken, String refreshTokenValue, boolean persistent) {}
 }

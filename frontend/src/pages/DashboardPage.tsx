@@ -1,7 +1,8 @@
 import { useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getDashboardStats } from '../lib/api';
+import { getAdminUsers, getDashboardStats } from '../lib/api';
 import { DashboardStats } from '../types/api';
+import { AdminUserResponse } from '../types/api';
 import { Link } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
@@ -227,6 +228,11 @@ function AdminBroadcastControls() {
   const { broadcast, createBroadcast, clearBroadcast } = useBroadcast();
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState('');
+  const [audience, setAudience] = useState<'ALL' | 'USER'>('ALL');
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [users, setUsers] = useState<AdminUserResponse[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
   const { t } = useLang();
   const { colorScheme } = useContext(ColorSchemeContext);
   const isDark = colorScheme === 'dark';
@@ -239,6 +245,39 @@ function AdminBroadcastControls() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setUsersError(null);
+    setLoadingUsers(true);
+    getAdminUsers()
+      .then((items) => {
+        setUsers(items.filter((u) => u.enabled));
+      })
+      .catch(() => {
+        setUsersError(t.broadcastUsersLoadError || 'Failed to load users.');
+      })
+      .finally(() => setLoadingUsers(false));
+  }, [open, t.broadcastUsersLoadError]);
+
+  useEffect(() => {
+    if (audience === 'ALL') {
+      setSelectedUserId('');
+    }
+  }, [audience]);
+
+  const canSave = msg.trim().length > 0 && (audience === 'ALL' || !!selectedUserId);
+
+  const handleSave = async () => {
+    if (!canSave) return;
+    const targetUserId = audience === 'USER' ? Number(selectedUserId) : null;
+    await createBroadcast(msg.trim(), targetUserId);
+    setMsg('');
+    setAudience('ALL');
+    setSelectedUserId('');
+    setOpen(false);
+  };
 
   if (role !== 'ADMIN' && role !== 'DEVELOPPER') return null;
 
@@ -258,6 +297,57 @@ function AdminBroadcastControls() {
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} style={{ zIndex: 99990 }} />
           <div className={`rounded-lg shadow-lg p-6 w-full max-w-lg ${isDark ? 'bg-surface-900 border border-surface-700 text-surface-100' : 'bg-white'} `} style={{ zIndex: 99999 }}>
             <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-surface-100' : ''}`}>{t.createBroadcastTitle}</h3>
+            <div className="mb-4">
+              <label className={`block mb-2 text-sm font-medium ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>
+                {t.broadcastAudienceLabel || 'Send to'}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAudience('ALL')}
+                  className={`px-3 py-2 rounded border text-sm ${audience === 'ALL'
+                    ? (isDark ? 'bg-amber-700 border-amber-600 text-white' : 'bg-amber-500 border-amber-500 text-white')
+                    : (isDark ? 'bg-surface-800 border-surface-700 text-surface-200' : 'bg-white border-slate-300 text-slate-700')}`}
+                >
+                  {t.broadcastAudienceAll || 'All users'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAudience('USER')}
+                  className={`px-3 py-2 rounded border text-sm ${audience === 'USER'
+                    ? (isDark ? 'bg-amber-700 border-amber-600 text-white' : 'bg-amber-500 border-amber-500 text-white')
+                    : (isDark ? 'bg-surface-800 border-surface-700 text-surface-200' : 'bg-white border-slate-300 text-slate-700')}`}
+                >
+                  {t.broadcastAudienceUser || 'Specific user'}
+                </button>
+              </div>
+            </div>
+
+            {audience === 'USER' && (
+              <div className="mb-4">
+                <label className={`block mb-2 text-sm font-medium ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>
+                  {t.broadcastSelectUserLabel || 'Select user'}
+                </label>
+                {loadingUsers ? (
+                  <p className={`text-sm ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.broadcastUsersLoading || 'Loading users...'}</p>
+                ) : (
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    size={Math.min(8, Math.max(users.length + 1, 4))}
+                    className={`w-full p-2 border rounded max-h-48 overflow-y-auto ${isDark ? 'bg-surface-800 border-surface-700 text-surface-100' : 'bg-white border-slate-300 text-slate-800'}`}
+                  >
+                    <option value="">{t.broadcastSelectUserPlaceholder || 'Choose a user'}</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={String(u.id)}>
+                        {u.email} ({u.role})
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {usersError && <p className="mt-1 text-xs text-red-500">{usersError}</p>}
+              </div>
+            )}
             <textarea 
               value={msg} 
               onChange={(e) => setMsg(e.target.value)} 
@@ -266,7 +356,13 @@ function AdminBroadcastControls() {
             />
             <div className="flex justify-end gap-2">
               <button onClick={() => setOpen(false)} className={`px-4 py-2 rounded ${isDark ? 'bg-surface-800 text-surface-200 hover:bg-surface-700' : 'bg-slate-100'}`}>{t.cancel}</button>
-              <button onClick={() => { createBroadcast(msg || ''); setMsg(''); setOpen(false); }} className={`px-4 py-2 rounded ${isDark ? 'bg-amber-700 text-white hover:bg-amber-800' : 'bg-amber-500 text-white'}`}>{t.save}</button>
+              <button
+                onClick={handleSave}
+                disabled={!canSave}
+                className={`px-4 py-2 rounded ${isDark ? 'bg-amber-700 text-white hover:bg-amber-800 disabled:bg-amber-900/50' : 'bg-amber-500 text-white disabled:bg-amber-300'} disabled:cursor-not-allowed`}
+              >
+                {t.save}
+              </button>
             </div>
           </div>
         </div>,

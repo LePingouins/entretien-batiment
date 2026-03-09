@@ -12,6 +12,7 @@ import { getRoleHomePath } from '../lib/pageAccess';
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  rememberMe: z.boolean().optional(),
 });
 
 type LoginForm = z.infer<typeof schema>;
@@ -33,7 +34,7 @@ function LoginPage() {
     setError(null);
     try {
       const res = await api.post<AuthResponse>('/api/auth/login', data);
-      login(res.data);
+      login(res.data, Boolean(data.rememberMe));
       // Redirect will happen in useEffect below
     } catch (err: any) {
       const apiError: ErrorResponse = err.response?.data;
@@ -88,6 +89,20 @@ function LoginPage() {
               placeholder="Enter your password"
             />
             {errors.password && <div className="text-red-500 text-xs mt-1">{errors.password.message}</div>}
+          </div>
+
+          <div className="rounded-xl border border-surface-200 bg-surface-50/70 p-3">
+            <label className="inline-flex items-center gap-2 text-sm text-surface-700">
+              <input
+                type="checkbox"
+                {...register('rememberMe')}
+                className="h-4 w-4 rounded border-surface-300 text-brand-600 focus:ring-brand-500"
+              />
+              <span>{t.rememberMeLabel || 'Remember me for 30 days'}</span>
+            </label>
+            <p className="mt-2 text-xs text-surface-500">
+              {t.rememberMeInfo || 'If enabled, you will stay signed in for one month. After that, you will need to log in again.'}
+            </p>
           </div>
         </div>
 

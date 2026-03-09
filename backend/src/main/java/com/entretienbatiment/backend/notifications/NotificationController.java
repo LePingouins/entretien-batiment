@@ -2,6 +2,7 @@ package com.entretienbatiment.backend.notifications;
 
 import com.entretienbatiment.backend.security.CurrentUser;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -55,16 +56,14 @@ public class NotificationController {
         return ResponseEntity.ok().build();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/broadcast")
     public ResponseEntity<Void> createBroadcast(@RequestBody BroadcastRequest req) {
-        Long userId = currentUser.userIdOrNull();
-        if (userId == null) return ResponseEntity.status(401).build();
-        // Ideally we check if userId is ADMIN here
-        notificationService.createBroadcast(req.title(), req.message(), req.href());
+        notificationService.createBroadcast(req.title(), req.message(), req.href(), req.targetUserId());
         return ResponseEntity.ok().build();
     }
 
-    public record BroadcastRequest(String title, String message, String href) {}
+    public record BroadcastRequest(String title, String message, String href, Long targetUserId) {}
 
     public record NotificationDto(
             String id,

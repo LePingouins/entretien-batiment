@@ -24,7 +24,7 @@ export type NotificationsContextType = {
   toggleFilter: (key: string) => void;
   resetFilters: () => void;
   markAllRead: () => void;
-  addBroadcastNotification: (id: string, title: string, message: string, href?: string) => void;
+  addBroadcastNotification: (id: string, title: string, message: string, href?: string, targetUserId?: number | null) => void;
   removeNotification: (id: string) => void;
   removeBroadcastNotification: (id: string) => void; // Added to the type
   removeBugReportNotification: (reportId: number) => void;
@@ -173,9 +173,9 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (e) {}
   }, [filters]);
 
-  const addBroadcastNotification = React.useCallback(async (id: string, title: string, message: string, href?: string) => {
+  const addBroadcastNotification = React.useCallback(async (id: string, title: string, message: string, href?: string, targetUserId?: number | null) => {
     try {
-      await createBroadcast(title, message, href);
+      await createBroadcast(title, message, href, targetUserId);
       fetchNotifications();
     } catch (e) {
       console.error(e);
