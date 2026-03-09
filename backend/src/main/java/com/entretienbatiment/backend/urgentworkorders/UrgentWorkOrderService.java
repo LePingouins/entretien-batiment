@@ -72,7 +72,18 @@ public class UrgentWorkOrderService {
     }
 
     public void deleteById(Long id) {
-        repository.deleteById(id);
+        // Delete the associated attachment file if it exists
+        repository.findById(id).ifPresent(uwo -> {
+            String filename = uwo.getAttachmentFilename();
+            if (filename != null && !filename.isBlank()) {
+                try {
+                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get("uploads", "workorders").resolve(filename));
+                } catch (Exception ignored) {
+                    // Keep request successful even if stale file cannot be removed.
+                }
+            }
+            repository.deleteById(id);
+        });
     }
 
     public void archive(Long id) {

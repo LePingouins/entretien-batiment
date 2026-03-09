@@ -613,7 +613,9 @@ public class WorkOrderService {
     @Transactional
     public void delete(Long id) {
         WorkOrder wo = repo.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "work order not found"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "work order not found"));
+        // Delete the associated attachment file if it exists
+        deleteAttachmentFileQuietly(wo.getAttachmentFilename());
         repo.delete(wo);
     }
 
