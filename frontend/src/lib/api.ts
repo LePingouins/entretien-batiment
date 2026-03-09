@@ -394,6 +394,24 @@ export async function getAnalyticsStats(): Promise<import('../types/api').Analyt
   return res.data;
 }
 
+export async function getDevelopperDebugDashboard(
+  limit = 50
+): Promise<import('../types/api').DevelopperDebugDashboardResponse> {
+  const res = await api.get<import('../types/api').DevelopperDebugDashboardResponse>('/api/developper/debug/errors', {
+    params: { limit },
+  });
+  return res.data;
+}
+
+export async function getDevelopperDebugErrorDetail(
+  fingerprint: string
+): Promise<import('../types/api').DevelopperDebugErrorDetailResponse> {
+  const res = await api.get<import('../types/api').DevelopperDebugErrorDetailResponse>(
+    `/api/developper/debug/errors/${encodeURIComponent(fingerprint)}`
+  );
+  return res.data;
+}
+
 // --- Notifications API ---
 import type { NotificationType } from '../context/NotificationsContext';
 

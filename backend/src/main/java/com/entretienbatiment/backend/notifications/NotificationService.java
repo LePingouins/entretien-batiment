@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -147,7 +148,7 @@ public class NotificationService {
     }
 
     public void notifyAdmins(String title, String message, String href, String source, Long bugReportId) {
-        List<AppUser> admins = userRepository.findByRole(com.entretienbatiment.backend.auth.Role.ADMIN);
+        List<AppUser> admins = userRepository.findByRoleIn(Set.of(Role.ADMIN, Role.DEVELOPPER));
         for (AppUser admin : admins) {
             if (!admin.isEnabled() || admin.getRole() == null) {
                 continue;
@@ -262,9 +263,15 @@ public class NotificationService {
             return true;
         }
 
-        return recipientRuleRepository.findBySourceAndRole(source, role)
+        Role effectiveRole = effectiveRuleRole(role);
+
+        return recipientRuleRepository.findBySourceAndRole(source, effectiveRole)
                 .map(NotificationRecipientRule::isEnabled)
-                .orElse(DEFAULT_ROLE_RULES.getOrDefault(source, ALL_ROLES).contains(role));
+                .orElse(DEFAULT_ROLE_RULES.getOrDefault(source, ALL_ROLES).contains(effectiveRole));
+    }
+
+    private Role effectiveRuleRole(Role role) {
+        return role != null && role.isAdminLike() ? Role.ADMIN : role;
     }
 
     private static Map<String, EnumSet<Role>> defaultRoleRules() {

@@ -8,6 +8,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class AdminSeeder {
 
+    private static final String DEFAULT_PASSWORD = "Horizon";
+    private static final String DEVELOPPER_EMAIL = "oligoudreault@gmail.com";
+
     @Bean
     CommandLineRunner seedAdmin(AppUserRepository repo, PasswordEncoder encoder) {
         return args -> {
@@ -21,15 +24,40 @@ public class AdminSeeder {
                 System.out.println("✅ Seeded ADMIN: admin@entretien.local / ChangeMe123! (change ASAP)");
             }
 
+            repo.findByEmailIgnoreCase(DEVELOPPER_EMAIL).ifPresentOrElse(existing -> {
+                boolean changed = false;
+                if (existing.getRole() != Role.DEVELOPPER) {
+                    existing.setRole(Role.DEVELOPPER);
+                    changed = true;
+                }
+                if (!existing.isEnabled()) {
+                    existing.setEnabled(true);
+                    changed = true;
+                }
+                if (changed) {
+                    repo.save(existing);
+                    System.out.println("✅ Enforced DEVELOPPER role for: " + DEVELOPPER_EMAIL);
+                }
+            }, () -> {
+                AppUser developper = new AppUser();
+                developper.setEmail(DEVELOPPER_EMAIL);
+                developper.setRole(Role.DEVELOPPER);
+                developper.setPasswordHash(encoder.encode(DEFAULT_PASSWORD));
+                developper.setEnabled(true);
+                developper.setGetReminders(true);
+                repo.save(developper);
+                System.out.println("✅ Seeded DEVELOPPER: " + DEVELOPPER_EMAIL + " / " + DEFAULT_PASSWORD);
+            });
+
             if (repo.findByEmailIgnoreCase("andre@gmail.com").isEmpty()) {
                 AppUser technician = new AppUser();
                 technician.setEmail("andre@gmail.com");
                 technician.setRole(Role.TECH);
-                technician.setPasswordHash(encoder.encode("Horizon"));
+                technician.setPasswordHash(encoder.encode(DEFAULT_PASSWORD));
                 technician.setEnabled(true);
                 technician.setGetReminders(true);
                 repo.save(technician);
-                System.out.println("✅ Seeded TECH: andre@gmail.com / Horizon");
+                System.out.println("✅ Seeded TECH: andre@gmail.com / " + DEFAULT_PASSWORD);
             }
         };
     }

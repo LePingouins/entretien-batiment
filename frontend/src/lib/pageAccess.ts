@@ -45,7 +45,7 @@ const NON_ADMIN_FALLBACK_ORDER: PageKey[] = [
 ];
 
 export function getRoleBasePath(role: UserRole | null | undefined): '/admin' | '/tech' | '/worker' {
-  if (role === 'ADMIN') return '/admin';
+  if (role === 'ADMIN' || role === 'DEVELOPPER') return '/admin';
   if (role === 'WORKER') return '/worker';
   return '/tech';
 }
@@ -61,5 +61,5 @@ export function getRolePagePath(role: UserRole | null | undefined, pageKey: Page
 }
 
 export function getRoleFallbackOrder(role: UserRole | null | undefined): PageKey[] {
-  return role === 'ADMIN' ? ADMIN_FALLBACK_ORDER : NON_ADMIN_FALLBACK_ORDER;
+  return role === 'ADMIN' || role === 'DEVELOPPER' ? ADMIN_FALLBACK_ORDER : NON_ADMIN_FALLBACK_ORDER;
 }

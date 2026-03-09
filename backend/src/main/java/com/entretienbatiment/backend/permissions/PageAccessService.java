@@ -62,7 +62,7 @@ public class PageAccessService {
     public List<PageAccessEntryDto> getCurrentUserPageAccess(Authentication authentication) {
         AppUser user = requireAuthenticatedUser(authentication);
         return toPageEntries(resolveEffectiveAccess(
-                user.getRole(),
+                effectiveAccessRole(user.getRole()),
                 loadStoredRoleRules(),
                 mapOverridesByPage(userPageAccessOverrideRepository.findByUserId(user.getId()))
         ));
@@ -195,6 +195,11 @@ public class PageAccessService {
             return false;
         }
 
+        Role effectiveRole = effectiveAccessRole(user.getRole());
+        if (effectiveRole == null) {
+            return false;
+        }
+
         UserPageAccessOverride override = userPageAccessOverrideRepository
                 .findByUserIdAndPageKey(user.getId(), pageKey)
                 .orElse(null);
@@ -203,9 +208,9 @@ public class PageAccessService {
             return override.isAllowed();
         }
 
-        return rolePageAccessRepository.findByPageKeyAndRole(pageKey, user.getRole())
+        return rolePageAccessRepository.findByPageKeyAndRole(pageKey, effectiveRole)
                 .map(RolePageAccess::isAllowed)
-                .orElse(defaultAllowed(user.getRole(), pageKey));
+            .orElse(defaultAllowed(effectiveRole, pageKey));
     }
 
     private AppUser requireAuthenticatedUser(Authentication authentication) {
@@ -309,7 +314,7 @@ public class PageAccessService {
                 state = override.isAllowed() ? OverrideState.ALLOW : OverrideState.DENY;
                 effectiveAllowed = override.isAllowed();
             } else {
-                effectiveAllowed = resolveRoleAllowed(pageKey, user.getRole(), storedRules);
+                effectiveAllowed = resolveRoleAllowed(pageKey, effectiveAccessRole(user.getRole()), storedRules);
             }
 
             pages.add(new UserPageAccessItemDto(pageKey, state, effectiveAllowed));
@@ -328,6 +333,13 @@ public class PageAccessService {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
     }
 
+    private Role effectiveAccessRole(Role role) {
+        if (role == null) {
+            return null;
+        }
+        return role.isAdminLike() ? Role.ADMIN : role;
+    }
+
     private static Map<Role, Set<String>> defaultAllowedByRole() {
         Map<Role, Set<String>> defaults = new EnumMap<>(Role.class);
 
@@ -341,6 +353,8 @@ public class PageAccessService {
                 PAGE_USERS,
                 PAGE_NOTIFICATIONS
         ));
+
+        defaults.put(Role.DEVELOPPER, defaults.get(Role.ADMIN));
 
         defaults.put(Role.TECH, Set.of(
                 PAGE_DASHBOARD,

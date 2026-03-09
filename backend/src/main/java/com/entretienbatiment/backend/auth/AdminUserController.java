@@ -17,6 +17,7 @@ import java.util.Locale;
 public class AdminUserController {
 
     private static final String DEFAULT_PASSWORD = "Horizon";
+    private static final String LOCKED_DEVELOPPER_EMAIL = "oligoudreault@gmail.com";
 
     private final AppUserRepository userRepo;
     private final PasswordEncoder encoder;
@@ -36,6 +37,9 @@ public class AdminUserController {
         }
         if (req.role() == null) {
             throw badRequest("role is required");
+        }
+        if (req.role() == Role.DEVELOPPER) {
+            throw badRequest("DEVELOPPER role is reserved and cannot be invited");
         }
         if (userRepo.findByEmailIgnoreCase(normalizedEmail).isPresent()) {
             throw badRequest("email already exists");
@@ -96,7 +100,7 @@ public class AdminUserController {
     @PatchMapping("/{id}/deactivate")
     public UserResponse deactivate(@PathVariable Long id, Authentication auth) {
         AppUser user = getUserOrThrow(id);
-        if (isSelf(auth, user) && user.getRole() == Role.ADMIN) {
+        if (isSelf(auth, user) && user.getRole() != null && user.getRole().isAdminLike()) {
             throw badRequest("You cannot deactivate your own admin account");
         }
         user.setEnabled(false);
@@ -122,7 +126,13 @@ public class AdminUserController {
         }
 
         AppUser user = getUserOrThrow(id);
-        if (isSelf(auth, user) && req.role() != Role.ADMIN) {
+        if (req.role() == Role.DEVELOPPER && !isLockedDevelopperEmail(user.getEmail())) {
+            throw badRequest("DEVELOPPER role is reserved for " + LOCKED_DEVELOPPER_EMAIL);
+        }
+        if (isLockedDevelopperAccount(user) && req.role() != Role.DEVELOPPER) {
+            throw badRequest("DEVELOPPER role is locked to " + LOCKED_DEVELOPPER_EMAIL);
+        }
+        if (isSelf(auth, user) && !req.role().isAdminLike()) {
             throw badRequest("You cannot remove your own admin role");
         }
 
@@ -137,6 +147,12 @@ public class AdminUserController {
         String normalizedEmail = normalizeEmail(req.email());
         if (normalizedEmail == null) {
             throw badRequest("email is required");
+        }
+        if (user.getRole() == Role.DEVELOPPER && !isLockedDevelopperEmail(normalizedEmail)) {
+            throw badRequest("DEVELOPPER account email is locked to " + LOCKED_DEVELOPPER_EMAIL);
+        }
+        if (isLockedDevelopperEmail(normalizedEmail) && user.getRole() != Role.DEVELOPPER) {
+            throw badRequest("Email " + LOCKED_DEVELOPPER_EMAIL + " is reserved for the DEVELOPPER account");
         }
         if (!user.getEmail().equalsIgnoreCase(normalizedEmail)
                 && userRepo.findByEmailIgnoreCase(normalizedEmail).isPresent()) {
@@ -177,6 +193,9 @@ public class AdminUserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id, Authentication auth) {
         AppUser user = getUserOrThrow(id);
+        if (isLockedDevelopperAccount(user)) {
+            throw badRequest("The reserved DEVELOPPER account cannot be deleted");
+        }
         if (isSelf(auth, user)) {
             throw badRequest("You cannot delete your own account");
         }
@@ -211,9 +230,17 @@ public class AdminUserController {
     }
 
     private String notificationsPathForRole(Role role) {
-        if (role == Role.ADMIN) return "/admin/notifications";
+        if (role != null && role.isAdminLike()) return "/admin/notifications";
         if (role == Role.TECH) return "/tech/notifications";
         return "/worker/notifications";
+    }
+
+    private boolean isLockedDevelopperAccount(AppUser user) {
+        return user.getRole() == Role.DEVELOPPER && isLockedDevelopperEmail(user.getEmail());
+    }
+
+    private boolean isLockedDevelopperEmail(String email) {
+        return email != null && LOCKED_DEVELOPPER_EMAIL.equalsIgnoreCase(email.trim());
     }
 
     private ResponseStatusException badRequest(String message) {

@@ -19,6 +19,7 @@ import UrgentWorkOrdersPage from '../pages/UrgentWorkOrdersPage';
 import DashboardPage from '../pages/DashboardPage';
 import AnalyticsPage from '../pages/AnalyticsPage';
 import AdminUsersPage from '../pages/AdminUsersPage';
+import DevelopperDebugPage from '../pages/DevelopperDebugPage';
 import NoAccessPage from '../pages/NoAccessPage';
 
 import { Navigate } from 'react-router-dom';
@@ -41,7 +42,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'no-access',
-        element: <ProtectedRoute allowedRoles={['ADMIN', 'TECH', 'WORKER']} />,
+        element: <ProtectedRoute allowedRoles={['ADMIN', 'DEVELOPPER', 'TECH', 'WORKER']} />,
         children: [
           {
             index: true,
@@ -51,7 +52,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'admin',
-        element: <ProtectedRoute requiredRole="ADMIN" />,
+        element: <ProtectedRoute allowedRoles={['ADMIN', 'DEVELOPPER']} />,
         children: [
           {
             path: '',
@@ -136,6 +137,16 @@ const router = createBrowserRouter([
                     <AdminUsersPage />
                   </RequirePageAccess>
                 ),
+              },
+              {
+                path: 'debug',
+                element: <ProtectedRoute requiredRole="DEVELOPPER" />,
+                children: [
+                  {
+                    index: true,
+                    element: <DevelopperDebugPage />,
+                  },
+                ],
               },
             ],
           },

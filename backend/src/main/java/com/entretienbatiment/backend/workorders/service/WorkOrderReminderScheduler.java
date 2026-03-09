@@ -161,6 +161,7 @@ public class WorkOrderReminderScheduler {
 
         return switch (user.getRole()) {
             case ADMIN -> "/admin";
+            case DEVELOPPER -> "/admin";
             case WORKER -> "/worker";
             default -> "/tech";
         };

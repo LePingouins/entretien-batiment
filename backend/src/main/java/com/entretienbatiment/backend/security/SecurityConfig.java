@@ -2,6 +2,7 @@ package com.entretienbatiment.backend.security;
 
 import com.entretienbatiment.backend.auth.AppUser;
 import com.entretienbatiment.backend.auth.AppUserRepository;
+import com.entretienbatiment.backend.auth.Role;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -40,12 +41,18 @@ public class SecurityConfig {
             AppUser u = appUserRepository.findByEmailIgnoreCase(username)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-            // role in DB is "ADMIN" or "TECH"
-            return User.withUsername(u.getEmail())
+            User.UserBuilder builder = User.withUsername(u.getEmail())
                     .password(u.getPasswordHash())
-                    .roles(u.getRole().name())            // -> ROLE_ADMIN / ROLE_TECH
-                    .disabled(!u.isEnabled())
-                    .build();
+                    .disabled(!u.isEnabled());
+
+            if (u.getRole() == Role.DEVELOPPER) {
+                // DEVELOPPER keeps its own role while inheriting ADMIN permissions.
+                builder.roles(Role.DEVELOPPER.name(), Role.ADMIN.name());
+            } else {
+                builder.roles(u.getRole().name());
+            }
+
+            return builder.build();
         };
     }
 
@@ -99,6 +106,9 @@ public class SecurityConfig {
                 
                 // Admin endpoints - strict
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                // Developer-only endpoints
+                .requestMatchers("/api/developper/**").hasRole("DEVELOPPER")
                 
                 // Tech dashboard - strict
                 .requestMatchers("/api/tech/**").hasRole("TECH")

@@ -43,6 +43,7 @@ const PAGE_KEY_ORDER: PageKey[] = [
 
 const FALLBACK_ALLOWED_BY_ROLE: Record<UserRole, PageKey[]> = {
   ADMIN: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS'],
+  DEVELOPPER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS'],
   TECH: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS'],
   WORKER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS'],
 };
@@ -142,9 +143,10 @@ const AdminUsersPage: React.FC = () => {
 
   const roleLabel = React.useCallback((role: UserRole): string => {
     if (role === 'ADMIN') return t.adminUsersRoleAdmin || 'Admin';
+    if (role === 'DEVELOPPER') return t.adminUsersRoleDevelopper || 'Developper';
     if (role === 'TECH') return t.adminUsersRoleTech || 'Technician';
     return t.adminUsersRoleWorker || 'Worker';
-  }, [t.adminUsersRoleAdmin, t.adminUsersRoleTech, t.adminUsersRoleWorker]);
+  }, [t.adminUsersRoleAdmin, t.adminUsersRoleDevelopper, t.adminUsersRoleTech, t.adminUsersRoleWorker]);
 
   const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -305,7 +307,7 @@ const AdminUsersPage: React.FC = () => {
       return FALLBACK_ALLOWED_BY_ROLE[role].includes(pageKey);
     }
 
-    if (role === 'ADMIN') return rule.admin;
+    if (role === 'ADMIN' || role === 'DEVELOPPER') return rule.admin;
     if (role === 'TECH') return rule.tech;
     return rule.worker;
   }, [pageRoleRules]);
@@ -527,6 +529,7 @@ const AdminUsersPage: React.FC = () => {
                   {users.map((user) => {
                     const isSelf = user.id === userId;
                     const rowBusy = busyUserId === user.id;
+                    const isLockedDevelopper = user.role === 'DEVELOPPER';
 
                     return (
                       <tr key={user.id} className={`border-t ${isDark ? 'border-surface-800' : 'border-surface-100'}`}>
@@ -542,16 +545,22 @@ const AdminUsersPage: React.FC = () => {
                         </td>
 
                         <td className="px-5 py-4">
-                          <select
-                            value={user.role}
-                            disabled={rowBusy}
-                            onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
-                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${isDark ? 'bg-surface-950 border-surface-700 text-surface-100' : 'bg-white border-surface-200 text-surface-900'} ${rowBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          >
-                            {ROLE_OPTIONS.map((role) => (
-                              <option key={role} value={role}>{roleLabel(role)}</option>
-                            ))}
-                          </select>
+                          {isLockedDevelopper ? (
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-amber-900/30 text-amber-300' : 'bg-amber-50 text-amber-700'}`}>
+                              {roleLabel(user.role)}
+                            </span>
+                          ) : (
+                            <select
+                              value={user.role}
+                              disabled={rowBusy}
+                              onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
+                              className={`px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${isDark ? 'bg-surface-950 border-surface-700 text-surface-100' : 'bg-white border-surface-200 text-surface-900'} ${rowBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            >
+                              {ROLE_OPTIONS.map((role) => (
+                                <option key={role} value={role}>{roleLabel(role)}</option>
+                              ))}
+                            </select>
+                          )}
                         </td>
 
                         <td className="px-5 py-4">
@@ -566,8 +575,8 @@ const AdminUsersPage: React.FC = () => {
                           <div className="flex flex-wrap items-center gap-2">
                             <button
                               onClick={() => handleToggleEnabled(user)}
-                              disabled={rowBusy}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${user.enabled ? (isDark ? 'bg-red-900/30 text-red-300 hover:bg-red-900/50' : 'bg-red-50 text-red-700 hover:bg-red-100') : (isDark ? 'bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100')} ${rowBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
+                              disabled={rowBusy || isLockedDevelopper}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${user.enabled ? (isDark ? 'bg-red-900/30 text-red-300 hover:bg-red-900/50' : 'bg-red-50 text-red-700 hover:bg-red-100') : (isDark ? 'bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100')} ${(rowBusy || isLockedDevelopper) ? 'opacity-60 cursor-not-allowed' : ''}`}
                             >
                               {user.enabled
                                 ? (t.adminUsersDeactivate || 'Deactivate')
@@ -576,8 +585,8 @@ const AdminUsersPage: React.FC = () => {
 
                             <button
                               onClick={() => handleEmailChange(user)}
-                              disabled={rowBusy}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isDark ? 'bg-blue-900/30 text-blue-300 hover:bg-blue-900/50' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'} ${rowBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
+                              disabled={rowBusy || isLockedDevelopper}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isDark ? 'bg-blue-900/30 text-blue-300 hover:bg-blue-900/50' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'} ${(rowBusy || isLockedDevelopper) ? 'opacity-60 cursor-not-allowed' : ''}`}
                             >
                               {t.adminUsersChangeEmail || 'Change Email'}
                             </button>
@@ -592,8 +601,8 @@ const AdminUsersPage: React.FC = () => {
 
                             <button
                               onClick={() => handleDeleteUser(user.id)}
-                              disabled={rowBusy || isSelf}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isDark ? 'bg-red-900/30 text-red-300 hover:bg-red-900/50' : 'bg-red-50 text-red-700 hover:bg-red-100'} ${(rowBusy || isSelf) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                              disabled={rowBusy || isSelf || isLockedDevelopper}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isDark ? 'bg-red-900/30 text-red-300 hover:bg-red-900/50' : 'bg-red-50 text-red-700 hover:bg-red-100'} ${(rowBusy || isSelf || isLockedDevelopper) ? 'opacity-60 cursor-not-allowed' : ''}`}
                             >
                               {t.adminUsersDeleteUser || 'Delete'}
                             </button>

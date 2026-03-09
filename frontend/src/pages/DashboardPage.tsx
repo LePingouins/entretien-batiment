@@ -240,7 +240,7 @@ function AdminBroadcastControls() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  if (role !== 'ADMIN') return null;
+  if (role !== 'ADMIN' && role !== 'DEVELOPPER') return null;
 
   return (
     <div className="flex items-center gap-2">

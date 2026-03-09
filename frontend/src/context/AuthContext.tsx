@@ -13,7 +13,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Helper to validate and cast role from storage
 function parseRole(value: string | null): UserRole | null {
-  if (value === 'ADMIN' || value === 'TECH' || value === 'WORKER') return value;
+  if (value === 'ADMIN' || value === 'DEVELOPPER' || value === 'TECH' || value === 'WORKER') return value;
   return null;
 }
 

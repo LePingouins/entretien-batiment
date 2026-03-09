@@ -2,6 +2,7 @@ package com.entretienbatiment.backend.security;
 
 import com.entretienbatiment.backend.auth.AppUser;
 import com.entretienbatiment.backend.auth.AppUserRepository;
+import com.entretienbatiment.backend.auth.Role;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,12 +62,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                     String effectiveUserId = user.getId() != null ? user.getId().toString() : userId;
                     String effectiveRole = user.getRole().name();
+                    List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + effectiveRole));
+                    if (user.getRole() == Role.DEVELOPPER) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+                    }
 
                     log.info("JWT Auth: email={}, role={}, userId={}", user.getEmail(), effectiveRole, effectiveUserId);
                     var auth = new UsernamePasswordAuthenticationToken(
                             user.getEmail(),
                             null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + effectiveRole))
+                            authorities
                     );
                     auth.setDetails(effectiveUserId);
                     SecurityContextHolder.getContext().setAuthentication(auth);

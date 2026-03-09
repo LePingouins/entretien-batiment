@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -59,7 +60,7 @@ public class BugReportService {
                 saved.getId()
         );
 
-        if (reporter.getRole() != Role.ADMIN) {
+        if (reporter.getRole() == null || !reporter.getRole().isAdminLike()) {
             notificationService.notifyUser(
                 reporter.getId(),
                 "Bug Report / Feature Request",
@@ -77,7 +78,7 @@ public class BugReportService {
     public BugReportConfirmDto confirmReport(Long reportId, Long adminUserId) {
         AppUser admin = requireEnabledUser(adminUserId);
 
-        if (admin.getRole() != Role.ADMIN) {
+        if (admin.getRole() == null || !admin.getRole().isAdminLike()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
         }
 
@@ -144,7 +145,7 @@ public class BugReportService {
         AppUser actor = requireEnabledUser(actorUserId);
         BugReportFeature report = requireReport(reportId);
 
-        boolean actorIsAdmin = actor.getRole() == Role.ADMIN;
+        boolean actorIsAdmin = actor.getRole() != null && actor.getRole().isAdminLike();
         boolean actorIsReporter = Objects.equals(report.getReporterUserId(), actorUserId);
         if (!actorIsAdmin && !actorIsReporter) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
@@ -171,7 +172,7 @@ public class BugReportService {
         }
 
         if (actorIsAdmin) {
-            List<Long> adminUserIds = new ArrayList<>(userRepository.findByRole(Role.ADMIN).stream()
+            List<Long> adminUserIds = new ArrayList<>(userRepository.findByRoleIn(Set.of(Role.ADMIN, Role.DEVELOPPER)).stream()
                     .map(AppUser::getId)
                     .filter(Objects::nonNull)
                     .distinct()
@@ -252,7 +253,7 @@ public class BugReportService {
     }
 
     private boolean canManageReport(AppUser actor, BugReportFeature report, Long actorUserId) {
-        if (actor.getRole() == Role.ADMIN) {
+        if (actor.getRole() != null && actor.getRole().isAdminLike()) {
             return true;
         }
         return Objects.equals(report.getReporterUserId(), actorUserId);

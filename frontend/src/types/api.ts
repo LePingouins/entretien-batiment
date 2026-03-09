@@ -66,7 +66,7 @@ export interface PageResponse<T> {
   size: number;
 }
 
-export type UserRole = 'ADMIN' | 'TECH' | 'WORKER';
+export type UserRole = 'ADMIN' | 'DEVELOPPER' | 'TECH' | 'WORKER';
 
 export interface AdminUserResponse {
   id: number;
@@ -245,4 +245,38 @@ export interface BugReportConfirmedResponse {
   reporterUserId: number;
   reportTitle: string;
   alreadyConfirmed: boolean;
+}
+
+export interface DebugErrorOccurrence {
+  id: number;
+  occurredAt: string;
+  requestMethod: string;
+  requestPath: string;
+  statusCode: number;
+  methodName: string;
+  context: string;
+  errorMessage: string;
+  stackTrace: string;
+}
+
+export interface DebugErrorGroup {
+  fingerprint: string;
+  occurrences: number;
+  exceptionType: string;
+  errorMessage: string;
+  methodName: string;
+  lastOccurredAt: string;
+  latest: DebugErrorOccurrence | null;
+}
+
+export interface DevelopperDebugDashboardResponse {
+  totalOccurrences: number;
+  uniqueErrors: number;
+  errors: DebugErrorGroup[];
+}
+
+export interface DevelopperDebugErrorDetailResponse {
+  fingerprint: string;
+  occurrences: number;
+  entries: DebugErrorOccurrence[];
 }

@@ -1,5 +1,12 @@
 package com.entretienbatiment.backend.auth;
 
 public enum Role {
-    ADMIN, TECH, WORKER
+    ADMIN,
+    DEVELOPPER,
+    TECH,
+    WORKER;
+
+    public boolean isAdminLike() {
+        return this == ADMIN || this == DEVELOPPER;
+    }
 }

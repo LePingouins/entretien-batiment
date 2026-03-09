@@ -476,7 +476,7 @@ function BugReportsBox() {
   const [confirmingReportId, setConfirmingReportId] = React.useState<number | null>(null);
   const [confirmError, setConfirmError] = React.useState<string | null>(null);
 
-  const isAdmin = role === 'ADMIN';
+  const isAdmin = role === 'ADMIN' || role === 'DEVELOPPER';
 
   const handleConfirm = async (notification: NotificationType) => {
     if (!isAdmin || !notification.bugReportId) {

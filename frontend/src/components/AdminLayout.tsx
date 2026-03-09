@@ -162,6 +162,11 @@ const AdminLayout: React.FC = () => {
             {canAccess('ANALYTICS') && (
               <Link to={pagePath('ANALYTICS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.analyticsTitle || 'Analytics'}</Link>
             )}
+            {role === 'DEVELOPPER' && (
+              <Link to="/admin/debug" className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-amber-300 hover:text-amber-200 hover:bg-surface-800' : 'text-amber-700 hover:text-amber-800 hover:bg-amber-50'}`}>
+                {t.debugDashboardNav || 'Debug Dashboard'}
+              </Link>
+            )}
             {canAccess('USERS') && (
               <Link to={pagePath('USERS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.adminUsersNav || 'Users'}</Link>
             )}
