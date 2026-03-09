@@ -21,9 +21,6 @@ const NoAccessPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-surface-50 px-4 py-8 flex items-center justify-center">
       <div className="w-full max-w-xl rounded-2xl border border-surface-200 bg-white shadow-card p-6 sm:p-8 text-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 mb-3">
-          {t.noAccessTitle || 'No accessible pages'}
-        </h1>
         <p className="text-surface-600 mb-6">
           {t.noAccessDescription || 'Your account is signed in, but no pages are currently enabled for your user. Please contact an administrator.'}
         </p>
@@ -44,6 +41,10 @@ const NoAccessPage: React.FC = () => {
             {t.noAccessLogout || t.logout || 'Logout'}
           </button>
         </div>
+
+        <p className="mt-6 text-center text-sm text-surface-500 opacity-70">
+          {t.pageExplanationNoAccess}
+        </p>
       </div>
     </div>
   );

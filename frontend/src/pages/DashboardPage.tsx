@@ -67,15 +67,6 @@ export default function DashboardPage() {
 
   return (
     <div className={`p-6 md:p-8 space-y-8 max-w-7xl mx-auto ${isDark ? 'text-surface-100' : ''}`}>
-      <header className="mb-8">
-        <h1 className={`text-3xl font-extrabold sm:text-4xl tracking-tight ${isDark ? 'text-surface-100' : 'text-slate-900'}`}>
-          {t.dashboardTitle}
-        </h1>
-        <p className={`mt-2 text-lg ${isDark ? 'text-surface-400' : 'text-slate-600'}`}>
-          {t.dashboardDescription}
-        </p>
-      </header>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         {/* Work Orders Card */}
@@ -222,6 +213,10 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      <p className={`text-center text-sm opacity-70 ${isDark ? 'text-surface-400' : 'text-slate-600'}`}>
+        {t.pageExplanationDashboard}
+      </p>
 
     </div>
   );

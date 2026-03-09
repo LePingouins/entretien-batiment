@@ -3,7 +3,6 @@ import { useLang } from '../context/LangContext';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { getAnalyticsStats } from '../lib/api';
 import type { AnalyticsStatsResponse } from '../types/api';
-import PageHeader from '../components/PageHeader';
 import { FaPrint } from 'react-icons/fa';
 import './printable.css';
 
@@ -54,11 +53,6 @@ export default function AnalyticsPage() {
             </div>
             <div className="text-sm text-gray-500">Analytics Report - {new Date().toLocaleDateString()}</div>
         </div>
-
-        <PageHeader 
-            title={t.analyticsTitle}
-            subtitle={t.analyticsSubtitle}
-        />
 
         <div className="max-w-7xl mx-auto -mt-2 mb-6 flex justify-end">
             <button 
@@ -336,6 +330,10 @@ export default function AnalyticsPage() {
                     )}
                 </div>
             </div>
+
+            <p className={`text-center text-sm opacity-70 ${isDark ? 'text-surface-400' : 'text-slate-600'}`}>
+                {t.pageExplanationAnalytics}
+            </p>
         </div>
     </div>
   );

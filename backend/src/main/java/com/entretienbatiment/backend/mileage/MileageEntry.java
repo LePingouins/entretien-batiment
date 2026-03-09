@@ -3,7 +3,6 @@ package com.entretienbatiment.backend.mileage;
 import jakarta.persistence.*;
 import com.entretienbatiment.backend.workorders.domain.WorkOrder;
 import com.entretienbatiment.backend.urgentworkorders.UrgentWorkOrder;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDate;
 
 @Entity

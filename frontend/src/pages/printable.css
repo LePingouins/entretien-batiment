@@ -1,6 +1,4 @@
-/* Printable layout utility styles (for future extension) */
-.printable-content {}
-.no-print {}
+/* Printable layout utility styles */
 
 @media print {
 	.printable-content {

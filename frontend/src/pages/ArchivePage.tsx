@@ -4,7 +4,6 @@ import api, { unarchiveWorkOrder, getArchivedUrgentWorkOrders, getArchivedMileag
 import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority, UrgentWorkOrderResponse, MileageEntry } from '../types/api';
 import { useLang } from '../context/LangContext';
 import { useOutletContext } from 'react-router-dom';
-import PageHeader from '../components/PageHeader';
 import { ColorSchemeType } from './AdminWorkOrders/colorSchemes';
 
 // Priority label helper
@@ -267,8 +266,6 @@ function ArchivePage() {
 
   return (
     <div className={`${getPageBackground(colorScheme)} flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8`}>
-      <PageHeader title={t.archive} />
-
       {/* Tabs */}
       <div className="flex gap-4 mb-6 justify-center flex-wrap">
         <button
@@ -631,6 +628,10 @@ function ArchivePage() {
           )}
         </>
       )}
+
+      <p className={`mt-6 text-center text-sm opacity-70 ${textColors.secondary}`}>
+        {t.pageExplanationArchive}
+      </p>
     </div>
   );
 }

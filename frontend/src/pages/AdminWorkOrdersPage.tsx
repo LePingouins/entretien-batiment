@@ -18,7 +18,6 @@ import { DragEndEvent } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import PageHeader from '../components/PageHeader';
 
 
 
@@ -717,7 +716,6 @@ function AdminWorkOrdersPage() {
 
   return (
     <div className={(colorScheme === 'dark' ? 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8' : 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8')}>
-      <PageHeader title={t.workOrders} />
       {/* Materials Drawer (should be at root, not inside cards) */}
       <MaterialsDrawer
         isOpen={materialsDrawer.open}
@@ -1118,6 +1116,10 @@ function AdminWorkOrdersPage() {
         )}
       </div>
       {/* End blue background wrapper */}
+
+      <p className={`mt-6 text-center text-sm opacity-70 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-600'}`}>
+        {t.pageExplanationWorkOrders}
+      </p>
     </div>
   );
 }

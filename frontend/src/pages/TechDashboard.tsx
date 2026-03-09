@@ -16,9 +16,6 @@ const TechDashboard: React.FC = () => {
     <div className="min-h-[calc(100vh-120px)] p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         <section className={`rounded-2xl border p-6 ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-surface-200 shadow-card'}`}>
-          <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-surface-100' : 'text-surface-900'}`}>
-            {t.techDashboardTitle || 'Technician Dashboard'}
-          </h1>
           <p className={`${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
             {t.techDashboardWelcome || 'Welcome back! Your assigned work orders and tasks will appear here.'}
           </p>
@@ -103,6 +100,10 @@ const TechDashboard: React.FC = () => {
             </div>
           )}
         </section>
+
+        <p className={`text-center text-sm opacity-70 ${isDark ? 'text-surface-400' : 'text-surface-600'}`}>
+          {t.pageExplanationTechDashboard}
+        </p>
       </div>
     </div>
   );

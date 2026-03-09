@@ -1,5 +1,4 @@
 import React from 'react';
-import PageHeader from '../components/PageHeader';
 import { NotificationsContext, NotificationType, NotificationsContextType } from '../context/NotificationsContext';
 import { useNavigate } from 'react-router-dom';
 import { RiFilter3Line, RiCheckDoubleLine, RiNotification4Line, RiCheckLine, RiDeleteBinLine, RiArrowRightLine, RiToolsLine, RiAlarmWarningLine, RiCarLine, RiBroadcastLine, RiInformationLine, RiTimeLine } from 'react-icons/ri';
@@ -193,7 +192,6 @@ const NotificationsPage: React.FC = () => {
     <div className="max-w-7xl mx-auto p-4 md:p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 px-2">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t.notificationsHeader}</h1>
           <p className="text-surface-500 text-sm mt-1">{t.notificationsDesc.replace('{count}', count.toString())}</p>
         </div>
         <div className="flex gap-3">
@@ -393,6 +391,10 @@ const NotificationsPage: React.FC = () => {
           </div>
         </aside>
       </div>
+
+      <p className="mt-8 text-center text-sm text-surface-500 dark:text-surface-400 opacity-70">
+        {t.pageExplanationNotifications}
+      </p>
     </div>
   );
 };

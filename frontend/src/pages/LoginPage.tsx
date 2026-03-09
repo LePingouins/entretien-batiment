@@ -65,8 +65,6 @@ function LoginPage() {
             <img src="/logo.png" alt="Horizon Nature" className="h-16 w-auto" />
           </div>
         </div>
-        <h2 className="text-2xl font-bold mb-1 text-center text-surface-900">{t.loginTitle || 'Welcome Back'}</h2>
-        <p className="text-sm text-surface-500 text-center mb-8">Sign in to your account</p>
 
         <div className="space-y-5">
           <div>
@@ -112,6 +110,10 @@ function LoginPage() {
             </span>
           ) : t.loginButton || 'Sign In'}
         </button>
+
+        <p className="mt-5 text-center text-sm text-surface-500 opacity-70">
+          {t.pageExplanationLogin}
+        </p>
 
         <div className="mt-6 text-center">
           <span className="text-xs text-surface-400">&copy; {new Date().getFullYear()} Horizon Nature</span>

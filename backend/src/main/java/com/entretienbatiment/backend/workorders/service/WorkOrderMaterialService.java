@@ -25,8 +25,8 @@ public class WorkOrderMaterialService {
 
     @Transactional(readOnly = true)
     public List<MaterialResponse> listMaterials(Long workOrderId) {
-        WorkOrder wo = workOrderRepo.findById(workOrderId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "work order not found"));
+        workOrderRepo.findById(workOrderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "work order not found"));
         return materialRepo.findByWorkOrderIdOrderByCreatedAtAsc(workOrderId)
                 .stream().map(this::toResponse).toList();
     }

@@ -1,5 +1,4 @@
 import * as React from 'react';
-import PageHeader from '../components/PageHeader';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
@@ -184,7 +183,9 @@ const AdminUsersPage: React.FC = () => {
     if (user.enabled) {
       await runUserAction(
         user.id,
-        () => deactivateAdminUser(user.id),
+        async () => {
+          await deactivateAdminUser(user.id);
+        },
         t.adminUsersUpdated || 'User updated.'
       );
       return;
@@ -192,7 +193,9 @@ const AdminUsersPage: React.FC = () => {
 
     await runUserAction(
       user.id,
-      () => activateAdminUser(user.id),
+      async () => {
+        await activateAdminUser(user.id);
+      },
       t.adminUsersUpdated || 'User updated.'
     );
   };
@@ -200,7 +203,9 @@ const AdminUsersPage: React.FC = () => {
   const handleRoleChange = async (targetUserId: number, role: UserRole) => {
     await runUserAction(
       targetUserId,
-      () => updateAdminUserRole(targetUserId, role),
+      async () => {
+        await updateAdminUserRole(targetUserId, role);
+      },
       t.adminUsersUpdated || 'User updated.'
     );
   };
@@ -211,7 +216,9 @@ const AdminUsersPage: React.FC = () => {
 
     await runUserAction(
       targetUserId,
-      () => resetAdminUserPassword(targetUserId),
+      async () => {
+        await resetAdminUserPassword(targetUserId);
+      },
       t.adminUsersResetSuccess || 'Password reset to Horizon.'
     );
   };
@@ -244,7 +251,9 @@ const AdminUsersPage: React.FC = () => {
 
     await runUserAction(
       user.id,
-      () => updateAdminUserEmail(user.id, nextEmail),
+      async () => {
+        await updateAdminUserEmail(user.id, nextEmail);
+      },
       t.adminUsersEmailUpdated || 'User email updated.'
     );
   };
@@ -432,11 +441,6 @@ const AdminUsersPage: React.FC = () => {
   return (
     <div className={`p-6 min-h-screen ${isDark ? 'bg-surface-950' : 'bg-surface-50'}`}>
       <div className="max-w-7xl mx-auto space-y-6">
-        <PageHeader
-          title={t.adminUsersTitle || 'Admin Overview'}
-          subtitle={t.adminUsersSubtitle || 'Manage user access, roles, and credentials.'}
-        />
-
         <div className={`rounded-2xl border p-4 ${isDark ? 'bg-surface-900 border-surface-800 text-surface-200' : 'bg-white border-surface-200 text-surface-700'}`}>
           <p className="text-sm font-medium">
             {t.adminUsersDefaultPassword || 'Default password for invited and reset accounts: Horizon'}
@@ -883,6 +887,10 @@ const AdminUsersPage: React.FC = () => {
             </div>
           )}
         </section>
+
+        <p className={`text-center text-sm opacity-70 ${isDark ? 'text-surface-400' : 'text-surface-600'}`}>
+          {t.pageExplanationUsers}
+        </p>
       </div>
     </div>
   );

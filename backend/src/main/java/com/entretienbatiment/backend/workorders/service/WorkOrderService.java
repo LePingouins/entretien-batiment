@@ -834,6 +834,7 @@ public class WorkOrderService {
     }
 
     // Optional: keep these helpers (now fixed with details=userId)
+    @SuppressWarnings("unused")
     private AppUser requireCurrentUser() {
         Long userId = currentUserIdOrNull();
         if (userId == null) throw new IllegalArgumentException("unauthenticated");

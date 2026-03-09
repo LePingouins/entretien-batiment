@@ -17,7 +17,6 @@ import { FilterBar } from './AdminWorkOrders/FilterBar';
 import { MaterialsDrawer } from '../components/MaterialsDrawer';
 import { getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
 import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
-import PageHeader from '../components/PageHeader';
 
 // Reusable modal component for creating/updating
 const UrgentWorkOrderModal = ({
@@ -660,7 +659,6 @@ function UrgentWorkOrdersPage() {
 
   return (
     <div className={(colorScheme === 'dark' ? 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8' : 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8')}>
-      <PageHeader title={t.urgentWorkOrders || 'Urgent Work Orders'} />
       <div className="mb-8">
         <div className="w-full flex items-start gap-3 relative mb-4">
           <div className="flex-1 min-w-0 overflow-x-auto">
@@ -1114,6 +1112,10 @@ function UrgentWorkOrdersPage() {
           </div>
         </SharedEditModal>
       )}
+
+      <p className={`mt-6 text-center text-sm opacity-70 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-600'}`}>
+        {t.pageExplanationUrgentWorkOrders}
+      </p>
     </div>
   );
 }

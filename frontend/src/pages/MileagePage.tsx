@@ -6,7 +6,6 @@ import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import api, { archiveMileageEntry, getUrgentWorkOrders } from '../lib/api';
 import { getRoleBasePath } from '../lib/pageAccess';
 import { NotificationsContext } from '../context/NotificationsContext';
-import PageHeader from '../components/PageHeader';
 import type { WorkOrderResponse, UrgentWorkOrderResponse } from '../types/api';
 
 interface MileageEntry {
@@ -280,10 +279,6 @@ const MileagePage: React.FC = () => {
   return (
     <main className={`${bg} flex flex-col w-full`}>
       <div className={(colorScheme === 'dark' ? 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8' : 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8')}>
-          <PageHeader
-            title={t.mileage}
-            subtitle={''}
-          />
           <div className="flex justify-center mb-4">
             <button
               className={`mt-2 w-full sm:w-auto px-5 py-2.5 text-white rounded-lg shadow-sm font-semibold transition-colors duration-150 ${colorScheme === 'dark' ? 'bg-brand-600 hover:bg-brand-700' : 'bg-brand-600 hover:bg-brand-700'}`}
@@ -445,6 +440,10 @@ const MileagePage: React.FC = () => {
               </div>
             ))}
           </div>
+
+          <p className={`mt-6 text-center text-sm opacity-70 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-600'}`}>
+            {t.pageExplanationMileage}
+          </p>
         </div>
     </main>
   );

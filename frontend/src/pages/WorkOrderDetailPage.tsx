@@ -433,6 +433,10 @@ const WorkOrderDetailPage: React.FC = () => {
               {t.saveAsPdf}
             </button>
           </div>
+
+          <p className={`mt-6 text-center text-sm opacity-70 ${isDark ? 'text-surface-400' : 'text-surface-600'}`}>
+            {t.pageExplanationWorkOrderDetail}
+          </p>
         </main>
       </div>
     </>
