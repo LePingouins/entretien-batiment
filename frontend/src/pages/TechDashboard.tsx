@@ -31,7 +31,7 @@ const TechDashboard: React.FC = () => {
             <div className={`text-sm font-medium ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>{t.remindersSectionTitle || 'Reminders'}</div>
           </div>
           <div className={`p-5 rounded-2xl border ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-surface-200 shadow-card'}`}>
-            <div className={`text-sm font-semibold mb-3 ${isDark ? 'text-surface-300' : 'text-surface-700'}`}>Quick Access</div>
+            <div className={`text-sm font-semibold mb-3 ${isDark ? 'text-surface-300' : 'text-surface-700'}`}>{t.quickAccess || 'Quick Access'}</div>
             <div className="flex flex-wrap gap-2">
               <Link to="/tech/work-orders" className="px-2.5 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 transition-colors">
                 {t.workOrders}
