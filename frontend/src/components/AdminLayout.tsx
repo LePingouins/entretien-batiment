@@ -157,30 +157,30 @@ const AdminLayout: React.FC = () => {
           </div>
           <nav className={`flex flex-wrap items-center gap-1 sm:gap-2 text-sm ${navOpen ? 'block' : 'hidden'} sm:flex`}>
             {canAccess('DASHBOARD') && (
-              <Link to={pagePath('DASHBOARD')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.dashboardTitle}</Link>
+              <Link to={pagePath('DASHBOARD')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname === pagePath('DASHBOARD') ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.dashboardTitle}</Link>
             )}
             {canAccess('WORK_ORDERS') && (
-              <Link to={pagePath('WORK_ORDERS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.workOrders}</Link>
+              <Link to={pagePath('WORK_ORDERS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('WORK_ORDERS')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.workOrders}</Link>
             )}
             {canAccess('URGENT_WORK_ORDERS') && (
-              <Link to={pagePath('URGENT_WORK_ORDERS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.urgentWorkOrders || 'Urgent'}</Link>
+              <Link to={pagePath('URGENT_WORK_ORDERS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('URGENT_WORK_ORDERS')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.urgentWorkOrders || 'Urgent'}</Link>
             )}
             {canAccess('MILEAGE') && (
-              <Link to={pagePath('MILEAGE')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.mileage}</Link>
+              <Link to={pagePath('MILEAGE')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('MILEAGE')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.mileage}</Link>
             )}
             {canAccess('ANALYTICS') && (
-              <Link to={pagePath('ANALYTICS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.analyticsTitle || 'Analytics'}</Link>
+              <Link to={pagePath('ANALYTICS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('ANALYTICS')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.analyticsTitle || 'Analytics'}</Link>
             )}
             {role === 'DEVELOPPER' && (
-              <Link to="/admin/debug" className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-amber-300 hover:text-amber-200 hover:bg-surface-800' : 'text-amber-700 hover:text-amber-800 hover:bg-amber-50'}`}>
+              <Link to="/admin/debug" className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes('/admin/debug') ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-amber-300 hover:text-amber-200 hover:bg-surface-800' : 'text-amber-700 hover:text-amber-800 hover:bg-amber-50'}`}>
                 {t.debugDashboardNav || 'Debug Dashboard'}
               </Link>
             )}
             {canAccess('USERS') && (
-              <Link to={pagePath('USERS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.adminUsersNav || 'Users'}</Link>
+              <Link to={pagePath('USERS')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('USERS')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.adminUsersNav || 'Users'}</Link>
             )}
             {canAccess('ARCHIVE') && (
-              <Link to={pagePath('ARCHIVE')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.archive}</Link>
+              <Link to={pagePath('ARCHIVE')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('ARCHIVE')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.archive}</Link>
             )}
             <BugReportButton />
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>

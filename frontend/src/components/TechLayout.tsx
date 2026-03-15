@@ -161,22 +161,22 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
           </div>
           <nav className={`flex flex-wrap items-center gap-1 sm:gap-2 text-sm ${navOpen ? 'block' : 'hidden'} sm:flex`}>
             {canAccess('DASHBOARD') && (
-              <Link to={pagePath('')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.dashboardTitle}</Link>
+              <Link to={pagePath('')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname === pagePath('') ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.dashboardTitle}</Link>
             )}
             {canAccess('WORK_ORDERS') && (
-              <Link to={pagePath('work-orders')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.workOrders}</Link>
+              <Link to={pagePath('work-orders')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('work-orders')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.workOrders}</Link>
             )}
             {canAccess('URGENT_WORK_ORDERS') && (
-              <Link to={pagePath('urgent-work-orders')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.urgentWorkOrders || 'Urgent'}</Link>
+              <Link to={pagePath('urgent-work-orders')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('urgent-work-orders')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.urgentWorkOrders || 'Urgent'}</Link>
             )}
             {canAccess('MILEAGE') && (
-              <Link to={pagePath('mileage')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.mileage}</Link>
+              <Link to={pagePath('mileage')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('mileage')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.mileage}</Link>
             )}
             {canAccess('ARCHIVE') && (
-              <Link to={pagePath('archive')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.archive}</Link>
+              <Link to={pagePath('archive')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('archive')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.archive}</Link>
             )}
             {canAccess('ANALYTICS') && (
-              <Link to={pagePath('analytics')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.analyticsTitle || 'Analytics'}</Link>
+              <Link to={pagePath('analytics')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('analytics')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.analyticsTitle || 'Analytics'}</Link>
             )}
             <BugReportButton />
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>
