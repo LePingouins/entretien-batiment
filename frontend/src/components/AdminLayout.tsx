@@ -137,16 +137,25 @@ const AdminLayout: React.FC = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [showSettings, closeSettings]);
+  const [navOpen, setNavOpen] = React.useState(false);
+  const handleHamburger = () => setNavOpen((open) => !open);
   return (
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
     <div className={`min-h-screen flex flex-col justify-between transition-colors overflow-x-hidden ${colorScheme === 'dark' ? 'dark bg-surface-950' : 'bg-slate-100'}`}>
       <header className={`sticky top-0 z-40 backdrop-blur-xl border-b ${colorScheme === 'dark' ? 'bg-surface-900/90 text-surface-100 border-surface-700' : 'bg-white text-slate-800 border-slate-200 shadow-sm'}`}>
         <div className="w-full px-4 sm:px-6 py-2.5 flex flex-wrap sm:flex-nowrap justify-between items-center gap-2">
           <div className="flex items-center gap-3">
+            <button className="sm:hidden p-2 rounded-lg focus:outline-none" aria-label="Open navigation" onClick={handleHamburger}>
+              <span className="block w-6 h-6">
+                <span className={`block h-0.5 w-full bg-current mb-1 transition-all ${navOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+                <span className={`block h-0.5 w-full bg-current mb-1 transition-all ${navOpen ? 'opacity-0' : ''}`}></span>
+                <span className={`block h-0.5 w-full bg-current transition-all ${navOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+              </span>
+            </button>
             <img src="/logo.png" alt="Horizon Nature" className="h-8 sm:h-9 w-auto" />
             <span className={`font-bold text-base sm:text-lg tracking-tight ${colorScheme === 'dark' ? 'text-white' : 'text-surface-900'}`}>Entretien-Bâtiment</span>
           </div>
-          <nav className="flex flex-wrap items-center gap-1 sm:gap-2 text-sm">
+          <nav className={`flex flex-wrap items-center gap-1 sm:gap-2 text-sm ${navOpen ? 'block' : 'hidden'} sm:flex`}>
             {canAccess('DASHBOARD') && (
               <Link to={pagePath('DASHBOARD')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.dashboardTitle}</Link>
             )}
@@ -174,9 +183,7 @@ const AdminLayout: React.FC = () => {
               <Link to={pagePath('ARCHIVE')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.archive}</Link>
             )}
             <BugReportButton />
-            
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>
-            
             <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>
             <button
               aria-label="Settings"
