@@ -27,18 +27,7 @@ public class JwtService {
 
     public String createAccessToken(AppUser user) {
         Instant now = Instant.now();
-        Instant exp;
-        if (user.getRole() != null) {
-            String role = user.getRole().name();
-            if (role.equals("ADMIN") || role.equals("DEVELOPPER") || role.equals("TECH") || role.equals("WORKER")) {
-                // 1 week = 7 days * 24 hours * 60 minutes * 60 seconds
-                exp = now.plusSeconds(7L * 24 * 60 * 60);
-            } else {
-                exp = now.plusSeconds(accessMinutes * 60L);
-            }
-        } else {
-            exp = now.plusSeconds(accessMinutes * 60L);
-        }
+        Instant exp = now.plusSeconds(accessMinutes * 60L);
 
         return Jwts.builder()
                 .subject(user.getId().toString())

@@ -9,6 +9,8 @@ import { useAuth } from '../context/AuthContext';
 import { useBroadcast } from '../context/BroadcastContext';
 import { NotificationsContext, NotificationsContextType } from '../context/NotificationsContext';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
+import { usePageAccess } from '../context/PageAccessContext';
+import { getRolePagePath } from '../lib/pageAccess';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -18,6 +20,8 @@ export default function DashboardPage() {
   const { t } = useLang();
   const { colorScheme } = useContext(ColorSchemeContext);
   const isDark = colorScheme === 'dark';
+  const { role } = useAuth();
+  const { canAccess } = usePageAccess();
   
   const ctx = useContext(NotificationsContext) as NotificationsContextType;
   const reminders = ctx.notifications.filter(n => n.source === 'REMINDER');
@@ -71,40 +75,46 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         {/* Work Orders Card */}
-        <DashboardCard 
-          title={t.dashboardRegularWorkOrders}
-          total={stats.totalWorkOrders}
-          active={stats.activeWorkOrders}
-          activeLabel={t.dashboardActive}
-          icon={<ClipboardDocumentListIcon className="h-8 w-8 text-blue-600" />}
-          accentColor="bg-blue-600"
-          percent={woPercent}
-          link="/admin/work-orders"
-          isDark={isDark}
-        />
+        {canAccess('WORK_ORDERS') && (
+          <DashboardCard 
+            title={t.dashboardRegularWorkOrders}
+            total={stats.totalWorkOrders}
+            active={stats.activeWorkOrders}
+            activeLabel={t.dashboardActive}
+            icon={<ClipboardDocumentListIcon className="h-8 w-8 text-blue-600" />}
+            accentColor="bg-blue-600"
+            percent={woPercent}
+            link={getRolePagePath(role, 'WORK_ORDERS')}
+            isDark={isDark}
+          />
+        )}
 
         {/* Urgent Work Orders Card */}
-        <DashboardCard 
-          title={t.dashboardUrgentWorkOrders}
-          total={stats.urgentWorkOrders}
-          active={stats.activeUrgentWorkOrders}
-          activeLabel={t.dashboardInProgress}
-          icon={<FireIcon className="h-8 w-8 text-red-600" />}
-          accentColor="bg-red-600"
-          percent={uwoPercent}
-          link="/admin/urgent-work-orders"
-          isDark={isDark}
-        />
+        {canAccess('URGENT_WORK_ORDERS') && (
+          <DashboardCard 
+            title={t.dashboardUrgentWorkOrders}
+            total={stats.urgentWorkOrders}
+            active={stats.activeUrgentWorkOrders}
+            activeLabel={t.dashboardInProgress}
+            icon={<FireIcon className="h-8 w-8 text-red-600" />}
+            accentColor="bg-red-600"
+            percent={uwoPercent}
+            link={getRolePagePath(role, 'URGENT_WORK_ORDERS')}
+            isDark={isDark}
+          />
+        )}
 
         {/* Mileage Card */}
-        <SimpleStatCard 
-          title={t.dashboardMileageEntries}
-          value={stats.mileageEntries}
-          icon={<TruckIcon className="h-8 w-8 text-green-600" />}
-          accentColor="text-green-600"
-          link="/admin/mileage"
-          isDark={isDark}
-        />
+        {canAccess('MILEAGE') && (
+          <SimpleStatCard 
+            title={t.dashboardMileageEntries}
+            value={stats.mileageEntries}
+            icon={<TruckIcon className="h-8 w-8 text-green-600" />}
+            accentColor="text-green-600"
+            link={getRolePagePath(role, 'MILEAGE')}
+            isDark={isDark}
+          />
+        )}
         
       </div>
 
@@ -120,24 +130,38 @@ export default function DashboardPage() {
             <AdminBroadcastControls />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-             <Link to="/admin/work-orders?action=create" className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-blue-50'}`}>
-                <div className={`p-3 rounded-full text-blue-600 transition-colors mb-2 ${isDark ? 'bg-blue-900/30 group-hover:bg-blue-900/50' : 'bg-blue-100 group-hover:bg-blue-200'}`}>
-                  <PlusIcon className="h-6 w-6" />
-                </div>
-                <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardNewWorkOrder}</span>
-             </Link>
-             <Link to="/admin/urgent-work-orders?action=create" className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-red-50'}`}>
-                <div className={`p-3 rounded-full text-red-600 transition-colors mb-2 ${isDark ? 'bg-red-900/30 group-hover:bg-red-900/50' : 'bg-red-100 group-hover:bg-red-200'}`}>
-                  <PlusIcon className="h-6 w-6" />
-                </div>
-                <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardNewUrgentOrder}</span>
-             </Link>
-             <Link to="/admin/mileage?action=create" className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-green-50'}`}>
-                <div className={`p-3 rounded-full text-green-600 transition-colors mb-2 ${isDark ? 'bg-green-900/30 group-hover:bg-green-900/50' : 'bg-green-100 group-hover:bg-green-200'}`}>
-                  <PlusIcon className="h-6 w-6" />
-                </div>
-                <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardNewMileageEntry}</span>
-             </Link>
+             {canAccess('WORK_ORDERS') && (
+               <Link to={`${getRolePagePath(role, 'WORK_ORDERS')}?action=create`} className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-blue-50'}`}>
+                 <div className={`p-3 rounded-full text-blue-600 transition-colors mb-2 ${isDark ? 'bg-blue-900/30 group-hover:bg-blue-900/50' : 'bg-blue-100 group-hover:bg-blue-200'}`}>
+                   <PlusIcon className="h-6 w-6" />
+                 </div>
+                 <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardNewWorkOrder}</span>
+               </Link>
+             )}
+             {canAccess('URGENT_WORK_ORDERS') && (
+               <Link to={`${getRolePagePath(role, 'URGENT_WORK_ORDERS')}?action=create`} className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-red-50'}`}>
+                 <div className={`p-3 rounded-full text-red-600 transition-colors mb-2 ${isDark ? 'bg-red-900/30 group-hover:bg-red-900/50' : 'bg-red-100 group-hover:bg-red-200'}`}>
+                   <PlusIcon className="h-6 w-6" />
+                 </div>
+                 <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardNewUrgentOrder}</span>
+               </Link>
+             )}
+             {canAccess('MILEAGE') && (
+               <Link to={`${getRolePagePath(role, 'MILEAGE')}?action=create`} className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-green-50'}`}>
+                 <div className={`p-3 rounded-full text-green-600 transition-colors mb-2 ${isDark ? 'bg-green-900/30 group-hover:bg-green-900/50' : 'bg-green-100 group-hover:bg-green-200'}`}>
+                   <PlusIcon className="h-6 w-6" />
+                 </div>
+                 <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardNewMileageEntry}</span>
+               </Link>
+             )}
+             {role === 'DEVELOPPER' && (
+               <Link to="/admin/debug" className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors group border ${isDark ? 'bg-surface-900 border-surface-700 hover:bg-surface-700' : 'bg-slate-50 border-slate-100 hover:bg-violet-50'}`}>
+                 <div className={`p-3 rounded-full text-violet-600 transition-colors mb-2 ${isDark ? 'bg-violet-900/30 group-hover:bg-violet-900/50' : 'bg-violet-100 group-hover:bg-violet-200'}`}>
+                   <BugIcon className="h-6 w-6" />
+                 </div>
+                 <span className={`font-medium text-sm text-center ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{t.dashboardDebugNav}</span>
+               </Link>
+             )}
           </div>
         </div>
 
@@ -483,6 +507,14 @@ function PlusIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  );
+}
+
+function BugIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44a23.916 23.916 0 0 0 1.152 6.06M12 12.75a2.25 2.25 0 0 0 2.248-2.354M12 12.75a2.25 2.25 0 0 1-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 0 0-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.778 3.778 0 0 1 .4-2.25m0 0a5.002 5.002 0 0 1 9.45 0m-9.45 0A5.002 5.002 0 0 0 2.55 5.75" />
     </svg>
   );
 }

@@ -76,13 +76,17 @@ export const en = {
     'Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'
   ],
   techDashboardTitle: 'Tech Dashboard',
-  techDashboardWelcome: 'Welcome to the technician dashboard. Work order features coming soon!',
+  techDashboardWelcome: 'Welcome back! Here is an overview of your activity and accessible pages.',
   workerDashboardTitle: 'Worker Dashboard',
-  workerDashboardWelcome: 'Welcome! You can follow notifications and manage your own account settings from here.',
+  workerDashboardWelcome: 'Welcome! Here is an overview of your notifications and accessible pages.',
   workerPermissionsTitle: 'Your Permissions',
   workerPermissionNotifications: 'View and manage your notifications.',
   workerPermissionProfile: 'Change only your own password and personal settings.',
   workerPermissionLimited: 'No access to admin or technician management pages.',
+  dashboardYourPages: 'Your Pages',
+  dashboardNoPages: 'No other pages are currently accessible for your account.',
+  dashboardDebugNav: 'Debug Dashboard',
+  dashboardDebugNavDesc: 'Inspect error logs and system diagnostics.',
   noAccessTitle: 'No accessible pages',
   noAccessDescription: 'Your account is signed in, but no pages are currently enabled for your user. Please contact an administrator.',
   noAccessRetry: 'Try again',
@@ -432,6 +436,7 @@ export const en = {
   pageExplanationNoAccess: 'Your account is active, but page access is currently restricted.',
   pageExplanationWorkOrderDetail: 'View full work order information, materials, and history.',
   pageExplanationUrgentWorkOrderDetail: 'View full urgent work order details and current status.',
+  pageExplanationDebugDashboard: 'Inspect error logs, stack traces, and system diagnostics.',
 };
 
 export const fr = {
@@ -512,15 +517,19 @@ export const fr = {
     'Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'
   ],
   techDashboardTitle: 'Tableau de bord technicien',
-  techDashboardWelcome: 'Bienvenue sur le tableau de bord du technicien. Les fonctionnalités des ordres de travail arrivent bientôt !',
+  techDashboardWelcome: 'Bienvenue ! Voici un aperçu de votre activité et des pages accessibles.',
   workerDashboardTitle: 'Tableau de bord ouvrier',
-  workerDashboardWelcome: 'Bienvenue ! Vous pouvez suivre vos notifications et gérer vos propres paramètres de compte depuis ici.',
+  workerDashboardWelcome: 'Bienvenue ! Voici un aperçu de vos notifications et des pages accessibles.',
   workerPermissionsTitle: 'Vos permissions',
   workerPermissionNotifications: 'Voir et gérer vos notifications.',
   workerPermissionProfile: 'Modifier uniquement votre propre mot de passe et vos paramètres personnels.',
-  workerPermissionLimited: 'Pas d’accès aux pages de gestion admin ou technicien.',
+  workerPermissionLimited: "Pas d'accès aux pages de gestion admin ou technicien.",
+  dashboardYourPages: 'Vos pages',
+  dashboardNoPages: 'Aucune autre page n\'est actuellement accessible pour votre compte.',
+  dashboardDebugNav: 'Tableau de débogage',
+  dashboardDebugNavDesc: 'Consultez les journaux d\'erreurs et diagnostics système.',
   noAccessTitle: 'Aucune page accessible',
-  noAccessDescription: 'Votre compte est connecté, mais aucune page n’est actuellement autorisée pour cet utilisateur. Veuillez contacter un administrateur.',
+  noAccessDescription: "Votre compte est connecté, mais aucune page n'est actuellement autorisée pour cet utilisateur. Veuillez contacter un administrateur.",
   noAccessRetry: 'Réessayer',
   noAccessLogout: 'Déconnexion',
   loginFormAria: 'Formulaire de connexion',
@@ -867,5 +876,4 @@ export const fr = {
   pageExplanationWorkerDashboard: 'Suivez l\'activité quotidienne et les mises à jour de votre compte.',
   pageExplanationNoAccess: 'Votre compte est actif, mais l\'accès aux pages est actuellement restreint.',
   pageExplanationWorkOrderDetail: 'Consultez les détails complets, matériaux et historique de l\'ordre de travail.',
-  pageExplanationUrgentWorkOrderDetail: 'Consultez les détails complets et le statut de l\'ordre urgent.',
-};
+  pageExplanationUrgentWorkOrderDetail: 'Consultez les détails complets et le statut de l\'ordre urgent.',  pageExplanationDebugDashboard: 'Consultez les journaux d\'erreurs, traces de pile et diagnostics système.',};

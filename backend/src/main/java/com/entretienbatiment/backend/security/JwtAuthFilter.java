@@ -68,7 +68,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
                     }
 
-                    log.info("JWT Auth: email={}, role={}, userId={}", user.getEmail(), effectiveRole, effectiveUserId);
+                    log.debug("JWT Auth: email={}, role={}, userId={}", user.getEmail(), effectiveRole, effectiveUserId);
                     var auth = new UsernamePasswordAuthenticationToken(
                             user.getEmail(),
                             null,

@@ -15,7 +15,12 @@ public class FilesController {
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
         try {
-            Path file = Paths.get("uploads/workorders").resolve(filename).normalize();
+            Path uploadsRoot = Paths.get("uploads/workorders").toAbsolutePath().normalize();
+            Path file = uploadsRoot.resolve(filename).normalize();
+            // Guard against path traversal: reject any path that escapes the uploads directory
+            if (!file.startsWith(uploadsRoot)) {
+                return ResponseEntity.badRequest().build();
+            }
             Resource resource = new UrlResource(file.toUri());
             if (!resource.exists() || !resource.isReadable()) {
                 return ResponseEntity.notFound().build();
