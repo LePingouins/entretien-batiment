@@ -1,31 +1,42 @@
-import React from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 
 import App from '../App';
-import LoginPage from '../pages/LoginPage';
 import ProtectedRoute from './ProtectedRoute';
 import RequirePageAccess from './RequirePageAccess';
+
+// Layouts are kept as eager imports — they are always rendered once the user
+// is authenticated and would otherwise flash a loader on every navigation.
 import AdminLayout from '../components/AdminLayout';
 import TechLayout from '../components/TechLayout';
 import WorkerLayout from '../components/WorkerLayout';
-import TechDashboard from '../pages/TechDashboard';
-import WorkerDashboard from '../pages/WorkerDashboard';
-import AdminWorkOrdersPage from '../pages/AdminWorkOrdersPage';
-import MileagePage from '../pages/MileagePage';
-import ArchivePage from '../pages/ArchivePage';
-import NotificationsPage from '../pages/NotificationsPage';
 
-import UrgentWorkOrdersPage from '../pages/UrgentWorkOrdersPage';
-import DashboardPage from '../pages/DashboardPage';
-import AnalyticsPage from '../pages/AnalyticsPage';
-import AdminUsersPage from '../pages/AdminUsersPage';
-import DevelopperDebugPage from '../pages/DevelopperDebugPage';
-import NoAccessPage from '../pages/NoAccessPage';
+// ─── Lazy-loaded pages ────────────────────────────────────────────────────────
+// Each page is split into its own JS chunk by Vite.  The browser only downloads
+// a chunk when the user actually navigates to that route, which reduces the
+// initial bundle size significantly.
+const LoginPage              = lazy(() => import('../pages/LoginPage'));
+const DashboardPage          = lazy(() => import('../pages/DashboardPage'));
+const TechDashboard          = lazy(() => import('../pages/TechDashboard'));
+const WorkerDashboard        = lazy(() => import('../pages/WorkerDashboard'));
+const AdminWorkOrdersPage    = lazy(() => import('../pages/AdminWorkOrdersPage'));
+const WorkOrderDetailPage    = lazy(() => import('../pages/WorkOrderDetailPage'));
+const UrgentWorkOrdersPage   = lazy(() => import('../pages/UrgentWorkOrdersPage'));
+const UrgentWorkOrderDetailPage = lazy(() => import('../pages/UrgentWorkOrderDetailPage'));
+const MileagePage            = lazy(() => import('../pages/MileagePage'));
+const ArchivePage            = lazy(() => import('../pages/ArchivePage'));
+const AnalyticsPage          = lazy(() => import('../pages/AnalyticsPage'));
+const AdminUsersPage         = lazy(() => import('../pages/AdminUsersPage'));
+const NotificationsPage      = lazy(() => import('../pages/NotificationsPage'));
+const DevelopperDebugPage    = lazy(() => import('../pages/DevelopperDebugPage'));
+const NoAccessPage           = lazy(() => import('../pages/NoAccessPage'));
 
-import { Navigate } from 'react-router-dom';
-
-const WorkOrderDetailPage = React.createElement(React.lazy(() => import('../pages/WorkOrderDetailPage')));
-const UrgentWorkOrderDetailPage = React.createElement(React.lazy(() => import('../pages/UrgentWorkOrderDetailPage')));
+/** Shown while a lazy page chunk is being downloaded */
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const router = createBrowserRouter([
   {
@@ -78,7 +89,7 @@ const router = createBrowserRouter([
                 path: 'work-orders/:id',
                 element: (
                   <RequirePageAccess pageKey="WORK_ORDERS">
-                    {WorkOrderDetailPage}
+                    <WorkOrderDetailPage />
                   </RequirePageAccess>
                 ),
               },
@@ -102,7 +113,7 @@ const router = createBrowserRouter([
                 path: 'urgent-work-orders/:id',
                 element: (
                   <RequirePageAccess pageKey="URGENT_WORK_ORDERS">
-                    {UrgentWorkOrderDetailPage}
+                    <UrgentWorkOrderDetailPage />
                   </RequirePageAccess>
                 ),
               },
@@ -180,7 +191,7 @@ const router = createBrowserRouter([
                 path: 'work-orders/:id',
                 element: (
                   <RequirePageAccess pageKey="WORK_ORDERS">
-                    {WorkOrderDetailPage}
+                    <WorkOrderDetailPage />
                   </RequirePageAccess>
                 ),
               },
@@ -196,7 +207,7 @@ const router = createBrowserRouter([
                 path: 'urgent-work-orders/:id',
                 element: (
                   <RequirePageAccess pageKey="URGENT_WORK_ORDERS">
-                    {UrgentWorkOrderDetailPage}
+                    <UrgentWorkOrderDetailPage />
                   </RequirePageAccess>
                 ),
               },
@@ -264,7 +275,7 @@ const router = createBrowserRouter([
                 path: 'work-orders/:id',
                 element: (
                   <RequirePageAccess pageKey="WORK_ORDERS">
-                    {WorkOrderDetailPage}
+                    <WorkOrderDetailPage />
                   </RequirePageAccess>
                 ),
               },
@@ -280,7 +291,7 @@ const router = createBrowserRouter([
                 path: 'urgent-work-orders/:id',
                 element: (
                   <RequirePageAccess pageKey="URGENT_WORK_ORDERS">
-                    {UrgentWorkOrderDetailPage}
+                    <UrgentWorkOrderDetailPage />
                   </RequirePageAccess>
                 ),
               },
@@ -324,6 +335,16 @@ const router = createBrowserRouter([
   },
 ]);
 
-const AppRouter = () => <RouterProvider router={router} />;
+/**
+ * The Suspense wrapper here catches all lazy-loaded page chunks.
+ * PageLoader is shown while the JS chunk for a given page is being downloaded.
+ * After the first visit to a route the chunk is cached by the browser, so
+ * subsequent navigations to the same route are instant.
+ */
+const AppRouter = () => (
+  <Suspense fallback={<PageLoader />}>
+    <RouterProvider router={router} />
+  </Suspense>
+);
 
 export default AppRouter;

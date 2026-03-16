@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useLang } from '../context/LangContext';
 import { changeMyPassword } from '../lib/api';
+import { useToast } from '../context/ToastContext';
 
 type PasswordChangeSectionProps = {
   isDark: boolean;
@@ -8,20 +9,17 @@ type PasswordChangeSectionProps = {
 
 const PasswordChangeSection: React.FC<PasswordChangeSectionProps> = ({ isDark }) => {
   const { t } = useLang();
+  const { addToast } = useToast();
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setError(t.passwordMismatch || 'Passwords do not match.');
+      addToast(t.passwordMismatch || 'Passwords do not match.', 'error');
       return;
     }
 
@@ -31,9 +29,9 @@ const PasswordChangeSection: React.FC<PasswordChangeSectionProps> = ({ isDark })
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setSuccess(t.passwordChangeSuccess || 'Password updated successfully.');
+      addToast(t.passwordChangeSuccess || 'Password updated successfully.', 'success');
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.passwordChangeError || 'Failed to change password.');
+      addToast(err?.response?.data?.message || t.passwordChangeError || 'Failed to change password.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -86,18 +84,6 @@ const PasswordChangeSection: React.FC<PasswordChangeSectionProps> = ({ isDark })
             className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${isDark ? 'border-surface-700 bg-surface-900 text-surface-100' : 'border-surface-200 bg-white text-surface-900'}`}
           />
         </div>
-
-        {error && (
-          <div className={`rounded-lg px-3 py-2 text-sm ${isDark ? 'bg-red-900/30 text-red-300 border border-red-800/40' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className={`rounded-lg px-3 py-2 text-sm ${isDark ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800/40' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
-            {success}
-          </div>
-        )}
 
         <button
           type="submit"

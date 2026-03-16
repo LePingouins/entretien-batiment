@@ -2,6 +2,8 @@ import * as React from 'react';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 import type {
   AccessOverrideState,
   AdminUserResponse,
@@ -52,17 +54,17 @@ const AdminUsersPage: React.FC = () => {
   const { t } = useLang();
   const { userId } = useAuth();
   const { colorScheme } = React.useContext(ColorSchemeContext);
+  const { addToast } = useToast();
+  const confirm = useConfirm();
 
   const [users, setUsers] = React.useState<AdminUserResponse[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
 
   const [inviteEmail, setInviteEmail] = React.useState('');
   const [inviteRole, setInviteRole] = React.useState<UserRole>('WORKER');
   const [inviting, setInviting] = React.useState(false);
 
   const [busyUserId, setBusyUserId] = React.useState<number | null>(null);
-  const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
 
   const [rules, setRules] = React.useState<NotificationRecipientRule[]>([]);
   const [rulesLoading, setRulesLoading] = React.useState(true);
@@ -84,16 +86,15 @@ const AdminUsersPage: React.FC = () => {
 
   const loadUsers = React.useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await getAdminUsers();
       setUsers(data);
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.adminUsersErrorLoad || 'Failed to load users.');
+      addToast(err?.response?.data?.message || t.adminUsersErrorLoad || 'Failed to load users.', 'error');
     } finally {
       setLoading(false);
     }
-  }, [t.adminUsersErrorLoad]);
+  }, [addToast, t.adminUsersErrorLoad]);
 
   const loadRules = React.useCallback(async () => {
     setRulesLoading(true);
@@ -101,11 +102,11 @@ const AdminUsersPage: React.FC = () => {
       const data = await getAdminNotificationRecipientRules();
       setRules(data);
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.adminNotifRulesLoadError || 'Failed to load notification recipient rules.');
+      addToast(err?.response?.data?.message || t.adminNotifRulesLoadError || 'Failed to load notification recipient rules.', 'error');
     } finally {
       setRulesLoading(false);
     }
-  }, [t.adminNotifRulesLoadError]);
+  }, [addToast, t.adminNotifRulesLoadError]);
 
   const loadPageRoleRules = React.useCallback(async () => {
     setPageRoleRulesLoading(true);
@@ -114,11 +115,11 @@ const AdminUsersPage: React.FC = () => {
       setPageRoleRules(data);
       setPageRoleRulesDirty(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.adminPageAccessLoadError || 'Failed to load page access rules.');
+      addToast(err?.response?.data?.message || t.adminPageAccessLoadError || 'Failed to load page access rules.', 'error');
     } finally {
       setPageRoleRulesLoading(false);
     }
-  }, [t.adminPageAccessLoadError]);
+  }, [addToast, t.adminPageAccessLoadError]);
 
   const loadUserAccessOverview = React.useCallback(async () => {
     setUserAccessLoading(true);
@@ -128,11 +129,11 @@ const AdminUsersPage: React.FC = () => {
       setDirtyUserOverrideIds(new Set());
       setExpandedAccessUserId((prev) => (prev != null && data.some((it) => it.userId === prev) ? prev : null));
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.adminPageAccessLoadError || 'Failed to load page access rules.');
+      addToast(err?.response?.data?.message || t.adminPageAccessLoadError || 'Failed to load page access rules.', 'error');
     } finally {
       setUserAccessLoading(false);
     }
-  }, [t.adminPageAccessLoadError]);
+  }, [addToast, t.adminPageAccessLoadError]);
 
   React.useEffect(() => {
     loadUsers();
@@ -150,32 +151,28 @@ const AdminUsersPage: React.FC = () => {
 
   const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
     setInviting(true);
     try {
       await inviteAdminUser(inviteEmail, inviteRole);
       setInviteEmail('');
       setInviteRole('WORKER');
-      setSuccessMessage(t.adminUsersInvitedSuccess || 'User invited successfully.');
+      addToast(t.adminUsersInvitedSuccess || 'User invited successfully.', 'success');
       await Promise.all([loadUsers(), loadUserAccessOverview()]);
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.adminUsersInviteFailed || 'Failed to invite user.');
+      addToast(err?.response?.data?.message || t.adminUsersInviteFailed || 'Failed to invite user.', 'error');
     } finally {
       setInviting(false);
     }
   };
 
   const runUserAction = async (targetUserId: number, action: () => Promise<void>, successText: string) => {
-    setError(null);
-    setSuccessMessage(null);
     setBusyUserId(targetUserId);
     try {
       await action();
-      setSuccessMessage(successText);
+      addToast(successText, 'success');
       await Promise.all([loadUsers(), loadUserAccessOverview()]);
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.adminUsersActionFailed || 'Action failed.');
+      addToast(err?.response?.data?.message || t.adminUsersActionFailed || 'Action failed.', 'error');
     } finally {
       setBusyUserId(null);
     }
@@ -213,7 +210,10 @@ const AdminUsersPage: React.FC = () => {
   };
 
   const handleResetPassword = async (targetUserId: number) => {
-    const ok = window.confirm(t.adminUsersResetConfirm || 'Reset this user password to Horizon?');
+    const ok = await confirm({
+      message: t.adminUsersResetConfirm || 'Reset this user password to Horizon?',
+      confirmLabel: 'Reset',
+    });
     if (!ok) return;
 
     await runUserAction(
@@ -227,11 +227,16 @@ const AdminUsersPage: React.FC = () => {
 
   const handleDeleteUser = async (targetUserId: number) => {
     if (targetUserId === userId) {
-      setError(t.adminUsersCannotDeleteSelf || 'You cannot delete your own account.');
+      addToast(t.adminUsersCannotDeleteSelf || 'You cannot delete your own account.', 'error');
       return;
     }
 
-    const ok = window.confirm(t.adminUsersDeleteConfirm || 'Delete this user permanently?');
+    const ok = await confirm({
+      message: t.adminUsersDeleteConfirm || 'Delete this user permanently?',
+      title: 'Delete User',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
     if (!ok) return;
 
     await runUserAction(
@@ -376,25 +381,21 @@ const AdminUsersPage: React.FC = () => {
   };
 
   const handleSavePageRoleRules = async () => {
-    setError(null);
-    setSuccessMessage(null);
     setPageRoleRulesSaving(true);
     try {
       const saved = await updateAdminRolePageAccessRules(pageRoleRules);
       setPageRoleRules(saved);
       setPageRoleRulesDirty(false);
-      setSuccessMessage(t.adminPageAccessSaved || 'Page access rules saved.');
+      addToast(t.adminPageAccessSaved || 'Page access rules saved.', 'success');
       await loadUserAccessOverview();
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.adminPageAccessSaveError || 'Failed to save page access rules.');
+      addToast(err?.response?.data?.message || t.adminPageAccessSaveError || 'Failed to save page access rules.', 'error');
     } finally {
       setPageRoleRulesSaving(false);
     }
   };
 
   const handleSaveUserOverrides = async (overview: UserPageAccessOverview) => {
-    setError(null);
-    setSuccessMessage(null);
     setSavingAccessUserId(overview.userId);
     try {
       const saved = await updateAdminUserPageAccessOverrides(
@@ -408,9 +409,9 @@ const AdminUsersPage: React.FC = () => {
         next.delete(overview.userId);
         return next;
       });
-      setSuccessMessage(t.adminPageAccessUserSaved || 'User page overrides saved.');
+      addToast(t.adminPageAccessUserSaved || 'User page overrides saved.', 'success');
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.adminPageAccessSaveError || 'Failed to save page access rules.');
+      addToast(err?.response?.data?.message || t.adminPageAccessSaveError || 'Failed to save page access rules.', 'error');
     } finally {
       setSavingAccessUserId(null);
     }
@@ -425,16 +426,14 @@ const AdminUsersPage: React.FC = () => {
   };
 
   const handleSaveRules = async () => {
-    setError(null);
-    setSuccessMessage(null);
     setRulesSaving(true);
     try {
       const saved = await updateAdminNotificationRecipientRules(rules);
       setRules(saved);
       setRulesDirty(false);
-      setSuccessMessage(t.adminNotifRulesSaved || 'Notification recipient rules saved.');
+      addToast(t.adminNotifRulesSaved || 'Notification recipient rules saved.', 'success');
     } catch (err: any) {
-      setError(err?.response?.data?.message || t.adminNotifRulesSaveError || 'Failed to save notification recipient rules.');
+      addToast(err?.response?.data?.message || t.adminNotifRulesSaveError || 'Failed to save notification recipient rules.', 'error');
     } finally {
       setRulesSaving(false);
     }
@@ -448,18 +447,6 @@ const AdminUsersPage: React.FC = () => {
             {t.adminUsersDefaultPassword || 'Default password for invited and reset accounts: Horizon'}
           </p>
         </div>
-
-        {error && (
-          <div className={`rounded-xl border px-4 py-3 text-sm ${isDark ? 'bg-red-900/20 border-red-900/30 text-red-300' : 'bg-red-50 border-red-200 text-red-700'}`}>
-            {error}
-          </div>
-        )}
-
-        {successMessage && (
-          <div className={`rounded-xl border px-4 py-3 text-sm ${isDark ? 'bg-emerald-900/20 border-emerald-900/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
-            {successMessage}
-          </div>
-        )}
 
         <section className={`rounded-2xl border p-5 ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-surface-200 shadow-sm'}`}>
           <h2 className={`text-lg font-bold mb-1 ${isDark ? 'text-surface-100' : 'text-surface-900'}`}>
