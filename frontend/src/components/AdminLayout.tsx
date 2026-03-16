@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
@@ -139,10 +140,36 @@ const AdminLayout: React.FC = () => {
   }, [showSettings, closeSettings]);
   const [navOpen, setNavOpen] = React.useState(false);
   const handleHamburger = () => setNavOpen((open) => !open);
+
+  // Sticky nav: header becomes fixed only after it has fully scrolled out of view
+  const headerRef = React.useRef<HTMLElement | null>(null);
+  const [isSticky, setIsSticky] = React.useState(false);
+  const [headerHeight, setHeaderHeight] = React.useState(0);
+
+  React.useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const ro = new ResizeObserver(() => setHeaderHeight(header.offsetHeight));
+    ro.observe(header);
+    setHeaderHeight(header.offsetHeight);
+    return () => ro.disconnect();
+  }, []);
+
+  React.useEffect(() => {
+    if (headerHeight === 0) return;
+    const handleScroll = () => setIsSticky(window.scrollY >= headerHeight);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [headerHeight]);
+
   return (
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
-    <div className={`min-h-screen flex flex-col justify-between transition-colors overflow-x-hidden ${colorScheme === 'dark' ? 'dark bg-surface-950' : 'bg-slate-100'}`}>
-      <header className={`sticky top-0 z-40 backdrop-blur-xl border-b ${colorScheme === 'dark' ? 'bg-surface-900/90 text-surface-100 border-surface-700' : 'bg-white text-slate-800 border-slate-200 shadow-sm'}`}>
+    <div className={`min-h-screen flex flex-col justify-between transition-colors ${colorScheme === 'dark' ? 'dark bg-surface-950' : 'bg-slate-100'}`}>
+      <header
+        ref={headerRef}
+        className={`${isSticky ? 'fixed top-0 left-0 right-0 w-full nav-slide-down' : ''} z-40 backdrop-blur-xl border-b ${colorScheme === 'dark' ? 'bg-surface-900/90 text-surface-100 border-surface-700' : 'bg-white text-slate-800 border-slate-200 shadow-sm'}`}
+      >
         <div className="w-full px-4 sm:px-6 py-2.5 flex flex-wrap sm:flex-nowrap justify-between items-center gap-2">
           <div className="flex items-center gap-3">
             <button className="sm:hidden p-2 rounded-lg focus:outline-none" aria-label="Open navigation" onClick={handleHamburger}>
@@ -240,6 +267,7 @@ const AdminLayout: React.FC = () => {
           </nav>
         </div>
       </header>
+      {isSticky && <div style={{ height: headerHeight }} aria-hidden="true" />}
 
       {/* Settings Modal */}
       {showSettings && (
