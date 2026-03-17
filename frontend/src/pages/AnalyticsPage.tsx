@@ -76,7 +76,7 @@ export default function AnalyticsPage() {
                     <h3 className={`text-sm font-medium uppercase tracking-wider mb-1 ${textMuted}`}>{t.tasksCompletedThisWeek}</h3>
                     <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-bold text-green-500">{stats.tasksCompletedThisWeek}</span>
-                        <span className={`text-sm ${textMuted}`}>tasks</span>
+                        <span className={`text-sm ${textMuted}`}>{t.tasks}</span>
                     </div>
                     <div className="mt-2 text-xs text-green-500 font-medium flex items-center gap-1">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
                     <h3 className={`text-sm font-medium uppercase tracking-wider mb-1 ${textMuted}`}>{t.urgentTasksCompletedThisWeek}</h3>
                     <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-bold text-red-500">{stats.urgentTasksCompletedThisWeek}</span>
-                        <span className={`text-sm ${textMuted}`}>completed</span>
+                        <span className={`text-sm ${textMuted}`}>{t.completed}</span>
                     </div>
                      <div className="mt-2 text-xs text-red-500 font-medium">
                         {stats.urgentCount} {t.totalPendingUrgent}
@@ -128,15 +128,15 @@ export default function AnalyticsPage() {
                         <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border p-4 ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-slate-200'}`}>
                              <div className="p-4 text-center">
                                 <div className={`text-2xl font-bold ${textMain}`}>{stats.averageCompletionTimeHours.toFixed(1)}<span className="text-sm font-normal text-gray-400 ml-1">h</span></div>
-                                <div className={`text-xs uppercase tracking-wider mt-1 ${textMuted}`}>Global Avg</div>
+                                <div className={`text-xs uppercase tracking-wider mt-1 ${textMuted}`}>{t.globalAvg}</div>
                              </div>
                              <div className={`p-4 text-center border-l border-r ${isDark ? 'border-surface-700' : 'border-slate-100'}`}>
                                 <div className="text-2xl font-bold text-red-500">{stats.averageCompletionTimeUrgent?.toFixed(1)}<span className="text-sm font-normal text-red-300 ml-1">h</span></div>
-                                <div className={`text-xs uppercase tracking-wider mt-1 ${textMuted}`}>Urgent Avg</div>
+                                <div className={`text-xs uppercase tracking-wider mt-1 ${textMuted}`}>{t.urgentAvg}</div>
                              </div>
                              <div className="p-4 text-center">
                                 <div className="text-2xl font-bold text-blue-500">{stats.averageCompletionTimeNormal?.toFixed(1)}<span className="text-sm font-normal text-blue-300 ml-1">h</span></div>
-                                <div className={`text-xs uppercase tracking-wider mt-1 ${textMuted}`}>Normal Avg</div>
+                                <div className={`text-xs uppercase tracking-wider mt-1 ${textMuted}`}>{t.normalAvg}</div>
                              </div>
                         </div>
                     </section>
@@ -194,7 +194,9 @@ export default function AnalyticsPage() {
                                                 <div className="absolute bottom-0 left-0 right-0 bg-blue-500 transition-all duration-500" style={{ height: `${Math.min((count / (Math.max(...Object.values(stats.activeTasksByStatus)) || 1)) * 100, 100)}%` }}></div>
                                             </div>
                                             <span className={`text-xl font-bold mt-2 ${textMain}`}>{count}</span>
-                                            <span className={`text-[10px] uppercase font-semibold text-center mt-1 ${textMuted}`}>{status.replace('_', ' ')}</span>
+                                                                                        <span className={`text-[10px] uppercase font-semibold text-center mt-1 ${textMuted}`}>
+                                                                                            {t[`status${status.split('_').map(s => s.charAt(0) + s.slice(1).toLowerCase()).join('')}`] || status.replace('_', ' ')}
+                                                                                        </span>
                                         </div>
                                     ))
                                 ) : (
@@ -266,7 +268,7 @@ export default function AnalyticsPage() {
                                             <div className={`text-sm font-medium ${textMain}`}>{tech.name}</div>
                                         </div>
                                         <div className="font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded text-xs">
-                                            {tech.completedTasks} tasks
+                                            {tech.completedTasks} {t.tasks}
                                         </div>
                                     </div>
                                 ))

@@ -700,7 +700,7 @@ function UrgentWorkOrdersPage() {
               }
               onClick={handleCreate}
             >
-              <span className="align-middle">New Urgent Work Order</span>
+              <span className="align-middle">{t.dashboardNewUrgentOrder}</span>
             </button>
           </div>
         </div>
@@ -907,7 +907,7 @@ function UrgentWorkOrdersPage() {
               </div>
               {/* Due Date field (always use dueDate) - moved below Location */}
               <div>
-                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>Due Date</label>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.dueDate}</label>
                 <input
                   type="date"
                   className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`}

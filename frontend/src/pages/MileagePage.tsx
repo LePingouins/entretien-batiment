@@ -369,7 +369,7 @@ const MileagePage: React.FC = () => {
                         value={entry.workOrderId || ''}
                         onChange={e => handleChange(entry.id, 'workOrderId', e.target.value ? Number(e.target.value) : undefined)}
                       >
-                        <option value="">{(t as any).linkWorkOrder || 'Link Work Order'}</option>
+                        <option value="">{t.linkWorkOrder}</option>
                         {workOrders.map(wo => (
                           <option key={wo.id} value={wo.id}>{wo.title}</option>
                         ))}
@@ -392,7 +392,7 @@ const MileagePage: React.FC = () => {
                         value={entry.urgentWorkOrderId || ''}
                         onChange={e => handleChange(entry.id, 'urgentWorkOrderId', e.target.value ? Number(e.target.value) : undefined)}
                       >
-                        <option value="">{(t as any).linkUrgentWorkOrder || 'Link Urgent Work Order'}</option>
+                        <option value="">{t.linkUrgentWorkOrder}</option>
                         {urgentWorkOrders.map(uwo => (
                           <option key={uwo.id} value={uwo.id}>{uwo.title}</option>
                         ))}
