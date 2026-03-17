@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
@@ -192,6 +192,35 @@ const MileagePage: React.FC = () => {
      handleUpdate(id, field, value);
   };
 
+  const handleLinkChange = (id: number | undefined, value: string) => {
+    let workOrderId: number | undefined;
+    let urgentWorkOrderId: number | undefined;
+    if (value.startsWith('wo-')) {
+      workOrderId = Number(value.slice(3));
+    } else if (value.startsWith('uwo-')) {
+      urgentWorkOrderId = Number(value.slice(4));
+    }
+    // Optimistic update — clear both, then set only the chosen one
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, workOrderId, urgentWorkOrderId } : e));
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+    const payload = {
+      date: entry.date,
+      supplier: entry.supplier,
+      startKm: entry.startKm ? parseInt(entry.startKm as string) : null,
+      endKm: entry.endKm ? parseInt(entry.endKm as string) : null,
+      workOrderId: workOrderId ?? null,
+      urgentWorkOrderId: urgentWorkOrderId ?? null,
+    };
+    api.put(`${API_URL}/${id}`, payload).then(res => {
+      setEntries(curr => curr.map(e => e.id === id ? {
+        ...e,
+        workOrderId: res.data.workOrderId,
+        urgentWorkOrderId: res.data.urgentWorkOrderId,
+      } : e));
+    });
+  };
+
   const handleDelete = (id: number | undefined) => {
     if (!id) return;
     api.delete(`${API_URL}/${id}`)
@@ -362,52 +391,54 @@ const MileagePage: React.FC = () => {
                       placeholder={t.endKm || 'End Km'}
                       min="0"
                     />
-                    {/* Work Order Link Dropdown */}
-                    <div className="flex flex-col">
-                      <select
-                        className={`border rounded-lg h-10 px-2 text-sm flex-shrink-0 w-[180px] ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-600 text-surface-100' : 'bg-white border-surface-200'}`}
-                        value={entry.workOrderId || ''}
-                        onChange={e => handleChange(entry.id, 'workOrderId', e.target.value ? Number(e.target.value) : undefined)}
-                      >
-                        <option value="">{t.linkWorkOrder}</option>
-                        {workOrders.map(wo => (
-                          <option key={wo.id} value={wo.id}>{wo.title}</option>
-                        ))}
-                      </select>
-                      {entry.workOrderId && (
-                        <a
-                          href={`${basePath}/work-orders/${entry.workOrderId}`}
-                          className="text-xs text-blue-600 underline mt-1 hover:text-blue-800"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {workOrders.find(wo => wo.id === entry.workOrderId)?.title || (t as any).viewWorkOrder || 'View Work Order'}
-                        </a>
-                      )}
-                    </div>
-                    {/* Urgent Work Order Link Dropdown */}
-                    <div className="flex flex-col">
-                      <select
-                        className={`border rounded-lg h-10 px-2 text-sm flex-shrink-0 w-[180px] ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-600 text-surface-100' : 'bg-white border-surface-200'}`}
-                        value={entry.urgentWorkOrderId || ''}
-                        onChange={e => handleChange(entry.id, 'urgentWorkOrderId', e.target.value ? Number(e.target.value) : undefined)}
-                      >
-                        <option value="">{t.linkUrgentWorkOrder}</option>
-                        {urgentWorkOrders.map(uwo => (
-                          <option key={uwo.id} value={uwo.id}>{uwo.title}</option>
-                        ))}
-                      </select>
-                      {entry.urgentWorkOrderId && (
-                        <a
-                          href={`${basePath}/urgent-work-orders/${entry.urgentWorkOrderId}`}
-                          className="text-xs text-purple-600 underline mt-1 hover:text-purple-800"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {urgentWorkOrders.find(uwo => uwo.id === entry.urgentWorkOrderId)?.title || (t as any).viewUrgentWorkOrder || 'View Urgent Work Order'}
-                        </a>
-                      )}
-                    </div>
+                    {/* Unified Work Order / Urgent Work Order Link */}
+                    {(() => {
+                      const linkValue = entry.workOrderId
+                        ? `wo-${entry.workOrderId}`
+                        : entry.urgentWorkOrderId
+                        ? `uwo-${entry.urgentWorkOrderId}`
+                        : '';
+                      const linkedWo = entry.workOrderId ? workOrders.find(wo => wo.id === entry.workOrderId) : null;
+                      const linkedUwo = entry.urgentWorkOrderId ? urgentWorkOrders.find(uwo => uwo.id === entry.urgentWorkOrderId) : null;
+                      return (
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <select
+                            className={`border rounded-lg h-10 px-2 text-sm w-[185px] ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-600 text-surface-100' : 'bg-white border-surface-200'}`}
+                            value={linkValue}
+                            onChange={e => handleLinkChange(entry.id, e.target.value)}
+                          >
+                            <option value="">— {t.linkWorkOrder} —</option>
+                            <optgroup label={t.workOrders}>
+                              {workOrders.map(wo => (
+                                <option key={`wo-${wo.id}`} value={`wo-${wo.id}`}>{wo.title}</option>
+                              ))}
+                            </optgroup>
+                            <optgroup label={t.urgentWorkOrders}>
+                              {urgentWorkOrders.map(uwo => (
+                                <option key={`uwo-${uwo.id}`} value={`uwo-${uwo.id}`}>{uwo.title}</option>
+                              ))}
+                            </optgroup>
+                          </select>
+                          {(linkedWo || linkedUwo) && (
+                            <Link
+                              to={linkedWo
+                                ? `${basePath}/work-orders/${entry.workOrderId}`
+                                : `${basePath}/urgent-work-orders/${entry.urgentWorkOrderId}`}
+                              className={`inline-flex items-center gap-1.5 h-10 px-3 rounded-lg text-sm font-medium transition-colors flex-shrink-0 ${
+                                linkedUwo
+                                  ? colorScheme === 'dark' ? 'bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/25 hover:bg-purple-500/25' : 'bg-purple-50 text-purple-700 ring-1 ring-purple-200 hover:bg-purple-100'
+                                  : colorScheme === 'dark' ? 'bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/25 hover:bg-blue-500/25' : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100'
+                              }`}
+                            >
+                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                              <span className="max-w-[120px] truncate">{linkedWo ? linkedWo.title : linkedUwo?.title}</span>
+                            </Link>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className={`border rounded-lg flex items-center text-sm font-semibold h-10 px-2 flex-shrink-0 w-[110px] ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-600 text-brand-300' : colorScheme === 'current' ? 'bg-white/60 text-surface-900' : 'bg-brand-50 text-brand-700 border-brand-200'}`}>
                       {t.totalKm ? `${t.totalKm}: ` : 'Total: '}{computeTotalKm(entry.startKm, entry.endKm)}
                     </div>
