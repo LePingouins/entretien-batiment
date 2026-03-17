@@ -19,9 +19,7 @@ export const en = {
   delete: 'Delete',
   create: 'Create',
   tasks: 'Tasks',
-  globalAvg: 'Global Avg',
-  urgentAvg: 'Urgent Avg',
-  normalAvg: 'Normal Avg',
+  // globalAvg, urgentAvg, normalAvg moved to end of object to avoid duplicates
   completed: 'Completed',
   linkWorkOrder: 'Link Work Order',
   linkUrgentWorkOrder: 'Link Urgent Work Order',
@@ -467,9 +465,7 @@ export const fr = {
   delete: 'Supprimer',
   create: 'Créer',
   tasks: 'Tâches',
-  globalAvg: 'Moyenne Globale',
-  urgentAvg: 'Moyenne Urgente',
-  normalAvg: 'Moyenne Normale',
+  // globalAvg, urgentAvg, normalAvg moved to end of object to avoid duplicates
   completed: 'Terminées',
   linkWorkOrder: 'Lier à un ordre de travail',
   linkUrgentWorkOrder: 'Lier à un ordre urgent',
