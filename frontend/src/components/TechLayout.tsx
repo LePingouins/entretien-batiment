@@ -138,7 +138,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     navigate('/login');
   };
 
-  const pagePath = React.useCallback((segment: '' | 'work-orders' | 'urgent-work-orders' | 'mileage' | 'archive' | 'analytics') => {
+  const pagePath = React.useCallback((segment: '' | 'work-orders' | 'urgent-work-orders' | 'mileage' | 'archive' | 'analytics' | 'documents' | 'shopping-list') => {
     return segment ? `${basePath}/${segment}` : basePath;
   }, [basePath]);
 
@@ -205,6 +205,8 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
             {canAccess('ANALYTICS') && (
               <Link to={pagePath('analytics')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('analytics')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.analyticsTitle || 'Analytics'}</Link>
             )}
+            <Link to={pagePath('documents')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('documents')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.documentsPage || 'Documents'}</Link>
+            <Link to={pagePath('shopping-list')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('shopping-list')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.shoppingList || 'Shopping List'}</Link>
             <BugReportButton />
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>
             <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>

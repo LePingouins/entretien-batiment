@@ -87,10 +87,22 @@ public class WorkOrder {
     @Column(name = "archived_at")
     private Instant archivedAt;
 
+    // Invoice fields
+    @Column(name = "invoice_filename")
+    private String invoiceFilename;
+
+    @Column(name = "invoice_content_type")
+    private String invoiceContentType;
+
     public String getAttachmentFilename() { return attachmentFilename; }
     public String getAttachmentContentType() { return attachmentContentType; }
     public void setAttachmentFilename(String attachmentFilename) { this.attachmentFilename = attachmentFilename; }
     public void setAttachmentContentType(String attachmentContentType) { this.attachmentContentType = attachmentContentType; }
+
+    public String getInvoiceFilename() { return invoiceFilename; }
+    public String getInvoiceContentType() { return invoiceContentType; }
+    public void setInvoiceFilename(String invoiceFilename) { this.invoiceFilename = invoiceFilename; }
+    public void setInvoiceContentType(String invoiceContentType) { this.invoiceContentType = invoiceContentType; }
 
     public Integer getSortIndex() { return sortIndex; }
     public void setSortIndex(Integer sortIndex) { this.sortIndex = sortIndex; }

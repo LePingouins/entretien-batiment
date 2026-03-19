@@ -267,9 +267,10 @@ export async function getUrgentWorkOrders(params?: {
   });
 }
 
-export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { dueDate?: string; priority?: string; assignedToUserId?: number | string | null }) : Promise<UrgentWorkOrderResponse> {
+export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { dueDate?: string; priority?: string; assignedToUserId?: number | string | null; invoiceFiles?: File[] }) : Promise<UrgentWorkOrderResponse> {
   // If files are present, use FormData, else send JSON
-  if (payload.files && payload.files.length > 0) {
+  const hasInvoiceFiles = payload.invoiceFiles && payload.invoiceFiles.length > 0;
+  if ((payload.files && payload.files.length > 0) || hasInvoiceFiles) {
     const formData = new FormData();
     formData.append('title', payload.title);
     formData.append('description', payload.description);
@@ -283,8 +284,15 @@ export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { 
     if (payload.assignedToUserId !== undefined && payload.assignedToUserId !== null && payload.assignedToUserId !== '') {
       formData.append('assignedToUserId', String(payload.assignedToUserId));
     }
-    for (let i = 0; i < payload.files.length; i++) {
-      formData.append('files', payload.files[i]);
+    if (payload.files) {
+      for (let i = 0; i < payload.files.length; i++) {
+        formData.append('files', payload.files[i]);
+      }
+    }
+    if (payload.invoiceFiles) {
+      for (let i = 0; i < payload.invoiceFiles.length; i++) {
+        formData.append('invoiceFiles', payload.invoiceFiles[i]);
+      }
     }
     const res = await api.post('/api/urgent-work-orders', formData);
     return res.data;
@@ -306,10 +314,11 @@ export async function createUrgentWorkOrder(payload: UrgentWorkOrderRequest & { 
 
 export async function updateUrgentWorkOrder(
   id: number,
-  data: Partial<UrgentWorkOrderRequest & { status: string; dueDate?: string; priority?: string; assignedToUserId?: number | string | null; removeAttachment?: boolean }>
+  data: Partial<UrgentWorkOrderRequest & { status: string; dueDate?: string; priority?: string; assignedToUserId?: number | string | null; removeAttachment?: boolean; invoiceFiles?: File[]; removeInvoice?: boolean }>
 ): Promise<UrgentWorkOrderResponse> {
   const hasFiles = data.files && (data.files instanceof FileList ? data.files.length > 0 : Array.isArray(data.files) && data.files.length > 0);
-  const mustUseMultipart = !!hasFiles || data.removeAttachment === true;
+  const hasInvoiceFiles = data.invoiceFiles && data.invoiceFiles.length > 0;
+  const mustUseMultipart = !!hasFiles || data.removeAttachment === true || !!hasInvoiceFiles || data.removeInvoice === true;
 
   if (mustUseMultipart) {
     const formData = new FormData();
@@ -323,9 +332,15 @@ export async function updateUrgentWorkOrder(
       formData.append('assignedToUserId', data.assignedToUserId === null || data.assignedToUserId === '' ? '' : String(data.assignedToUserId));
     }
     if (data.removeAttachment === true) formData.append('removeAttachment', 'true');
+    if (data.removeInvoice === true) formData.append('removeInvoice', 'true');
     const filesArr = data.files instanceof FileList ? Array.from(data.files) : Array.isArray(data.files) ? data.files : [];
     for (let i = 0; i < filesArr.length; i++) {
       formData.append('files', filesArr[i]);
+    }
+    if (data.invoiceFiles) {
+      for (let i = 0; i < data.invoiceFiles.length; i++) {
+        formData.append('invoiceFiles', data.invoiceFiles[i]);
+      }
     }
     const res = await api.patch(`/api/urgent-work-orders/${id}`, formData);
     return res.data;
@@ -567,5 +582,22 @@ export async function updateAdminUserPageAccessOverrides(
 ): Promise<import('../types/api').UserPageAccessOverview> {
   const res = await api.put<import('../types/api').UserPageAccessOverview>(`/api/admin/page-access/users/${userId}`, updates);
   return res.data;
+}
+
+export async function getShoppingList(): Promise<import('../types/api').ShoppingListResponse> {
+  const res = await api.get<import('../types/api').ShoppingListResponse>('/api/shopping-list');
+  return res.data;
+}
+
+export async function getWorkOrdersWithInvoices(): Promise<import('../types/api').WorkOrderResponse[]> {
+  const res = await api.get<import('../types/api').PageResponse<import('../types/api').WorkOrderResponse>>('/api/admin/work-orders', {
+    params: { size: 1000, hasInvoice: true },
+  });
+  return res.data.content;
+}
+
+export async function getUrgentWorkOrdersWithInvoices(): Promise<import('../types/api').UrgentWorkOrderResponse[]> {
+  const res = await api.get<import('../types/api').UrgentWorkOrderResponse[]>('/api/urgent-work-orders');
+  return res.data.filter((wo) => !!wo.invoiceFilename);
 }
 

@@ -36,6 +36,9 @@ public class UrgentWorkOrder {
     private String attachmentContentType;
     private String attachmentDownloadUrl;
 
+    private String invoiceFilename;
+    private String invoiceContentType;
+
     private Integer materialsCount;
     private String materialsPreview; // Could be JSON or comma-separated
 
@@ -98,6 +101,16 @@ public class UrgentWorkOrder {
         return attachmentDownloadUrl; 
     }
     public void setAttachmentDownloadUrl(String attachmentDownloadUrl) { this.attachmentDownloadUrl = attachmentDownloadUrl; }
+    public String getInvoiceFilename() { return invoiceFilename; }
+    public void setInvoiceFilename(String invoiceFilename) { this.invoiceFilename = invoiceFilename; }
+    public String getInvoiceContentType() { return invoiceContentType; }
+    public void setInvoiceContentType(String invoiceContentType) { this.invoiceContentType = invoiceContentType; }
+    public String getInvoiceDownloadUrl() {
+        if (invoiceFilename != null && !invoiceFilename.isBlank()) {
+            return "/api/files/workorders/" + invoiceFilename;
+        }
+        return null;
+    }
     public Integer getMaterialsCount() { return materialsCount; }
     public void setMaterialsCount(Integer materialsCount) { this.materialsCount = materialsCount; }
     public String getMaterialsPreview() { return materialsPreview; }

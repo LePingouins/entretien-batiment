@@ -2,6 +2,7 @@ package com.entretienbatiment.backend.workorders.data;
 
 import com.entretienbatiment.backend.workorders.domain.WorkOrderMaterial;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,4 +11,7 @@ import java.util.List;
 public interface WorkOrderMaterialRepository extends JpaRepository<WorkOrderMaterial, Long> {
     List<WorkOrderMaterial> findByWorkOrderIdOrderByCreatedAtAsc(Long workOrderId);
     void deleteByIdAndWorkOrderId(Long id, Long workOrderId);
+
+    @Query("SELECT m FROM WorkOrderMaterial m WHERE m.workOrder.archived = false")
+    List<WorkOrderMaterial> findAllNotArchived();
 }

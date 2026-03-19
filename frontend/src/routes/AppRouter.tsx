@@ -30,6 +30,8 @@ const AdminUsersPage         = lazy(() => import('../pages/AdminUsersPage'));
 const NotificationsPage      = lazy(() => import('../pages/NotificationsPage'));
 const DevelopperDebugPage    = lazy(() => import('../pages/DevelopperDebugPage'));
 const NoAccessPage           = lazy(() => import('../pages/NoAccessPage'));
+const DocumentsPage          = lazy(() => import('../pages/DocumentsPage'));
+const MaterialsShoppingListPage = lazy(() => import('../pages/MaterialsShoppingListPage'));
 
 /** Shown while a lazy page chunk is being downloaded */
 const PageLoader = () => (
@@ -150,6 +152,14 @@ const router = createBrowserRouter([
                 ),
               },
               {
+                path: 'documents',
+                element: <DocumentsPage />,
+              },
+              {
+                path: 'shopping-list',
+                element: <MaterialsShoppingListPage />,
+              },
+              {
                 path: 'debug',
                 element: <ProtectedRoute requiredRole="DEVELOPPER" />,
                 children: [
@@ -243,6 +253,14 @@ const router = createBrowserRouter([
                   </RequirePageAccess>
                 ),
               },
+              {
+                path: 'documents',
+                element: <DocumentsPage />,
+              },
+              {
+                path: 'shopping-list',
+                element: <MaterialsShoppingListPage />,
+              },
             ],
           },
         ],
@@ -326,6 +344,14 @@ const router = createBrowserRouter([
                     <NotificationsPage />
                   </RequirePageAccess>
                 ),
+              },
+              {
+                path: 'documents',
+                element: <DocumentsPage />,
+              },
+              {
+                path: 'shopping-list',
+                element: <MaterialsShoppingListPage />,
               },
             ],
           },

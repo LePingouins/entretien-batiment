@@ -123,6 +123,8 @@ const WorkOrderDetailPage: React.FC = () => {
 
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
   const attachmentUrl = workOrder.attachmentDownloadUrl || (workOrder.attachmentFilename ? `/api/files/workorders/${workOrder.attachmentFilename}` : undefined);
+  const isInvoiceImage = workOrder.invoiceContentType?.startsWith('image/');
+  const invoiceUrl = workOrder.invoiceDownloadUrl || (workOrder.invoiceFilename ? `/api/files/workorders/${workOrder.invoiceFilename}` : undefined);
   return (
     <>
       {/* Printable layout styles */}
@@ -272,6 +274,45 @@ const WorkOrderDetailPage: React.FC = () => {
                               download
                               className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${isDark ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-50'}`}
                             >
+                              {t.download}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {invoiceUrl && (
+                    <div className="mt-8">
+                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7H6a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-3M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M9 7h6" />
+                        </svg>
+                        {t.invoiceDocument || 'Invoice / Document'}
+                      </h3>
+                      <div className={`rounded-xl overflow-hidden border ${isDark ? 'bg-surface-950 border-surface-700' : 'bg-green-50 border-green-200'}`}>
+                        {isInvoiceImage ? (
+                          <div className="relative group">
+                            <img src={invoiceUrl} alt="Invoice" className="w-full max-h-[500px] object-contain bg-black/5" />
+                            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
+                              <a href={invoiceUrl} target="_blank" rel="noopener noreferrer" className="bg-white text-gray-900 px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-gray-100">
+                                {t.openOriginal}
+                              </a>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-6 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-3 rounded-lg ${isDark ? 'bg-surface-700' : 'bg-white shadow-sm'}`}>
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="font-medium">{workOrder.invoiceFilename}</p>
+                                <p className="text-xs opacity-60">{t.clickToDownload}</p>
+                              </div>
+                            </div>
+                            <a href={invoiceUrl} download className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${isDark ? 'border-gray-600 hover:bg-gray-700' : 'border-green-300 bg-green-100 hover:bg-green-200 text-green-800'}`}>
                               {t.download}
                             </a>
                           </div>

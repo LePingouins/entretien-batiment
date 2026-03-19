@@ -81,6 +81,9 @@ public class UrgentWorkOrderController {
         if (request.getFiles() != null && !request.getFiles().isEmpty()) {
             storeAttachment(urgentWorkOrder, request.getFiles().get(0));
         }
+        if (request.getInvoiceFiles() != null && !request.getInvoiceFiles().isEmpty()) {
+            storeInvoice(urgentWorkOrder, request.getInvoiceFiles().get(0));
+        }
         UrgentWorkOrder saved = service.save(urgentWorkOrder);
         notificationService.notifyAdmins(
                 "New Urgent Work Order",
@@ -178,6 +181,13 @@ public class UrgentWorkOrderController {
                         storeAttachment(existing, updates.getFiles().get(0));
                     } else if (Boolean.TRUE.equals(updates.getRemoveAttachment())) {
                         clearAttachment(existing);
+                    }
+
+                    boolean hasNewInvoice = updates.getInvoiceFiles() != null && !updates.getInvoiceFiles().isEmpty();
+                    if (hasNewInvoice) {
+                        storeInvoice(existing, updates.getInvoiceFiles().get(0));
+                    } else if (Boolean.TRUE.equals(updates.getRemoveInvoice())) {
+                        clearInvoice(existing);
                     }
 
                     return ResponseEntity.ok(enrichDisplayNames(service.save(existing)));
@@ -397,6 +407,35 @@ public class UrgentWorkOrderController {
         urgentWorkOrder.setAttachmentFilename(null);
         urgentWorkOrder.setAttachmentContentType(null);
         urgentWorkOrder.setAttachmentDownloadUrl(null);
+        deleteStoredAttachment(previousFilename);
+    }
+
+    private void storeInvoice(UrgentWorkOrder urgentWorkOrder, MultipartFile file) {
+        String previousFilename = urgentWorkOrder.getInvoiceFilename();
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String ext = originalFilename != null && originalFilename.contains(".")
+                    ? originalFilename.substring(originalFilename.lastIndexOf('.'))
+                    : "";
+            String storedFilename = java.util.UUID.randomUUID() + ext;
+            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+            java.nio.file.Files.createDirectories(uploadDir);
+            java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
+            file.transferTo(filePath);
+            urgentWorkOrder.setInvoiceFilename(storedFilename);
+            urgentWorkOrder.setInvoiceContentType(file.getContentType());
+            if (previousFilename != null && !previousFilename.isBlank() && !previousFilename.equals(storedFilename)) {
+                deleteStoredAttachment(previousFilename);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to store invoice file", e);
+        }
+    }
+
+    private void clearInvoice(UrgentWorkOrder urgentWorkOrder) {
+        String previousFilename = urgentWorkOrder.getInvoiceFilename();
+        urgentWorkOrder.setInvoiceFilename(null);
+        urgentWorkOrder.setInvoiceContentType(null);
         deleteStoredAttachment(previousFilename);
     }
 

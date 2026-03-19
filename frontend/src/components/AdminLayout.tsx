@@ -209,6 +209,8 @@ const AdminLayout: React.FC = () => {
             {canAccess('ARCHIVE') && (
               <Link to={pagePath('ARCHIVE')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('ARCHIVE')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.archive}</Link>
             )}
+            <Link to="/admin/documents" className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes('/admin/documents') ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.documentsPage || 'Documents'}</Link>
+            <Link to="/admin/shopping-list" className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes('/admin/shopping-list') ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.shoppingList || 'Shopping List'}</Link>
             <BugReportButton />
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>
             <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>

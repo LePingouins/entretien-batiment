@@ -605,6 +605,13 @@ public class WorkOrderService {
             clearAttachment(wo);
         }
 
+        boolean hasNewInvoice = req.getInvoiceFiles() != null && !req.getInvoiceFiles().isEmpty();
+        if (hasNewInvoice) {
+            replaceInvoice(wo, req.getInvoiceFiles().get(0));
+        } else if (Boolean.TRUE.equals(req.getRemoveInvoice())) {
+            clearInvoice(wo);
+        }
+
         WorkOrder saved = repo.save(wo);
         reminderScheduler.checkAndSendReminder(saved);
         return toResponse(saved);
@@ -660,6 +667,29 @@ public class WorkOrderService {
 
         workOrder.setAttachmentFilename(attachmentFilename);
         workOrder.setAttachmentContentType(attachmentContentType);
+
+        String invoiceFilename = null;
+        String invoiceContentType = null;
+        if (req.getInvoiceFiles() != null && !req.getInvoiceFiles().isEmpty()) {
+            MultipartFile invoiceFile = req.getInvoiceFiles().get(0);
+            try {
+                String originalFilename = invoiceFile.getOriginalFilename();
+                String ext = originalFilename != null && originalFilename.contains(".")
+                        ? originalFilename.substring(originalFilename.lastIndexOf('.'))
+                        : "";
+                String storedFilename = java.util.UUID.randomUUID() + ext;
+                java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+                java.nio.file.Files.createDirectories(uploadDir);
+                java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
+                invoiceFile.transferTo(filePath);
+                invoiceFilename = storedFilename;
+                invoiceContentType = invoiceFile.getContentType();
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store invoice file", e);
+            }
+        }
+        workOrder.setInvoiceFilename(invoiceFilename);
+        workOrder.setInvoiceContentType(invoiceContentType);
         WorkOrder saved = repo.save(workOrder);
 
         // Assign sortIndex for proper Kanban positioning based on priority
@@ -718,6 +748,37 @@ public class WorkOrderService {
         deleteAttachmentFileQuietly(previousFilename);
     }
 
+    private void replaceInvoice(WorkOrder workOrder, MultipartFile file) {
+        String previousFilename = workOrder.getInvoiceFilename();
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String ext = originalFilename != null && originalFilename.contains(".")
+                    ? originalFilename.substring(originalFilename.lastIndexOf('.'))
+                    : "";
+            String storedFilename = java.util.UUID.randomUUID() + ext;
+            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+            java.nio.file.Files.createDirectories(uploadDir);
+            java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
+            file.transferTo(filePath);
+
+            workOrder.setInvoiceFilename(storedFilename);
+            workOrder.setInvoiceContentType(file.getContentType());
+
+            if (previousFilename != null && !previousFilename.isBlank() && !previousFilename.equals(storedFilename)) {
+                deleteAttachmentFileQuietly(previousFilename);
+            }
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store invoice file", e);
+        }
+    }
+
+    private void clearInvoice(WorkOrder workOrder) {
+        String previousFilename = workOrder.getInvoiceFilename();
+        workOrder.setInvoiceFilename(null);
+        workOrder.setInvoiceContentType(null);
+        deleteAttachmentFileQuietly(previousFilename);
+    }
+
     private void deleteAttachmentFileQuietly(String filename) {
         if (filename == null || filename.isBlank()) {
             return;
@@ -739,6 +800,9 @@ public class WorkOrderService {
         String downloadUrl = (attachmentFilename != null)
             ? "/api/files/workorders/" + attachmentFilename
             : null;
+        String invoiceFilename = wo.getInvoiceFilename();
+        String invoiceContentType = wo.getInvoiceContentType();
+        String invoiceDownloadUrl = invoiceFilename != null ? "/api/files/workorders/" + invoiceFilename : null;
         // Materials count and preview (first 2 names)
         Integer materialsCount = null;
         java.util.List<String> materialsPreview = null;
@@ -769,6 +833,9 @@ public class WorkOrderService {
             attachmentFilename,
             attachmentContentType,
             downloadUrl,
+            invoiceFilename,
+            invoiceContentType,
+            invoiceDownloadUrl,
             materialsCount,
             materialsPreview,
             wo.getSortIndex(),
@@ -783,20 +850,12 @@ public class WorkOrderService {
         String createdByName = wo.getCreatedBy() != null ? wo.getCreatedBy().getEmail() : null;
         Long assignedToId = wo.getAssignedTo() != null ? wo.getAssignedTo().getId() : null;
         String assignedToName = wo.getAssignedTo() != null ? wo.getAssignedTo().getEmail() : null;
-        String attachmentFilename = null;
-        String attachmentContentType = null;
-        String downloadUrl = null;
-        try {
-            java.lang.reflect.Method getAttachmentFilename = wo.getClass().getMethod("getAttachmentFilename");
-            java.lang.reflect.Method getAttachmentContentType = wo.getClass().getMethod("getAttachmentContentType");
-            attachmentFilename = (String) getAttachmentFilename.invoke(wo);
-            attachmentContentType = (String) getAttachmentContentType.invoke(wo);
-            if (attachmentFilename != null) {
-                downloadUrl = "/api/files/workorders/" + attachmentFilename;
-            }
-        } catch (Exception e) {
-            // fallback: leave as null
-        }
+        String attachmentFilename = wo.getAttachmentFilename();
+        String attachmentContentType = wo.getAttachmentContentType();
+        String downloadUrl = attachmentFilename != null ? "/api/files/workorders/" + attachmentFilename : null;
+        String invoiceFilename = wo.getInvoiceFilename();
+        String invoiceContentType = wo.getInvoiceContentType();
+        String invoiceDownloadUrl = invoiceFilename != null ? "/api/files/workorders/" + invoiceFilename : null;
         // Materials count and preview (first 2 names)
         Integer materialsCount = null;
         java.util.List<String> materialsPreview = null;
@@ -827,6 +886,9 @@ public class WorkOrderService {
             attachmentFilename,
             attachmentContentType,
             downloadUrl,
+            invoiceFilename,
+            invoiceContentType,
+            invoiceDownloadUrl,
             materialsCount,
             materialsPreview,
             wo.getSortIndex(),

@@ -362,6 +362,8 @@ function UrgentWorkOrdersPage() {
     const editFiles = editWatch('files');
     const editFileArray = React.useMemo(() => toFileArray(editFiles as FileList | File[] | null | undefined), [editFiles]);
     const [removeEditAttachment, setRemoveEditAttachment] = React.useState(false);
+    const [editInvoiceFiles, setEditInvoiceFiles] = React.useState<File[]>([]);
+    const [removeEditInvoice, setRemoveEditInvoice] = React.useState(false);
     const existingEditAttachmentUrl = React.useMemo(() => {
       if (!editModal.workOrder) return undefined;
       return editModal.workOrder.attachmentDownloadUrl || (editModal.workOrder.attachmentFilename ? `/api/files/workorders/${editModal.workOrder.attachmentFilename}` : undefined);
@@ -375,6 +377,16 @@ function UrgentWorkOrdersPage() {
       }
     };
 
+    const handleEditInvoiceFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const nextFiles = event.target.files ? Array.from(event.target.files) : [];
+      setEditInvoiceFiles(nextFiles);
+      if (nextFiles.length > 0) setRemoveEditInvoice(false);
+    };
+
+    const removeEditInvoiceFileAt = (indexToRemove: number) => {
+      setEditInvoiceFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+    };
+
     const removeEditSelectedFileAt = (indexToRemove: number) => {
       const nextFiles = editFileArray.filter((_, index) => index !== indexToRemove);
       setEditValue('files', (nextFiles.length > 0 ? nextFiles : undefined) as any);
@@ -383,6 +395,8 @@ function UrgentWorkOrdersPage() {
     const handleEdit = (workOrder: UrgentWorkOrderResponse) => {
       setEditModal({ open: true, workOrder });
       setRemoveEditAttachment(false);
+      setEditInvoiceFiles([]);
+      setRemoveEditInvoice(false);
       editReset({
         title: workOrder.title,
         description: workOrder.description,
@@ -407,11 +421,15 @@ function UrgentWorkOrdersPage() {
           dueDate: data.dueDate || '',
           files: data.files,
           removeAttachment: removeEditAttachment,
+          invoiceFiles: editInvoiceFiles.length > 0 ? editInvoiceFiles : undefined,
+          removeInvoice: removeEditInvoice,
         };
         payload.assignedToUserId = data.assignedToUserId ? Number(data.assignedToUserId) : null;
         const updated = await updateUrgentWorkOrder(editModal.workOrder.id, payload);
         setEditModal({ open: false, workOrder: null });
         setRemoveEditAttachment(false);
+        setEditInvoiceFiles([]);
+        setRemoveEditInvoice(false);
         editReset();
         // Optimistically update only the edited card, preserving order
         setOptimisticUrgentData((urgentData || []).map(wo =>
@@ -475,6 +493,15 @@ function UrgentWorkOrdersPage() {
     setValue('files', nextFiles as any);
   };
 
+  const [createInvoiceFiles, setCreateInvoiceFiles] = React.useState<File[]>([]);
+  const handleCreateInvoiceFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFiles = event.target.files ? Array.from(event.target.files) : [];
+    setCreateInvoiceFiles(nextFiles);
+  };
+  const removeCreateInvoiceFileAt = (indexToRemove: number) => {
+    setCreateInvoiceFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
   const removeCreateSelectedFileAt = (indexToRemove: number) => {
     const nextFiles = createFileArray.filter((_, index) => index !== indexToRemove);
     setValue('files', (nextFiles.length > 0 ? nextFiles : undefined) as any);
@@ -494,6 +521,7 @@ function UrgentWorkOrdersPage() {
 
   const handleCreate = () => {
     reset();
+    setCreateInvoiceFiles([]);
     setValue('priority', 'URGENT');
     if (defaultTechnicianId) {
       setValue('assignedToUserId', defaultTechnicianId as any);
@@ -513,9 +541,11 @@ function UrgentWorkOrdersPage() {
           priority: data.priority,
           assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : undefined,
           files: data.files,
+          invoiceFiles: createInvoiceFiles.length > 0 ? createInvoiceFiles : undefined,
         });
 
         reset();
+        setCreateInvoiceFiles([]);
         setShowModal(false);
         queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
       } catch (err) {
@@ -963,6 +993,36 @@ function UrgentWorkOrdersPage() {
                 )}
               </div>
 
+              {/* Invoice / Document Upload Section */}
+              <div>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.invoiceDocument || 'Invoice / Document'}</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 cursor-pointer ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`}
+                  onChange={handleCreateInvoiceFilesChange}
+                  title={t.addInvoice || 'Add Invoice/Document'}
+                />
+                <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-surface-500' : 'text-gray-500'}`}>
+                  {createInvoiceFiles.length > 0 ? createInvoiceFiles.map(f => f.name).join(', ') : t.noFileChosen || 'No file chosen'}
+                </div>
+                {createInvoiceFiles.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-2">
+                    {createInvoiceFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        {file.type.startsWith('image/') ? (
+                          <img src={URL.createObjectURL(file)} alt={file.name} className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-surface-700' : 'border'}`} onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)} />
+                        ) : (
+                          <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-500' : 'bg-gray-100 text-gray-500'}`}>📄</span>
+                        )}
+                        <span className={`truncate text-sm flex-1 ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
+                        <button type="button" className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-700' : 'text-gray-600 hover:bg-gray-100'}`} aria-label={`Remove ${file.name}`} onClick={() => removeCreateInvoiceFileAt(idx)}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
                 className={`px-6 py-2 rounded-xl shadow-card transition-all duration-200 font-semibold text-base mt-2 ${colorScheme === 'dark' ? 'bg-brand-600 text-white hover:bg-brand-700' : 'bg-brand-600 text-white'}`}
@@ -1105,6 +1165,44 @@ function UrgentWorkOrdersPage() {
                     >
                       ×
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Invoice / Document Upload Section (Edit) */}
+          <div>
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.invoiceDocument || 'Invoice / Document'}</label>
+            {editModal.workOrder?.invoiceFilename && !removeEditInvoice && (
+              <div className={`mb-2 flex items-center gap-2 p-2 rounded ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-green-50 border border-green-200'}`}>
+                <span className="text-lg">📄</span>
+                <a href={editModal.workOrder.invoiceDownloadUrl || `/api/files/workorders/${editModal.workOrder.invoiceFilename}`} target="_blank" rel="noopener noreferrer" className={`text-sm truncate underline ${colorScheme === 'dark' ? 'text-brand-300' : 'text-green-700'}`}>
+                  {editModal.workOrder.invoiceFilename}
+                </a>
+                <button type="button" className={`ml-auto rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-600' : 'text-gray-600 hover:bg-gray-200'}`} aria-label="Remove invoice" onClick={() => setRemoveEditInvoice(true)}>×</button>
+              </div>
+            )}
+            {removeEditInvoice && (
+              <div className={`mb-2 text-xs flex items-center gap-2 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-gray-600'}`}>
+                <span>{t.removeInvoice || 'Invoice will be removed on save.'}</span>
+                <button type="button" className={`underline ${colorScheme === 'dark' ? 'text-brand-300' : 'text-brand-700'}`} onClick={() => setRemoveEditInvoice(false)}>Undo</button>
+              </div>
+            )}
+            <input type="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" className={styles.input + ' cursor-pointer ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} onChange={handleEditInvoiceFilesChange} title={t.addInvoice || 'Add Invoice/Document'} />
+            <div className={`text-xs mt-1 ${colorScheme === 'dark' ? 'text-surface-500' : 'text-gray-500'}`}>
+              {editInvoiceFiles.length > 0 ? editInvoiceFiles.map(f => f.name).join(', ') : t.noFileChosen || 'No file chosen'}
+            </div>
+            {editInvoiceFiles.length > 0 && (
+              <div className="mt-2 flex flex-col gap-2">
+                {editInvoiceFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    {file.type.startsWith('image/') ? (
+                      <img src={URL.createObjectURL(file)} alt={file.name} className={`w-12 h-12 object-cover rounded ${colorScheme === 'dark' ? 'border border-surface-700' : 'border'}`} onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)} />
+                    ) : (
+                      <span className={`w-12 h-12 flex items-center justify-center border rounded text-xs ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-500' : 'bg-gray-100 text-gray-500'}`}>📄</span>
+                    )}
+                    <span className={`truncate text-sm flex-1 ${colorScheme === 'dark' ? 'text-surface-100' : ''}`}>{file.name}</span>
+                    <button type="button" className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-700' : 'text-gray-600 hover:bg-gray-100'}`} aria-label={`Remove ${file.name}`} onClick={() => removeEditInvoiceFileAt(idx)}>×</button>
                   </div>
                 ))}
               </div>

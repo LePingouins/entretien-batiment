@@ -48,6 +48,9 @@ export interface WorkOrderResponse {
   attachmentFilename?: string;
   attachmentContentType?: string;
   attachmentDownloadUrl?: string;
+  invoiceFilename?: string;
+  invoiceContentType?: string;
+  invoiceDownloadUrl?: string;
   materialsCount?: number;
   materialsPreview?: string[];
   /** Manual ordering index within the status column. NULL means priority-based ordering. */
@@ -161,11 +164,35 @@ export interface UrgentWorkOrderResponse {
   attachmentFilename?: string;
   attachmentContentType?: string;
   attachmentDownloadUrl?: string;
+  invoiceFilename?: string;
+  invoiceContentType?: string;
+  invoiceDownloadUrl?: string;
   materialsCount?: number;
   materialsPreview?: string[];
   sortIndex?: number;
   archived: boolean;
   archivedAt?: string;
+}
+
+export interface ShoppingListItem {
+  materialId: number;
+  name: string;
+  quantity?: number;
+  bought: boolean;
+  supplier?: string;
+  url?: string;
+  description?: string;
+  workOrderId: number;
+  workOrderTitle: string;
+  workOrderType: 'REGULAR' | 'URGENT';
+  workOrderStatus: string;
+}
+
+export interface ShoppingListResponse {
+  items: ShoppingListItem[];
+  totalCount: number;
+  boughtCount: number;
+  unboughtCount: number;
 }
 
 export interface UrgentWorkOrderRequest {

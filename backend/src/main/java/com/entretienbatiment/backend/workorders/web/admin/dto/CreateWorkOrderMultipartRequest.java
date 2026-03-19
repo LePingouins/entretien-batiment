@@ -25,6 +25,7 @@ public class CreateWorkOrderMultipartRequest {
     private Long assignedToUserId;
 
     private List<MultipartFile> files;
+    private List<MultipartFile> invoiceFiles;
 
     // Getters and setters
     public String getTitle() { return title; }
@@ -43,4 +44,6 @@ public class CreateWorkOrderMultipartRequest {
     public void setAssignedToUserId(Long assignedToUserId) { this.assignedToUserId = assignedToUserId; }
     public List<MultipartFile> getFiles() { return files; }
     public void setFiles(List<MultipartFile> files) { this.files = files; }
+    public List<MultipartFile> getInvoiceFiles() { return invoiceFiles; }
+    public void setInvoiceFiles(List<MultipartFile> invoiceFiles) { this.invoiceFiles = invoiceFiles; }
 }

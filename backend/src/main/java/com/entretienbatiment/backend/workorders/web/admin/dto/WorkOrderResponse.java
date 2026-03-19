@@ -31,6 +31,10 @@ public record WorkOrderResponse(
         String attachmentContentType,
         String attachmentDownloadUrl,
 
+        String invoiceFilename,
+        String invoiceContentType,
+        String invoiceDownloadUrl,
+
         Integer materialsCount,
         List<String> materialsPreview,
 

@@ -17,6 +17,8 @@ public class UpdateWorkOrderMultipartRequest {
     private Long assignedToUserId;
     private Boolean removeAttachment;
     private List<MultipartFile> files;
+    private List<MultipartFile> invoiceFiles;
+    private Boolean removeInvoice;
 
     public String getTitle() {
         return title;
@@ -88,5 +90,21 @@ public class UpdateWorkOrderMultipartRequest {
 
     public void setFiles(List<MultipartFile> files) {
         this.files = files;
+    }
+
+    public List<MultipartFile> getInvoiceFiles() {
+        return invoiceFiles;
+    }
+
+    public void setInvoiceFiles(List<MultipartFile> invoiceFiles) {
+        this.invoiceFiles = invoiceFiles;
+    }
+
+    public Boolean getRemoveInvoice() {
+        return removeInvoice;
+    }
+
+    public void setRemoveInvoice(Boolean removeInvoice) {
+        this.removeInvoice = removeInvoice;
     }
 }
