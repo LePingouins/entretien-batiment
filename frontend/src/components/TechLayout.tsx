@@ -9,6 +9,8 @@ import NotificationsIcon from './NotificationsIcon';
 import BugReportButton from './BugReportButton';
 import { getCurrentUser, updateUserSettings } from '../lib/api';
 import PasswordChangeSection from './PasswordChangeSection';
+import NavDropdown from './NavDropdown';
+import NavSearch, { NavSearchItem } from './NavSearch';
 
 const COLOR_SCHEME_OPTIONS: Array<{ value: ColorSchemeType; label: string; icon: string }> = [
   { value: 'default', label: 'Light', icon: '☀️' },
@@ -167,6 +169,23 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [headerHeight]);
 
+  const linkCls = (isActive: boolean) =>
+    `px-3 py-1.5 rounded-lg font-medium transition-colors text-sm ${isActive ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`;
+
+  const searchItems = React.useMemo((): NavSearchItem[] => {
+    const items: NavSearchItem[] = [];
+    if (canAccess('DASHBOARD')) items.push({ label: t.dashboardTitle, path: pagePath(''), group: lang === 'fr' ? 'Général' : 'General' });
+    if (canAccess('WORK_ORDERS')) items.push({ label: t.workOrders, path: pagePath('work-orders'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
+    if (canAccess('URGENT_WORK_ORDERS')) items.push({ label: t.urgentWorkOrders || 'Urgent Work Orders', path: pagePath('urgent-work-orders'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
+    if (canAccess('ARCHIVE')) items.push({ label: t.archive, path: pagePath('archive'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
+    if (canAccess('MILEAGE')) items.push({ label: t.mileage, path: pagePath('mileage'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
+    if (canAccess('ANALYTICS')) items.push({ label: t.analyticsTitle || 'Analytics', path: pagePath('analytics'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
+    items.push({ label: t.documentsPage || 'Documents', path: pagePath('documents'), group: lang === 'fr' ? 'Ressources' : 'Resources' });
+    items.push({ label: t.shoppingList || 'Shopping List', path: pagePath('shopping-list'), group: lang === 'fr' ? 'Ressources' : 'Resources' });
+    return items;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAccess, t, lang, basePath]);
+
   return (
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
     <div className={`min-h-screen flex flex-col justify-between transition-colors ${colorScheme === 'dark' ? 'dark bg-surface-950' : 'bg-slate-100'}`}>
@@ -174,7 +193,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
         ref={headerRef}
         className={`${isSticky ? 'fixed top-0 left-0 right-0 w-full nav-slide-down' : ''} z-40 backdrop-blur-xl border-b ${colorScheme === 'dark' ? 'bg-surface-900/90 text-surface-100 border-surface-700' : 'bg-white text-slate-800 border-slate-200 shadow-sm'}`}
       >
-        <div className="w-full px-4 sm:px-6 py-2.5 flex flex-wrap sm:flex-nowrap justify-between items-center gap-2">
+        <div className="w-full px-4 sm:px-6 py-2.5 flex justify-between items-center gap-2">
           <div className="flex items-center gap-3">
             <button className="sm:hidden p-2 rounded-lg focus:outline-none" aria-label="Open navigation" onClick={handleHamburger}>
               <span className="block w-6 h-6">
@@ -186,30 +205,45 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
             <img src="/logo.png" alt="Horizon Nature" className="h-8 sm:h-9 w-auto" />
             <span className={`font-bold text-base sm:text-lg tracking-tight ${colorScheme === 'dark' ? 'text-white' : 'text-surface-900'}`}>Entretien-Bâtiment</span>
           </div>
-          <nav className={`flex flex-wrap items-center gap-1 sm:gap-2 text-sm ${navOpen ? 'block' : 'hidden'} sm:flex`}>
+
+          {/* Desktop nav — single compact row, hidden on mobile */}
+          <nav className="hidden sm:flex items-center gap-1 sm:gap-2">
             {canAccess('DASHBOARD') && (
-              <Link to={pagePath('')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname === pagePath('') ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.dashboardTitle}</Link>
+              <Link to={pagePath('')} className={linkCls(window.location.pathname === pagePath(''))}>{t.dashboardTitle}</Link>
             )}
-            {canAccess('WORK_ORDERS') && (
-              <Link to={pagePath('work-orders')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('work-orders')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.workOrders}</Link>
+            {(canAccess('WORK_ORDERS') || canAccess('URGENT_WORK_ORDERS') || canAccess('ARCHIVE')) && (
+              <NavDropdown
+                isDark={colorScheme === 'dark'}
+                label={t.workOrders}
+                items={[
+                  ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('work-orders'), isActive: window.location.pathname.includes(pagePath('work-orders')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') }] : []),
+                  ...(canAccess('URGENT_WORK_ORDERS') ? [{ label: t.urgentWorkOrders || 'Urgent', path: pagePath('urgent-work-orders'), isActive: window.location.pathname.includes(pagePath('urgent-work-orders')) }] : []),
+                  ...(canAccess('ARCHIVE') ? [{ label: t.archive, path: pagePath('archive'), isActive: window.location.pathname.includes(pagePath('archive')) }] : []),
+                ]}
+              />
             )}
-            {canAccess('URGENT_WORK_ORDERS') && (
-              <Link to={pagePath('urgent-work-orders')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('urgent-work-orders')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.urgentWorkOrders || 'Urgent'}</Link>
+            {(canAccess('MILEAGE') || canAccess('ANALYTICS')) && (
+              <NavDropdown
+                isDark={colorScheme === 'dark'}
+                label={lang === 'fr' ? 'Opérations' : 'Operations'}
+                items={[
+                  ...(canAccess('MILEAGE') ? [{ label: t.mileage, path: pagePath('mileage'), isActive: window.location.pathname.includes(pagePath('mileage')) }] : []),
+                  ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('analytics'), isActive: window.location.pathname.includes(pagePath('analytics')) }] : []),
+                ]}
+              />
             )}
-            {canAccess('MILEAGE') && (
-              <Link to={pagePath('mileage')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('mileage')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.mileage}</Link>
-            )}
-            {canAccess('ARCHIVE') && (
-              <Link to={pagePath('archive')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('archive')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.archive}</Link>
-            )}
-            {canAccess('ANALYTICS') && (
-              <Link to={pagePath('analytics')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('analytics')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.analyticsTitle || 'Analytics'}</Link>
-            )}
-            <Link to={pagePath('documents')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('documents')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.documentsPage || 'Documents'}</Link>
-            <Link to={pagePath('shopping-list')} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${window.location.pathname.includes(pagePath('shopping-list')) ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}>{t.shoppingList || 'Shopping List'}</Link>
+            <NavDropdown
+              isDark={colorScheme === 'dark'}
+              label={lang === 'fr' ? 'Ressources' : 'Resources'}
+              items={[
+                { label: t.documentsPage || 'Documents', path: pagePath('documents'), isActive: window.location.pathname.includes(pagePath('documents')) },
+                { label: t.shoppingList || 'Shopping List', path: pagePath('shopping-list'), isActive: window.location.pathname.includes(pagePath('shopping-list')) },
+              ]}
+            />
+            <NavSearch isDark={colorScheme === 'dark'} lang={lang} items={searchItems} />
             <BugReportButton />
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>
-            <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>
+            <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>
             <button
               aria-label="Settings"
               className={`p-2 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-white hover:bg-surface-800' : 'text-surface-500 hover:text-surface-700 hover:bg-surface-100'}`}
@@ -221,49 +255,79 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
               </svg>
             </button>
             <NotificationsIcon />
-            <div className="flex items-center gap-1.5 z-40">
-              <span
-                onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
-                role="button"
-                tabIndex={0}
-                className={`text-xs font-medium cursor-pointer select-none ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}
-              >
-                {lang === 'en' ? 'EN' : 'FR'}
-              </span>
-              <label
-                ref={langLabelRef}
-                tabIndex={0}
-                role="button"
-                aria-pressed={lang === 'fr'}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setLang(lang === 'fr' ? 'en' : 'fr');
-                  }
-                }}
-                onClick={(e) => { 
-                  e.preventDefault(); 
-                  setLang(lang === 'fr' ? 'en' : 'fr'); 
-                }}
-                className="relative inline-flex items-center cursor-pointer"
-              >
-                <input
-                  ref={langToggleRef}
-                  type="checkbox"
-                  checked={lang === 'fr'}
-                  onChange={e => setLang(e.target.checked ? 'fr' : 'en')}
-                  className="sr-only peer"
-                  tabIndex={-1}
-                />
-                <div className={`w-9 h-5 rounded-full peer transition-all ${colorScheme === 'dark' ? 'bg-surface-700 peer-checked:bg-brand-600' : 'bg-surface-200 peer-checked:bg-brand-500'}`}> 
-                  <div
-                    className={`absolute left-0.5 top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${lang === 'fr' ? 'translate-x-4' : ''}`}
-                  ></div>
+            <div className="flex items-center gap-1.5">
+              <span onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} role="button" tabIndex={0} className={`text-xs font-medium cursor-pointer select-none ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>{lang === 'en' ? 'EN' : 'FR'}</span>
+              <label ref={langLabelRef} tabIndex={0} role="button" aria-pressed={lang === 'fr'} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLang(lang === 'fr' ? 'en' : 'fr'); } }} onClick={(e) => { e.preventDefault(); setLang(lang === 'fr' ? 'en' : 'fr'); }} className="relative inline-flex items-center cursor-pointer">
+                <input ref={langToggleRef} type="checkbox" checked={lang === 'fr'} onChange={e => setLang(e.target.checked ? 'fr' : 'en')} className="sr-only peer" tabIndex={-1} />
+                <div className={`w-9 h-5 rounded-full peer transition-all ${colorScheme === 'dark' ? 'bg-surface-700 peer-checked:bg-brand-600' : 'bg-surface-200 peer-checked:bg-brand-500'}`}>
+                  <div className={`absolute left-0.5 top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${lang === 'fr' ? 'translate-x-4' : ''}`}></div>
                 </div>
               </label>
             </div>
           </nav>
+
+          {/* Mobile: always-visible utilities (settings, notifications, lang) */}
+          <div className="flex sm:hidden items-center gap-1">
+            <button aria-label="Settings" className={`p-2 rounded-lg transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-white hover:bg-surface-800' : 'text-surface-500 hover:text-surface-700 hover:bg-surface-100'}`} onClick={() => setShowSettings(true)}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="12" cy="12" r="3.5" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.14.31.21.65.21 1v.09A1.65 1.65 0 0 0 21 12c0 .35-.07.69-.21 1v.09A1.65 1.65 0 0 0 19.4 15z" /></svg>
+            </button>
+            <NotificationsIcon />
+            <div className="flex items-center gap-1.5">
+              <span onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} role="button" tabIndex={0} className={`text-xs font-medium cursor-pointer select-none ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>{lang === 'en' ? 'EN' : 'FR'}</span>
+              <label ref={langLabelRef} tabIndex={0} role="button" aria-pressed={lang === 'fr'} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLang(lang === 'fr' ? 'en' : 'fr'); } }} onClick={(e) => { e.preventDefault(); setLang(lang === 'fr' ? 'en' : 'fr'); }} className="relative inline-flex items-center cursor-pointer">
+                <input ref={langToggleRef} type="checkbox" checked={lang === 'fr'} onChange={e => setLang(e.target.checked ? 'fr' : 'en')} className="sr-only peer" tabIndex={-1} />
+                <div className={`w-9 h-5 rounded-full peer transition-all ${colorScheme === 'dark' ? 'bg-surface-700 peer-checked:bg-brand-600' : 'bg-surface-200 peer-checked:bg-brand-500'}`}>
+                  <div className={`absolute left-0.5 top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${lang === 'fr' ? 'translate-x-4' : ''}`}></div>
+                </div>
+              </label>
+            </div>
+          </div>
         </div>
+
+        {/* Mobile nav panel — slides down below header when hamburger is open */}
+        {navOpen && (
+          <div className={`sm:hidden border-t px-4 py-2 flex flex-col gap-0.5 text-sm ${colorScheme === 'dark' ? 'border-surface-700 bg-surface-900' : 'border-surface-200 bg-white'}`}>
+            {canAccess('DASHBOARD') && (
+              <Link to={pagePath('')} onClick={() => setNavOpen(false)} className={linkCls(window.location.pathname === pagePath(''))}>{t.dashboardTitle}</Link>
+            )}
+            {(canAccess('WORK_ORDERS') || canAccess('URGENT_WORK_ORDERS') || canAccess('ARCHIVE')) && (
+              <NavDropdown
+                isDark={colorScheme === 'dark'}
+                label={t.workOrders}
+                isMobileOpen
+                items={[
+                  ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('work-orders'), isActive: window.location.pathname.includes(pagePath('work-orders')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') }] : []),
+                  ...(canAccess('URGENT_WORK_ORDERS') ? [{ label: t.urgentWorkOrders || 'Urgent', path: pagePath('urgent-work-orders'), isActive: window.location.pathname.includes(pagePath('urgent-work-orders')) }] : []),
+                  ...(canAccess('ARCHIVE') ? [{ label: t.archive, path: pagePath('archive'), isActive: window.location.pathname.includes(pagePath('archive')) }] : []),
+                ]}
+              />
+            )}
+            {(canAccess('MILEAGE') || canAccess('ANALYTICS')) && (
+              <NavDropdown
+                isDark={colorScheme === 'dark'}
+                label={lang === 'fr' ? 'Opérations' : 'Operations'}
+                isMobileOpen
+                items={[
+                  ...(canAccess('MILEAGE') ? [{ label: t.mileage, path: pagePath('mileage'), isActive: window.location.pathname.includes(pagePath('mileage')) }] : []),
+                  ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('analytics'), isActive: window.location.pathname.includes(pagePath('analytics')) }] : []),
+                ]}
+              />
+            )}
+            <NavDropdown
+              isDark={colorScheme === 'dark'}
+              label={lang === 'fr' ? 'Ressources' : 'Resources'}
+              isMobileOpen
+              items={[
+                { label: t.documentsPage || 'Documents', path: pagePath('documents'), isActive: window.location.pathname.includes(pagePath('documents')) },
+                { label: t.shoppingList || 'Shopping List', path: pagePath('shopping-list'), isActive: window.location.pathname.includes(pagePath('shopping-list')) },
+              ]}
+            />
+            <div className={`my-1 h-px ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`} />
+            <NavSearch isDark={colorScheme === 'dark'} lang={lang} items={searchItems} />
+            <BugReportButton />
+            <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors text-left ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>
+          </div>
+        )}
       </header>
       {isSticky && <div style={{ height: headerHeight }} aria-hidden="true" />}
       
