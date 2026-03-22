@@ -154,9 +154,9 @@ function UrgentDndBoard({ columns, workOrders, onMove, onOpenMaterials, onDelete
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 pb-12 px-2 sm:px-4 pt-4 w-full justify-evenly overflow-x-auto md:overflow-x-visible">
+      <div className="flex flex-col sm:flex-row gap-4 pb-12 px-2 sm:px-4 pt-4 w-full justify-evenly overflow-x-auto md:overflow-x-visible">
         {columns.map((column: any) => (
-          <div className="flex-shrink-0 w-[260px] sm:w-[280px] flex flex-col" key={column.id}>
+          <div className="flex-shrink-0 w-full sm:w-[280px] flex flex-col" key={column.id}>
             <DroppableColumnComponent status={column.id} colorScheme={column.colorScheme}>
               <SortableContext
                 id={column.id}

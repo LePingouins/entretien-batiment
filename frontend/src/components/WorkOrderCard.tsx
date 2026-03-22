@@ -173,9 +173,9 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchi
       role="group"
       aria-label={`Work order ${workOrder.title}`}
     >
-      <div className="flex justify-between items-start gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-row items-center gap-2 mb-1">
             <span className={`text-xs font-mono ${colorScheme === 'dark' ? 'text-surface-500' : 'text-surface-400'}`}>#{workOrder.id}</span>
             <StatusBadge status={workOrder.status} />
           </div>
@@ -185,7 +185,9 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchi
             </h3>
           </Link>
         </div>
-        <PriorityBadge priority={workOrder.priority} />
+        <div className="mt-2 sm:mt-0 sm:ml-2 w-full sm:w-auto flex justify-start sm:justify-end">
+          <PriorityBadge priority={workOrder.priority} />
+        </div>
       </div>
       <p className={`text-sm line-clamp-2 ${colorScheme === 'dark' ? 'text-surface-400' : 'text-surface-500'}`}>{workOrder.description}</p>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">

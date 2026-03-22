@@ -86,14 +86,14 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
         }
       }}
     >
-      <div className="flex justify-between items-start gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-row items-center gap-2 mb-1">
             <span className={`text-xs font-mono ${effectiveColorScheme === 'dark' ? 'text-surface-500' : 'text-surface-400'}`}>#{workOrder.id}</span>
             <span className={`px-2 py-0.5 rounded text-xs font-semibold ${effectiveColorScheme === 'dark' ? statusColorsDark[workOrder.status] : statusColorsLight[workOrder.status]}`}>{workOrder.status.replace('_',' ')}</span>
           </div>
-            <Link
-              to={`./${workOrder.id}`}
+          <Link
+            to={`./${workOrder.id}`}
             className={`font-semibold text-sm sm:text-base truncate block ${effectiveColorScheme === 'dark' ? 'text-surface-100 hover:text-white' : 'text-surface-900 hover:text-brand-700'}`}
             onClick={(e) => e.stopPropagation()}
             title={workOrder.title}

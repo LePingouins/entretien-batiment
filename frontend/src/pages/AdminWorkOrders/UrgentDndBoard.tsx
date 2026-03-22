@@ -76,9 +76,9 @@ const UrgentDndBoard = () => {
   };
 
   return (
-    <div className="flex gap-4 pb-12 px-2 sm:px-4 pt-4 w-full justify-evenly overflow-x-auto md:overflow-x-visible">
+    <div className="flex flex-col sm:flex-row gap-4 pb-12 px-2 sm:px-4 pt-4 w-full justify-evenly overflow-x-auto md:overflow-x-visible">
       {STATUS_OPTIONS.map(status => (
-        <div className="flex-shrink-0 w-[260px] sm:w-[280px] flex flex-col" key={status}>
+        <div className="flex-shrink-0 w-full sm:w-[280px] flex flex-col" key={status}>
           <div className="font-bold text-lg mb-2 text-center">
             {status === WorkOrderStatus.IN_PROGRESS ? 'In Progress' : 'Completed'}
           </div>
