@@ -307,3 +307,73 @@ export interface DevelopperDebugErrorDetailResponse {
   occurrences: number;
   entries: DebugErrorOccurrence[];
 }
+
+// ─── Inventory System (Horizon Nature) ─────────────────────────────────
+
+export interface InventoryCategoryResponse {
+  id: number;
+  name: string;
+  createdAt: string;
+}
+
+export interface InventoryProductResponse {
+  id: number;
+  sku: string;
+  name: string;
+  categoryId?: number;
+  categoryName?: string;
+  unit: string;
+  barcode?: string;
+  expectedQty: number;
+  locationZone?: string;
+  notes?: string;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InventoryProductRequest {
+  sku: string;
+  name: string;
+  categoryId?: number;
+  unit?: string;
+  barcode?: string;
+  expectedQty?: number;
+  locationZone?: string;
+  notes?: string;
+}
+
+export type InventorySessionStatus = 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export interface InventorySessionResponse {
+  id: number;
+  name: string;
+  status: InventorySessionStatus;
+  notes?: string;
+  startedAt?: string;
+  completedAt?: string;
+  createdByUserId?: number;
+  createdByName?: string;
+  totalItems: number;
+  countedItems: number;
+  discrepancyCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InventoryCountItemResponse {
+  id: number;
+  productId: number;
+  productSku: string;
+  productName: string;
+  productBarcode?: string;
+  unit: string;
+  zone?: string;
+  expectedQty: number;
+  countedQty?: number;
+  discrepancy?: number;
+  countedByUserId?: number;
+  countedByName?: string;
+  notes?: string;
+  countedAt?: string;
+}

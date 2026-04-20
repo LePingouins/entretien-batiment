@@ -32,6 +32,9 @@ const DevelopperDebugPage    = lazy(() => import('../pages/DevelopperDebugPage')
 const NoAccessPage           = lazy(() => import('../pages/NoAccessPage'));
 const DocumentsPage          = lazy(() => import('../pages/DocumentsPage'));
 const MaterialsShoppingListPage = lazy(() => import('../pages/MaterialsShoppingListPage'));
+const InventoryProductsPage       = lazy(() => import('../pages/InventoryProductsPage'));
+const InventoryCountSessionsPage  = lazy(() => import('../pages/InventoryCountSessionsPage'));
+const InventoryCountLivePage      = lazy(() => import('../pages/InventoryCountLivePage'));
 
 /** Shown while a lazy page chunk is being downloaded */
 const PageLoader = () => (
@@ -160,6 +163,18 @@ const router = createBrowserRouter([
                 element: <MaterialsShoppingListPage />,
               },
               {
+                path: 'inventory',
+                element: <InventoryCountSessionsPage />,
+              },
+              {
+                path: 'inventory/products',
+                element: <InventoryProductsPage />,
+              },
+              {
+                path: 'inventory/count/:id',
+                element: <InventoryCountLivePage />,
+              },
+              {
                 path: 'debug',
                 element: <ProtectedRoute requiredRole="DEVELOPPER" />,
                 children: [
@@ -261,6 +276,18 @@ const router = createBrowserRouter([
                 path: 'shopping-list',
                 element: <MaterialsShoppingListPage />,
               },
+              {
+                path: 'inventory',
+                element: <InventoryCountSessionsPage />,
+              },
+              {
+                path: 'inventory/products',
+                element: <InventoryProductsPage />,
+              },
+              {
+                path: 'inventory/count/:id',
+                element: <InventoryCountLivePage />,
+              },
             ],
           },
         ],
@@ -352,6 +379,18 @@ const router = createBrowserRouter([
               {
                 path: 'shopping-list',
                 element: <MaterialsShoppingListPage />,
+              },
+              {
+                path: 'inventory',
+                element: <InventoryCountSessionsPage />,
+              },
+              {
+                path: 'inventory/products',
+                element: <InventoryProductsPage />,
+              },
+              {
+                path: 'inventory/count/:id',
+                element: <InventoryCountLivePage />,
               },
             ],
           },

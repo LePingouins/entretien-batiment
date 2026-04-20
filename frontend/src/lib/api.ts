@@ -601,3 +601,99 @@ export async function getUrgentWorkOrdersWithInvoices(): Promise<import('../type
   return res.data.filter((wo) => !!wo.invoiceFilename);
 }
 
+// ─── Inventory System API (Horizon Nature) ─────────────────────────────
+
+import type {
+  InventoryCategoryResponse,
+  InventoryProductResponse,
+  InventoryProductRequest,
+  InventorySessionResponse,
+  InventoryCountItemResponse,
+} from '../types/api';
+
+// Categories
+export async function getInventoryCategories(): Promise<InventoryCategoryResponse[]> {
+  const res = await api.get<InventoryCategoryResponse[]>('/api/inventory/categories');
+  return res.data;
+}
+export async function createInventoryCategory(name: string): Promise<InventoryCategoryResponse> {
+  const res = await api.post<InventoryCategoryResponse>('/api/inventory/categories', { name });
+  return res.data;
+}
+export async function deleteInventoryCategory(id: number): Promise<void> {
+  await api.delete(`/api/inventory/categories/${id}`);
+}
+
+// Products
+export async function getInventoryProducts(q?: string): Promise<InventoryProductResponse[]> {
+  const params: any = {};
+  if (q) params.q = q;
+  const res = await api.get<InventoryProductResponse[]>('/api/inventory/products', { params });
+  return res.data;
+}
+export async function getInventoryProduct(id: number): Promise<InventoryProductResponse> {
+  const res = await api.get<InventoryProductResponse>(`/api/inventory/products/${id}`);
+  return res.data;
+}
+export async function createInventoryProduct(data: InventoryProductRequest): Promise<InventoryProductResponse> {
+  const res = await api.post<InventoryProductResponse>('/api/inventory/products', data);
+  return res.data;
+}
+export async function updateInventoryProduct(id: number, data: Partial<InventoryProductRequest>): Promise<InventoryProductResponse> {
+  const res = await api.patch<InventoryProductResponse>(`/api/inventory/products/${id}`, data);
+  return res.data;
+}
+export async function deleteInventoryProduct(id: number): Promise<void> {
+  await api.delete(`/api/inventory/products/${id}`);
+}
+export async function getInventoryZones(): Promise<string[]> {
+  const res = await api.get<string[]>('/api/inventory/zones');
+  return res.data;
+}
+
+// Count Sessions
+export async function getInventorySessions(): Promise<InventorySessionResponse[]> {
+  const res = await api.get<InventorySessionResponse[]>('/api/inventory/sessions');
+  return res.data;
+}
+export async function getInventorySession(id: number): Promise<InventorySessionResponse> {
+  const res = await api.get<InventorySessionResponse>(`/api/inventory/sessions/${id}`);
+  return res.data;
+}
+export async function createInventorySession(name: string, notes?: string): Promise<InventorySessionResponse> {
+  const res = await api.post<InventorySessionResponse>('/api/inventory/sessions', { name, notes });
+  return res.data;
+}
+export async function startInventorySession(id: number): Promise<InventorySessionResponse> {
+  const res = await api.patch<InventorySessionResponse>(`/api/inventory/sessions/${id}/start`);
+  return res.data;
+}
+export async function completeInventorySession(id: number): Promise<InventorySessionResponse> {
+  const res = await api.patch<InventorySessionResponse>(`/api/inventory/sessions/${id}/complete`);
+  return res.data;
+}
+export async function cancelInventorySession(id: number): Promise<InventorySessionResponse> {
+  const res = await api.patch<InventorySessionResponse>(`/api/inventory/sessions/${id}/cancel`);
+  return res.data;
+}
+export async function deleteInventorySession(id: number): Promise<void> {
+  await api.delete(`/api/inventory/sessions/${id}`);
+}
+
+// Count Items
+export async function getInventorySessionItems(sessionId: number, zone?: string, q?: string): Promise<InventoryCountItemResponse[]> {
+  const params: any = {};
+  if (zone) params.zone = zone;
+  if (q) params.q = q;
+  const res = await api.get<InventoryCountItemResponse[]>(`/api/inventory/sessions/${sessionId}/items`, { params });
+  return res.data;
+}
+export async function recordInventoryCount(sessionId: number, productId: number, countedQty: number, notes?: string): Promise<InventoryCountItemResponse> {
+  const res = await api.post<InventoryCountItemResponse>(`/api/inventory/sessions/${sessionId}/count`, { productId, countedQty, notes });
+  return res.data;
+}
+export function getInventoryExportUrl(sessionId: number): string {
+  const base = import.meta.env.VITE_API_URL || '';
+  return `${base}/api/inventory/sessions/${sessionId}/export`;
+}
+

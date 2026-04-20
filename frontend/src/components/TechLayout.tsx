@@ -140,7 +140,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     navigate('/login');
   };
 
-  const pagePath = React.useCallback((segment: '' | 'work-orders' | 'urgent-work-orders' | 'mileage' | 'archive' | 'analytics' | 'documents' | 'shopping-list') => {
+  const pagePath = React.useCallback((segment: '' | 'work-orders' | 'urgent-work-orders' | 'mileage' | 'archive' | 'analytics' | 'documents' | 'shopping-list' | 'inventory' | 'inventory/products') => {
     return segment ? `${basePath}/${segment}` : basePath;
   }, [basePath]);
 
@@ -182,6 +182,8 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     if (canAccess('ANALYTICS')) items.push({ label: t.analyticsTitle || 'Analytics', path: pagePath('analytics'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     items.push({ label: t.documentsPage || 'Documents', path: pagePath('documents'), group: lang === 'fr' ? 'Ressources' : 'Resources' });
     items.push({ label: t.shoppingList || 'Shopping List', path: pagePath('shopping-list'), group: lang === 'fr' ? 'Ressources' : 'Resources' });
+    items.push({ label: t.invSessionsTitle || 'Inventory', path: pagePath('inventory'), group: lang === 'fr' ? 'Ressources' : 'Resources' });
+    items.push({ label: t.invProductsNav || 'Inventory Products', path: pagePath('inventory/products'), group: lang === 'fr' ? 'Ressources' : 'Resources' });
     return items;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canAccess, t, lang, basePath]);
@@ -238,6 +240,8 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
               items={[
                 { label: t.documentsPage || 'Documents', path: pagePath('documents'), isActive: window.location.pathname.includes(pagePath('documents')) },
                 { label: t.shoppingList || 'Shopping List', path: pagePath('shopping-list'), isActive: window.location.pathname.includes(pagePath('shopping-list')) },
+                { label: t.invSessionsTitle || 'Inventory', path: pagePath('inventory'), isActive: window.location.pathname === pagePath('inventory') },
+                { label: t.invProductsNav || 'Products', path: pagePath('inventory/products'), isActive: window.location.pathname.includes(pagePath('inventory/products')) },
               ]}
             />
             <NavSearch isDark={colorScheme === 'dark'} lang={lang} items={searchItems} />
@@ -320,6 +324,8 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
               items={[
                 { label: t.documentsPage || 'Documents', path: pagePath('documents'), isActive: window.location.pathname.includes(pagePath('documents')) },
                 { label: t.shoppingList || 'Shopping List', path: pagePath('shopping-list'), isActive: window.location.pathname.includes(pagePath('shopping-list')) },
+                { label: t.invSessionsTitle || 'Inventory', path: pagePath('inventory'), isActive: window.location.pathname === pagePath('inventory') },
+                { label: t.invProductsNav || 'Products', path: pagePath('inventory/products'), isActive: window.location.pathname.includes(pagePath('inventory/products')) },
               ]}
             />
             <div className={`my-1 h-px ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`} />
