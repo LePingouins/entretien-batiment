@@ -48,6 +48,15 @@ module.exports = {
         '2xl': '1rem',
         '3xl': '1.25rem',
       },
+      keyframes: {
+        'scan-line': {
+          '0%, 100%': { top: '8px', opacity: '1' },
+          '50%': { top: 'calc(100% - 8px)', opacity: '0.7' },
+        },
+      },
+      animation: {
+        'scan-line': 'scan-line 2s ease-in-out infinite',
+      },
     },
   },
   plugins: [],

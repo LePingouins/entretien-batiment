@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState, useCallback } from 'react';
+import QRCode from 'react-qr-code';
 import { useLang } from '../context/LangContext';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import {
@@ -27,6 +28,8 @@ export default function InventoryProductsPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [qrProduct, setQrProduct] = useState<InventoryProductResponse | null>(null);
+  const [showPrintLabels, setShowPrintLabels] = useState(false);
 
   // Form fields
   const [form, setForm] = useState<InventoryProductRequest>({
@@ -114,6 +117,31 @@ export default function InventoryProductsPage() {
     );
   }
 
+  // Print labels view
+  if (showPrintLabels) {
+    return (
+      <div className="p-4">
+        <div className="flex gap-2 mb-6 print:hidden">
+          <button onClick={() => window.print()} className={btnPrimary}>
+            🖴 {t.invPrintLabels || 'Print'}
+          </button>
+          <button onClick={() => setShowPrintLabels(false)} className={btnSecondary}>
+            ← {t.back || 'Back'}
+          </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
+          {filtered.map(p => (
+            <div key={p.id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 8, textAlign: 'center', breakInside: 'avoid' }}>
+              <QRCode value={p.sku} size={110} />
+              <p style={{ margin: '4px 0 0', fontFamily: 'monospace', fontWeight: 'bold', fontSize: 11 }}>{p.sku}</p>
+              <p style={{ margin: '2px 0 0', fontSize: 10, color: '#555' }}>{p.name}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -126,9 +154,12 @@ export default function InventoryProductsPage() {
             {t.invProductsSubtitle || 'Manage all warehouse products for inventory counts.'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={() => setShowCategoryForm(!showCategoryForm)} className={btnSecondary}>
             {t.invManageCategories || 'Categories'}
+          </button>
+          <button onClick={() => setShowPrintLabels(true)} className={btnSecondary}>
+            🖴 {t.invPrintLabels || 'Print Labels'}
           </button>
           <button onClick={() => { setShowForm(true); setEditing(null); setForm({ sku: '', name: '', unit: 'unit', expectedQty: 0, locationZone: '', barcode: '', notes: '' }); }} className={btnPrimary}>
             + {t.invAddProduct || 'Add Product'}
@@ -276,6 +307,7 @@ export default function InventoryProductsPage() {
                   <td className={`px-4 py-3 hidden md:table-cell ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{p.unit}</td>
                   <td className={`px-4 py-3 hidden md:table-cell ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{p.locationZone || '—'}</td>
                   <td className="px-4 py-3 text-right">
+                    <button onClick={() => setQrProduct(p)} className={`text-xs px-2 py-1 rounded ${isDark ? 'text-emerald-400 hover:bg-surface-800' : 'text-emerald-600 hover:bg-emerald-50'}`}>QR</button>
                     <button onClick={() => handleEdit(p)} className={`text-xs px-2 py-1 rounded ${isDark ? 'text-brand-400 hover:bg-surface-800' : 'text-brand-600 hover:bg-brand-50'}`}>{t.edit || 'Edit'}</button>
                     <button onClick={() => handleDelete(p.id)} className={`text-xs px-2 py-1 rounded ${isDark ? 'text-red-400 hover:bg-surface-800' : 'text-red-600 hover:bg-red-50'}`}>{t.delete || 'Delete'}</button>
                   </td>
@@ -285,6 +317,31 @@ export default function InventoryProductsPage() {
           </table>
         </div>
       </div>
+
+      {/* QR label modal */}
+      {qrProduct && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setQrProduct(null)}>
+          <div className={`${card} p-6 max-w-xs w-full mx-4 space-y-4`} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center">
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{t.invQRLabel || 'QR Label'}</h3>
+              <button onClick={() => setQrProduct(null)} className={`text-lg ${isDark ? 'text-surface-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}>×</button>
+            </div>
+            <div className="flex justify-center p-4 bg-white rounded-xl">
+              <QRCode value={qrProduct.sku} size={180} />
+            </div>
+            <div className="text-center">
+              <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{qrProduct.name}</p>
+              <p className={`font-mono text-xs mt-1 ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{qrProduct.sku}</p>
+              {qrProduct.locationZone && (
+                <p className={`text-xs mt-0.5 ${isDark ? 'text-surface-500' : 'text-slate-400'}`}>{qrProduct.locationZone}</p>
+              )}
+            </div>
+            <button onClick={() => window.print()} className={`w-full ${btnPrimary}`}>
+              🖴 {t.invPrintLabels || 'Print'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats bar */}
       <div className={`text-xs text-center ${isDark ? 'text-surface-500' : 'text-slate-400'}`}>

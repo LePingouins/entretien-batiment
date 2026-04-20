@@ -164,15 +164,27 @@ const router = createBrowserRouter([
               },
               {
                 path: 'inventory',
-                element: <InventoryCountSessionsPage />,
+                element: (
+                  <RequirePageAccess pageKey="INVENTORY">
+                    <InventoryCountSessionsPage />
+                  </RequirePageAccess>
+                ),
               },
               {
                 path: 'inventory/products',
-                element: <InventoryProductsPage />,
+                element: (
+                  <RequirePageAccess pageKey="INVENTORY_PRODUCTS">
+                    <InventoryProductsPage />
+                  </RequirePageAccess>
+                ),
               },
               {
                 path: 'inventory/count/:id',
-                element: <InventoryCountLivePage />,
+                element: (
+                  <RequirePageAccess pageKey="INVENTORY">
+                    <InventoryCountLivePage />
+                  </RequirePageAccess>
+                ),
               },
               {
                 path: 'debug',
@@ -278,15 +290,27 @@ const router = createBrowserRouter([
               },
               {
                 path: 'inventory',
-                element: <InventoryCountSessionsPage />,
+                element: (
+                  <RequirePageAccess pageKey="INVENTORY">
+                    <InventoryCountSessionsPage />
+                  </RequirePageAccess>
+                ),
               },
               {
                 path: 'inventory/products',
-                element: <InventoryProductsPage />,
+                element: (
+                  <RequirePageAccess pageKey="INVENTORY_PRODUCTS">
+                    <InventoryProductsPage />
+                  </RequirePageAccess>
+                ),
               },
               {
                 path: 'inventory/count/:id',
-                element: <InventoryCountLivePage />,
+                element: (
+                  <RequirePageAccess pageKey="INVENTORY">
+                    <InventoryCountLivePage />
+                  </RequirePageAccess>
+                ),
               },
             ],
           },
@@ -382,15 +406,27 @@ const router = createBrowserRouter([
               },
               {
                 path: 'inventory',
-                element: <InventoryCountSessionsPage />,
+                element: (
+                  <RequirePageAccess pageKey="INVENTORY">
+                    <InventoryCountSessionsPage />
+                  </RequirePageAccess>
+                ),
               },
               {
                 path: 'inventory/products',
-                element: <InventoryProductsPage />,
+                element: (
+                  <RequirePageAccess pageKey="INVENTORY_PRODUCTS">
+                    <InventoryProductsPage />
+                  </RequirePageAccess>
+                ),
               },
               {
                 path: 'inventory/count/:id',
-                element: <InventoryCountLivePage />,
+                element: (
+                  <RequirePageAccess pageKey="INVENTORY">
+                    <InventoryCountLivePage />
+                  </RequirePageAccess>
+                ),
               },
             ],
           },

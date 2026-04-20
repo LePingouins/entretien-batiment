@@ -578,7 +578,7 @@ export async function getAdminUserPageAccessOverview(): Promise<import('../types
 
 export async function updateAdminUserPageAccessOverrides(
   userId: number,
-  updates: Array<{ pageKey: import('../types/api').PageKey; state: import('../types/api').AccessOverrideState }>
+  updates: Array<{ pageKey: import('../types/api').PageKey; state: import('../types/api').AccessOverrideState; validFrom?: string; validUntil?: string }>
 ): Promise<import('../types/api').UserPageAccessOverview> {
   const res = await api.put<import('../types/api').UserPageAccessOverview>(`/api/admin/page-access/users/${userId}`, updates);
   return res.data;

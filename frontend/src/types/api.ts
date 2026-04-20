@@ -95,7 +95,9 @@ export type PageKey =
   | 'ARCHIVE'
   | 'ANALYTICS'
   | 'USERS'
-  | 'NOTIFICATIONS';
+  | 'NOTIFICATIONS'
+  | 'INVENTORY'
+  | 'INVENTORY_PRODUCTS';
 
 export type AccessOverrideState = 'DEFAULT' | 'ALLOW' | 'DENY';
 
@@ -119,6 +121,8 @@ export interface UserPageAccessItem {
   pageKey: PageKey;
   state: AccessOverrideState;
   effectiveAllowed: boolean;
+  validFrom?: string;
+  validUntil?: string;
 }
 
 export interface UserPageAccessOverview {

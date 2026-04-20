@@ -179,8 +179,8 @@ const AdminLayout: React.FC = () => {
     if (canAccess('USERS')) items.push({ label: t.adminUsersNav || 'Users', path: pagePath('USERS'), group: lang === 'fr' ? 'Administration' : 'Administration' });
     items.push({ label: t.documentsPage || 'Documents', path: '/admin/documents', group: lang === 'fr' ? 'Ressources' : 'Resources' });
     items.push({ label: t.shoppingList || 'Shopping List', path: '/admin/shopping-list', group: lang === 'fr' ? 'Ressources' : 'Resources' });
-    items.push({ label: t.invSessionsTitle || 'Inventory', path: '/admin/inventory', group: lang === 'fr' ? 'Ressources' : 'Resources' });
-    items.push({ label: t.invProductsNav || 'Inventory Products', path: '/admin/inventory/products', group: lang === 'fr' ? 'Ressources' : 'Resources' });
+    if (canAccess('INVENTORY')) items.push({ label: t.invSessionsTitle || 'Inventory', path: '/admin/inventory', group: lang === 'fr' ? 'Ressources' : 'Resources' });
+    if (canAccess('INVENTORY_PRODUCTS')) items.push({ label: t.invProductsNav || 'Inventory Products', path: '/admin/inventory/products', group: lang === 'fr' ? 'Ressources' : 'Resources' });
     if (role === 'DEVELOPPER') items.push({ label: t.debugDashboardNav || 'Debug Dashboard', path: '/admin/debug', group: 'Dev' });
     return items;
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,8 +238,8 @@ const AdminLayout: React.FC = () => {
               items={[
                 { label: t.documentsPage || 'Documents', path: '/admin/documents', isActive: window.location.pathname.includes('/admin/documents') },
                 { label: t.shoppingList || 'Shopping List', path: '/admin/shopping-list', isActive: window.location.pathname.includes('/admin/shopping-list') },
-                { label: t.invSessionsTitle || 'Inventory', path: '/admin/inventory', isActive: window.location.pathname === '/admin/inventory' },
-                { label: t.invProductsNav || 'Products', path: '/admin/inventory/products', isActive: window.location.pathname.includes('/admin/inventory/products') },
+                ...(canAccess('INVENTORY') ? [{ label: t.invSessionsTitle || 'Inventory', path: '/admin/inventory', isActive: window.location.pathname === '/admin/inventory' }] : []),
+                ...(canAccess('INVENTORY_PRODUCTS') ? [{ label: t.invProductsNav || 'Products', path: '/admin/inventory/products', isActive: window.location.pathname.includes('/admin/inventory/products') }] : []),
               ]}
             />
             {canAccess('USERS') && (
@@ -328,8 +328,8 @@ const AdminLayout: React.FC = () => {
               items={[
                 { label: t.documentsPage || 'Documents', path: '/admin/documents', isActive: window.location.pathname.includes('/admin/documents') },
                 { label: t.shoppingList || 'Shopping List', path: '/admin/shopping-list', isActive: window.location.pathname.includes('/admin/shopping-list') },
-                { label: t.invSessionsTitle || 'Inventory', path: '/admin/inventory', isActive: window.location.pathname === '/admin/inventory' },
-                { label: t.invProductsNav || 'Products', path: '/admin/inventory/products', isActive: window.location.pathname.includes('/admin/inventory/products') },
+                ...(canAccess('INVENTORY') ? [{ label: t.invSessionsTitle || 'Inventory', path: '/admin/inventory', isActive: window.location.pathname === '/admin/inventory' }] : []),
+                ...(canAccess('INVENTORY_PRODUCTS') ? [{ label: t.invProductsNav || 'Products', path: '/admin/inventory/products', isActive: window.location.pathname.includes('/admin/inventory/products') }] : []),
               ]}
             />
             {canAccess('USERS') && (

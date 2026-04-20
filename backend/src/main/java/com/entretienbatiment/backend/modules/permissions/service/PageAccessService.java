@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -34,6 +36,8 @@ public class PageAccessService {
     public static final String PAGE_ANALYTICS = "ANALYTICS";
     public static final String PAGE_USERS = "USERS";
     public static final String PAGE_NOTIFICATIONS = "NOTIFICATIONS";
+    public static final String PAGE_INVENTORY = "INVENTORY";
+    public static final String PAGE_INVENTORY_PRODUCTS = "INVENTORY_PRODUCTS";
 
     private static final List<String> MANAGED_PAGE_KEYS = List.of(
             PAGE_DASHBOARD,
@@ -43,7 +47,9 @@ public class PageAccessService {
             PAGE_ARCHIVE,
             PAGE_ANALYTICS,
             PAGE_USERS,
-            PAGE_NOTIFICATIONS
+            PAGE_NOTIFICATIONS,
+            PAGE_INVENTORY,
+            PAGE_INVENTORY_PRODUCTS
     );
 
     private static final Map<Role, Set<String>> DEFAULT_ALLOWED_BY_ROLE = defaultAllowedByRole();
@@ -160,14 +166,23 @@ public class PageAccessService {
             }
 
             boolean allowed = state == OverrideState.ALLOW;
+            String rawFrom  = update.validFrom();
+            String rawUntil = update.validUntil();
+            Instant parsedFrom  = parseInstantOrNull(rawFrom);
+            Instant parsedUntil = parseInstantOrNull(rawUntil);
+
             if (existing == null) {
                 UserPageAccessOverride created = new UserPageAccessOverride();
                 created.setUserId(userId);
                 created.setPageKey(pageKey);
                 created.setAllowed(allowed);
+                created.setValidFrom(parsedFrom);
+                created.setValidUntil(parsedUntil);
                 userPageAccessOverrideRepository.save(created);
             } else {
                 existing.setAllowed(allowed);
+                existing.setValidFrom(parsedFrom);
+                existing.setValidUntil(parsedUntil);
                 userPageAccessOverrideRepository.save(existing);
             }
         }
@@ -209,7 +224,11 @@ public class PageAccessService {
                 .orElse(null);
 
         if (override != null) {
-            return override.isAllowed();
+            if (!override.isActiveNow()) {
+                // Schedule has expired or hasn't started yet — fall through to role default
+            } else {
+                return override.isAllowed();
+            }
         }
 
         return rolePageAccessRepository.findByPageKeyAndRole(pageKey, effectiveRole)
@@ -314,14 +333,19 @@ public class PageAccessService {
             OverrideState state = OverrideState.DEFAULT;
             boolean effectiveAllowed;
 
+            String overrideValidFrom  = null;
+            String overrideValidUntil = null;
             if (override != null) {
                 state = override.isAllowed() ? OverrideState.ALLOW : OverrideState.DENY;
-                effectiveAllowed = override.isAllowed();
+                overrideValidFrom  = override.getValidFrom()  != null ? override.getValidFrom().toString()  : null;
+                overrideValidUntil = override.getValidUntil() != null ? override.getValidUntil().toString() : null;
+                effectiveAllowed = override.isActiveNow() ? override.isAllowed()
+                        : resolveRoleAllowed(pageKey, effectiveAccessRole(user.getRole()), storedRules);
             } else {
                 effectiveAllowed = resolveRoleAllowed(pageKey, effectiveAccessRole(user.getRole()), storedRules);
             }
 
-            pages.add(new UserPageAccessItemDto(pageKey, state, effectiveAllowed));
+            pages.add(new UserPageAccessItemDto(pageKey, state, effectiveAllowed, overrideValidFrom, overrideValidUntil));
         }
 
         return new UserPageAccessOverviewDto(
@@ -331,6 +355,15 @@ public class PageAccessService {
                 user.isEnabled(),
                 pages
         );
+    }
+
+    private static Instant parseInstantOrNull(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return Instant.parse(raw);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 
     private ResponseStatusException badRequest(String message) {
@@ -355,7 +388,9 @@ public class PageAccessService {
                 PAGE_ARCHIVE,
                 PAGE_ANALYTICS,
                 PAGE_USERS,
-                PAGE_NOTIFICATIONS
+                PAGE_NOTIFICATIONS,
+                PAGE_INVENTORY,
+                PAGE_INVENTORY_PRODUCTS
         ));
 
         defaults.put(Role.DEVELOPPER, defaults.get(Role.ADMIN));
@@ -391,9 +426,9 @@ public class PageAccessService {
 
     public record RolePageAccessRuleUpdateRequest(String pageKey, Boolean admin, Boolean tech, Boolean worker) {}
 
-    public record UserPageAccessItemDto(String pageKey, OverrideState state, boolean effectiveAllowed) {}
+    public record UserPageAccessItemDto(String pageKey, OverrideState state, boolean effectiveAllowed, String validFrom, String validUntil) {}
 
     public record UserPageAccessOverviewDto(Long userId, String email, Role role, boolean enabled, List<UserPageAccessItemDto> pages) {}
 
-    public record UserPageAccessUpdateRequest(String pageKey, OverrideState state) {}
+    public record UserPageAccessUpdateRequest(String pageKey, OverrideState state, String validFrom, String validUntil) {}
 }

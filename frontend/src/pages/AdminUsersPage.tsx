@@ -41,11 +41,13 @@ const PAGE_KEY_ORDER: PageKey[] = [
   'ANALYTICS',
   'USERS',
   'NOTIFICATIONS',
+  'INVENTORY',
+  'INVENTORY_PRODUCTS',
 ];
 
 const FALLBACK_ALLOWED_BY_ROLE: Record<UserRole, PageKey[]> = {
-  ADMIN: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS'],
-  DEVELOPPER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS'],
+  ADMIN: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS'],
+  DEVELOPPER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS'],
   TECH: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS'],
   WORKER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS'],
 };
@@ -335,6 +337,10 @@ const AdminUsersPage: React.FC = () => {
         return t.pageAccessUsers || 'Users';
       case 'NOTIFICATIONS':
         return t.pageAccessNotifications || 'Notifications';
+      case 'INVENTORY':
+        return t.pageAccessInventory || 'Inventory';
+      case 'INVENTORY_PRODUCTS':
+        return t.pageAccessInventoryProducts || 'Inventory Products';
       default:
         return pageKey;
     }
@@ -342,6 +348,8 @@ const AdminUsersPage: React.FC = () => {
     t.pageAccessAnalytics,
     t.pageAccessArchive,
     t.pageAccessDashboard,
+    t.pageAccessInventory,
+    t.pageAccessInventoryProducts,
     t.pageAccessMileage,
     t.pageAccessNotifications,
     t.pageAccessUrgentWorkOrders,
@@ -369,7 +377,28 @@ const AdminUsersPage: React.FC = () => {
             : state === 'DENY'
               ? false
               : roleDefaultAllowed(user.role, pageKey);
-          return { ...page, state, effectiveAllowed };
+          // Clear schedule dates when removing the ALLOW override
+          const resetDates = state !== 'ALLOW' ? { validFrom: undefined, validUntil: undefined } : {};
+          return { ...page, state, effectiveAllowed, ...resetDates };
+        }),
+      };
+    }));
+    setDirtyUserOverrideIds((prev) => {
+      const next = new Set(prev);
+      next.add(targetUserId);
+      return next;
+    });
+  };
+
+  const updatePageSchedule = (targetUserId: number, pageKey: PageKey, field: 'validFrom' | 'validUntil', dateValue: string) => {
+    setUserAccessOverview((prev) => prev.map((user) => {
+      if (user.userId !== targetUserId) return user;
+      return {
+        ...user,
+        pages: user.pages.map((page) => {
+          if (page.pageKey !== pageKey) return page;
+          const iso = dateValue ? (field === 'validFrom' ? dateValue + 'T00:00:00Z' : dateValue + 'T23:59:59Z') : undefined;
+          return { ...page, [field]: iso };
         }),
       };
     }));
@@ -400,7 +429,12 @@ const AdminUsersPage: React.FC = () => {
     try {
       const saved = await updateAdminUserPageAccessOverrides(
         overview.userId,
-        overview.pages.map((page) => ({ pageKey: page.pageKey, state: page.state }))
+        overview.pages.map((page) => ({
+          pageKey: page.pageKey,
+          state: page.state,
+          ...(page.state === 'ALLOW' && page.validFrom ? { validFrom: page.validFrom } : {}),
+          ...(page.state === 'ALLOW' && page.validUntil ? { validUntil: page.validUntil } : {}),
+        }))
       );
 
       setUserAccessOverview((prev) => prev.map((user) => user.userId === saved.userId ? saved : user));
@@ -787,6 +821,39 @@ const AdminUsersPage: React.FC = () => {
                                     : (t.pageAccessDenied || 'Denied')}
                                 </span>
                               </div>
+                              {page.state === 'ALLOW' && (
+                                <div className={`mt-2 pt-2 border-t grid grid-cols-2 gap-2 ${isDark ? 'border-surface-700' : 'border-surface-100'}`}>
+                                  <div>
+                                    <label className={`block text-[11px] font-medium mb-1 ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
+                                      {t.invScheduleFrom || 'From'}
+                                    </label>
+                                    <input
+                                      type="date"
+                                      disabled={rowBusy}
+                                      value={page.validFrom ? page.validFrom.slice(0, 10) : ''}
+                                      onChange={(e) => updatePageSchedule(overview.userId, page.pageKey, 'validFrom', e.target.value)}
+                                      className={`w-full px-2 py-1 rounded-lg border text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 ${isDark ? 'bg-surface-950 border-surface-700 text-surface-100' : 'bg-white border-surface-200 text-surface-900'} ${rowBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={`block text-[11px] font-medium mb-1 ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
+                                      {t.invScheduleUntil || 'Until'}
+                                    </label>
+                                    <input
+                                      type="date"
+                                      disabled={rowBusy}
+                                      value={page.validUntil ? page.validUntil.slice(0, 10) : ''}
+                                      onChange={(e) => updatePageSchedule(overview.userId, page.pageKey, 'validUntil', e.target.value)}
+                                      className={`w-full px-2 py-1 rounded-lg border text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 ${isDark ? 'bg-surface-950 border-surface-700 text-surface-100' : 'bg-white border-surface-200 text-surface-900'} ${rowBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                    />
+                                  </div>
+                                  {(!page.validFrom && !page.validUntil) && (
+                                    <div className={`col-span-2 text-[11px] ${isDark ? 'text-surface-500' : 'text-surface-400'}`}>
+                                      {t.invSchedulePermanent || 'Permanent access (no date restriction)'}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
