@@ -332,6 +332,7 @@ const AdminLayout: React.FC = () => {
                 { label: t.shoppingList || 'Shopping List', path: '/admin/shopping-list', isActive: window.location.pathname.includes('/admin/shopping-list') },
                 ...(canAccess('INVENTORY') ? [{ label: t.invSessionsTitle || 'Inventory', path: '/admin/inventory', isActive: window.location.pathname === '/admin/inventory' }] : []),
                 ...(canAccess('INVENTORY_PRODUCTS') ? [{ label: t.invProductsNav || 'Products', path: '/admin/inventory/products', isActive: window.location.pathname.includes('/admin/inventory/products') }] : []),
+                ...(canAccess('SUBSCRIPTIONS') ? [{ label: t.subNav || 'Subscriptions', path: '/admin/subscriptions', isActive: window.location.pathname.includes('/admin/subscriptions') }] : []),
               ]}
             />
             {canAccess('USERS') && (
