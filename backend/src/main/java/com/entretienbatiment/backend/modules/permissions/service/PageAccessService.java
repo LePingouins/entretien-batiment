@@ -143,10 +143,12 @@ public class PageAccessService {
         }
 
         Map<String, OverrideState> requestedStates = new LinkedHashMap<>();
+        Map<String, UserPageAccessUpdateRequest> updatesByPage = new LinkedHashMap<>();
         for (UserPageAccessUpdateRequest update : updates) {
             String pageKey = normalizeAndValidatePageKey(update.pageKey());
             OverrideState state = update.state() == null ? OverrideState.DEFAULT : update.state();
             requestedStates.put(pageKey, state);
+            updatesByPage.put(pageKey, update);
         }
 
         Map<String, UserPageAccessOverride> existingByPage = mapOverridesByPage(
@@ -166,8 +168,9 @@ public class PageAccessService {
             }
 
             boolean allowed = state == OverrideState.ALLOW;
-            String rawFrom  = update.validFrom();
-            String rawUntil = update.validUntil();
+            UserPageAccessUpdateRequest update = updatesByPage.get(pageKey);
+            String rawFrom  = update != null ? update.validFrom()  : null;
+            String rawUntil = update != null ? update.validUntil() : null;
             Instant parsedFrom  = parseInstantOrNull(rawFrom);
             Instant parsedUntil = parseInstantOrNull(rawUntil);
 

@@ -9,8 +9,7 @@ import com.entretienbatiment.backend.modules.auth.service.AuthService;
 import com.entretienbatiment.backend.modules.auth.util.CookieUtil;
 import com.entretienbatiment.backend.modules.auth.dto.LoginRequest;
 import com.entretienbatiment.backend.modules.auth.dto.LoginResponse;
-import com.entretienbatiment.backend.modules.auth.model.RefreshToken;
-import com.entretienbatiment.backend.modules.auth.repository.RefreshTokenRepository;
+
 
 @RestController
 @RequestMapping("/api/auth")

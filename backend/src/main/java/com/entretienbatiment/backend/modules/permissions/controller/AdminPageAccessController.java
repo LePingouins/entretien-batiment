@@ -7,8 +7,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import com.entretienbatiment.backend.modules.permissions.service.PageAccessService;
-import com.entretienbatiment.backend.modules.permissions.model.RolePageAccess;
-import com.entretienbatiment.backend.modules.permissions.model.UserPageAccessOverride;
 
 @RestController
 @RequestMapping("/api/admin/page-access")

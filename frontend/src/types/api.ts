@@ -97,7 +97,8 @@ export type PageKey =
   | 'USERS'
   | 'NOTIFICATIONS'
   | 'INVENTORY'
-  | 'INVENTORY_PRODUCTS';
+  | 'INVENTORY_PRODUCTS'
+  | 'SUBSCRIPTIONS';
 
 export type AccessOverrideState = 'DEFAULT' | 'ALLOW' | 'DENY';
 
@@ -380,4 +381,64 @@ export interface InventoryCountItemResponse {
   countedByName?: string;
   notes?: string;
   countedAt?: string;
+}
+
+// ─── Software Subscriptions ─────────────────────────────────────────────
+
+export type SubscriptionBillingCycle = 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'YEARLY';
+export type SubscriptionStatus = 'ACTIVE' | 'TRIAL' | 'CANCELLED' | 'EXPIRED' | 'PAUSED';
+export type SubscriptionCategory =
+  | 'ERP' | 'ACCOUNTING' | 'SECURITY' | 'INFRASTRUCTURE'
+  | 'COMMUNICATION' | 'PRODUCTIVITY' | 'DOMAIN' | 'HOSTING'
+  | 'STORAGE' | 'MONITORING' | 'HR' | 'CRM' | 'OTHER';
+
+export interface SubscriptionResponse {
+  id: number;
+  name: string;
+  vendor?: string;
+  category: SubscriptionCategory;
+  cost: number;
+  currency: string;
+  billingCycle: SubscriptionBillingCycle;
+  status: SubscriptionStatus;
+  startDate?: string;
+  nextDueDate?: string;
+  autoRenew: boolean;
+  websiteUrl?: string;
+  contactEmail?: string;
+  notes?: string;
+  monthlyCost: number;
+  yearlyCost: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubscriptionRequest {
+  name: string;
+  vendor?: string;
+  category: string;
+  cost: number;
+  currency: string;
+  billingCycle: string;
+  status?: string;
+  startDate?: string;
+  nextDueDate?: string;
+  autoRenew?: boolean;
+  websiteUrl?: string;
+  contactEmail?: string;
+  notes?: string;
+}
+
+export interface SubscriptionReportResponse {
+  totalSubscriptions: number;
+  activeSubscriptions: number;
+  totalMonthlyCost: number;
+  totalYearlyCost: number;
+  upcomingRenewals30d: number;
+  expiredCount: number;
+  costByCategory: Record<string, number>;
+  countByCategory: Record<string, number>;
+  costByBillingCycle: Record<string, number>;
+  countByStatus: Record<string, number>;
+  upcomingRenewals: SubscriptionResponse[];
 }

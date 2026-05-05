@@ -697,3 +697,35 @@ export function getInventoryExportUrl(sessionId: number): string {
   return `${base}/api/inventory/sessions/${sessionId}/export`;
 }
 
+// ─── Software Subscriptions API ────────────────────────────────────────
+
+import type {
+  SubscriptionResponse,
+  SubscriptionRequest,
+  SubscriptionReportResponse,
+} from '../types/api';
+
+export async function getSubscriptions(): Promise<SubscriptionResponse[]> {
+  const res = await api.get<SubscriptionResponse[]>('/api/admin/subscriptions');
+  return res.data;
+}
+export async function getSubscription(id: number): Promise<SubscriptionResponse> {
+  const res = await api.get<SubscriptionResponse>(`/api/admin/subscriptions/${id}`);
+  return res.data;
+}
+export async function createSubscription(data: SubscriptionRequest): Promise<SubscriptionResponse> {
+  const res = await api.post<SubscriptionResponse>('/api/admin/subscriptions', data);
+  return res.data;
+}
+export async function updateSubscription(id: number, data: SubscriptionRequest): Promise<SubscriptionResponse> {
+  const res = await api.put<SubscriptionResponse>(`/api/admin/subscriptions/${id}`, data);
+  return res.data;
+}
+export async function deleteSubscription(id: number): Promise<void> {
+  await api.delete(`/api/admin/subscriptions/${id}`);
+}
+export async function getSubscriptionReport(): Promise<SubscriptionReportResponse> {
+  const res = await api.get<SubscriptionReportResponse>('/api/admin/subscriptions/report');
+  return res.data;
+}
+

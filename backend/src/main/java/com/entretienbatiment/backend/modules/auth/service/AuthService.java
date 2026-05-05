@@ -8,12 +8,8 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import com.entretienbatiment.backend.modules.auth.model.AppUser;
 import com.entretienbatiment.backend.modules.auth.model.RefreshToken;
-import com.entretienbatiment.backend.modules.auth.model.Role;
 import com.entretienbatiment.backend.modules.auth.repository.AppUserRepository;
 import com.entretienbatiment.backend.modules.auth.repository.RefreshTokenRepository;
-import com.entretienbatiment.backend.modules.auth.dto.LoginRequest;
-import com.entretienbatiment.backend.modules.auth.dto.LoginResponse;
-import com.entretienbatiment.backend.modules.auth.util.CookieUtil;
 import com.entretienbatiment.backend.modules.auth.util.TokenUtil;
 
 @Service

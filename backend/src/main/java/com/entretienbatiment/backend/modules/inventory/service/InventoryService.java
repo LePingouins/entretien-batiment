@@ -247,7 +247,7 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public String exportSessionCsv(Long sessionId) {
-        InventoryCountSession session = findSession(sessionId);
+        findSession(sessionId);
         List<InventoryCountItem> items = itemRepo.findBySessionWithProduct(sessionId);
 
         StringBuilder csv = new StringBuilder();

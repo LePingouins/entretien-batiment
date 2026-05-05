@@ -6,8 +6,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import com.entretienbatiment.backend.modules.notifications.service.NotificationService;
-import com.entretienbatiment.backend.modules.notifications.model.NotificationRecipientRule;
-import com.entretienbatiment.backend.modules.notifications.repository.NotificationRecipientRuleRepository;
 
 @RestController
 @RequestMapping("/api/admin/notification-rules")

@@ -7,8 +7,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.entretienbatiment.backend.modules.debug.service.DevelopperDebugService;
-import com.entretienbatiment.backend.modules.debug.model.DebugErrorLog;
-import com.entretienbatiment.backend.modules.debug.model.DebugErrorAggregateProjection;
 
 @RestController
 @RequestMapping("/api/developper/debug")

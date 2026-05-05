@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import com.entretienbatiment.backend.modules.notifications.service.NotificationService;
 import com.entretienbatiment.backend.modules.notifications.model.Notification;
-import com.entretienbatiment.backend.modules.notifications.repository.NotificationRepository;
 
 @RestController
 @RequestMapping("/api/notifications")

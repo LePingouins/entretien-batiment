@@ -73,7 +73,9 @@ public class SecurityConfig {
             "http://localhost:5173", 
             "http://localhost:4173",
             "http://10.0.0.109:4173",
-            "http://10.0.0.109:5173"
+            "http://10.0.0.109:5173",
+            "https://entretien-batiment.com",
+            "https://www.entretien-batiment.com"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));

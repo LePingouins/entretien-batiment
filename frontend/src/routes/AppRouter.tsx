@@ -35,6 +35,7 @@ const MaterialsShoppingListPage = lazy(() => import('../pages/MaterialsShoppingL
 const InventoryProductsPage       = lazy(() => import('../pages/InventoryProductsPage'));
 const InventoryCountSessionsPage  = lazy(() => import('../pages/InventoryCountSessionsPage'));
 const InventoryCountLivePage      = lazy(() => import('../pages/InventoryCountLivePage'));
+const SubscriptionsPage           = lazy(() => import('../pages/SubscriptionsPage'));
 
 /** Shown while a lazy page chunk is being downloaded */
 const PageLoader = () => (
@@ -183,6 +184,14 @@ const router = createBrowserRouter([
                 element: (
                   <RequirePageAccess pageKey="INVENTORY">
                     <InventoryCountLivePage />
+                  </RequirePageAccess>
+                ),
+              },
+              {
+                path: 'subscriptions',
+                element: (
+                  <RequirePageAccess pageKey="SUBSCRIPTIONS">
+                    <SubscriptionsPage />
                   </RequirePageAccess>
                 ),
               },

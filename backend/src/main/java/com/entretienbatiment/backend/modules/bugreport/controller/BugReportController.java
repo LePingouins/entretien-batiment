@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import com.entretienbatiment.backend.modules.bugreport.service.BugReportService;
-import com.entretienbatiment.backend.modules.bugreport.model.BugReportFeature;
 
 @RestController
 @RequestMapping("/api/bug-reports")

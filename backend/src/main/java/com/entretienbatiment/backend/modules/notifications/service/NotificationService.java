@@ -21,7 +21,6 @@ import com.entretienbatiment.backend.modules.notifications.model.Notification;
 import com.entretienbatiment.backend.modules.notifications.model.NotificationRecipientRule;
 import com.entretienbatiment.backend.modules.notifications.repository.NotificationRepository;
 import com.entretienbatiment.backend.modules.notifications.repository.NotificationRecipientRuleRepository;
-import com.entretienbatiment.backend.modules.notifications.service.NotificationWebSocketSender;
 
 @Service
 @Transactional

@@ -15,15 +15,14 @@ import com.entretienbatiment.backend.modules.auth.model.Role;
 import com.entretienbatiment.backend.modules.auth.repository.AppUserRepository;
 import com.entretienbatiment.backend.modules.auth.dto.CreateUserRequest;
 import com.entretienbatiment.backend.modules.auth.dto.UserResponse;
-import com.entretienbatiment.backend.modules.auth.service.AuthService;
 
 @RestController
 @RequestMapping("/api/admin/users")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 
-    private static final String DEFAULT_PASSWORD = "Horizon";
-    private static final String LOCKED_DEVELOPPER_EMAIL = "oligoudreault@gmail.com";
+    private static final String DEFAULT_PASSWORD = System.getenv().getOrDefault("DEFAULT_USER_PASSWORD", "ChangeMe123!");
+    private static final String LOCKED_DEVELOPPER_EMAIL = System.getenv().getOrDefault("SEED_DEV_EMAIL", "");
 
     private final AppUserRepository userRepo;
     private final PasswordEncoder encoder;
@@ -68,7 +67,7 @@ public class AdminUserController {
         notificationService.notifyUser(
             saved.getId(),
             "Welcome to Horizon",
-            "Your account is ready. Sign in with your invited email and default password Horizon, then change your password in settings.",
+            "Your account is ready. Sign in with your invited email and the default password, then change your password in settings.",
             notificationsPathForRole(saved.getRole()),
             "user-welcome"
         );

@@ -11,11 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import com.entretienbatiment.backend.modules.urgentworkorders.model.UrgentWorkOrder;
-import com.entretienbatiment.backend.modules.urgentworkorders.repository.UrgentWorkOrderRepository;
 import com.entretienbatiment.backend.modules.urgentworkorders.service.UrgentWorkOrderService;
 import com.entretienbatiment.backend.modules.urgentworkorders.dto.UrgentWorkOrderRequestDto;
 import com.entretienbatiment.backend.modules.urgentworkorders.dto.UrgentWorkOrderMultipartRequest;
-import com.entretienbatiment.backend.modules.urgentworkorders.service.UrgentWorkOrderSpecifications;
 
 @RestController
 @RequestMapping("/api/urgent-work-orders")
