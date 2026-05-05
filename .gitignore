@@ -76,7 +76,7 @@ coverage/
 # =========================
 # Uploads (if you don't want to track user uploads)
 # =========================
-# backend/uploads/
+backend/uploads/
 
 # =========================
 # Docker (optional)
