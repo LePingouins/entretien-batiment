@@ -25,23 +25,27 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.util.List;
 
 @Service
 public class WorkOrderService {
 
-    private static final String DEFAULT_TECHNICIAN_EMAIL = "andre@gmail.com";
+    private final String defaultTechnicianEmail;
 
     private final WorkOrderRepository repo;
     private final AppUserRepository users;
     private final NotificationService notificationService;
     private final WorkOrderReminderScheduler reminderScheduler;
 
-    public WorkOrderService(WorkOrderRepository repo, AppUserRepository users, NotificationService notificationService, WorkOrderReminderScheduler reminderScheduler) {
+    public WorkOrderService(WorkOrderRepository repo, AppUserRepository users, NotificationService notificationService, WorkOrderReminderScheduler reminderScheduler,
+                             @Value("${app.default-technician-email:}") String defaultTechnicianEmail) {
         this.repo = repo;
         this.users = users;
         this.notificationService = notificationService;
         this.reminderScheduler = reminderScheduler;
+        this.defaultTechnicianEmail = defaultTechnicianEmail;
     }
 
     @Transactional
@@ -926,7 +930,7 @@ public class WorkOrderService {
             return requireActiveTech(requestedAssigneeId);
         }
 
-        return users.findByEmailIgnoreCase(DEFAULT_TECHNICIAN_EMAIL)
+        return users.findByEmailIgnoreCase(defaultTechnicianEmail)
                 .filter(AppUser::isEnabled)
                 .filter(user -> user.getRole() == Role.TECH)
                 .orElse(null);

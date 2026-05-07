@@ -1,5 +1,6 @@
 package com.entretienbatiment.backend.config;
 
+import com.entretienbatiment.backend.common.security.LoginRateLimitFilter;
 import com.entretienbatiment.backend.modules.auth.model.AppUser;
 import com.entretienbatiment.backend.modules.auth.repository.AppUserRepository;
 import com.entretienbatiment.backend.modules.auth.model.Role;
@@ -87,7 +88,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService, AppUserRepository appUserRepository) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService, AppUserRepository appUserRepository, LoginRateLimitFilter loginRateLimitFilter) throws Exception {
         return http
             .cors(cors -> {}) // ✅ IMPORTANT: enables Spring Security CORS handling
             .csrf(csrf -> csrf.disable())
@@ -97,8 +98,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/ws-notifications/**").permitAll()
-                // Make files endpoint public for download
-                .requestMatchers("/api/files/workorders/**").permitAll()
+                // Make files endpoint authenticated
+                .requestMatchers("/api/files/workorders/**").authenticated()
                 
                 // Allow error page so that exceptions don't get masked as 403 Forbidden
                 .requestMatchers("/error").permitAll()
@@ -125,6 +126,7 @@ public class SecurityConfig {
                 // Catch-all
                 .anyRequest().authenticated()
             )
+            .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(new JwtAuthFilter(jwtService, appUserRepository), UsernamePasswordAuthenticationFilter.class)
             .build();
     }

@@ -15,9 +15,15 @@ public class AdminSeeder {
     CommandLineRunner seedAdmin(AppUserRepository repo, PasswordEncoder encoder) {
         return args -> {
             String adminEmail = System.getenv().getOrDefault("SEED_ADMIN_EMAIL", "admin@entretien.local");
-            String adminPassword = System.getenv().getOrDefault("SEED_ADMIN_PASSWORD", "ChangeMe123!");
+            String adminPassword = System.getenv("SEED_ADMIN_PASSWORD");
             String devEmail = System.getenv().getOrDefault("SEED_DEV_EMAIL", "");
             String devPassword = System.getenv().getOrDefault("SEED_DEV_PASSWORD", "");
+            String techEmail = System.getenv().getOrDefault("SEED_TECH_EMAIL", "tech@entretien.local");
+            String techPassword = System.getenv("SEED_TECH_PASSWORD");
+
+            if (adminPassword == null || adminPassword.isBlank()) {
+                throw new IllegalStateException("SEED_ADMIN_PASSWORD env var is required but not set");
+            }
 
             if (repo.findByEmailIgnoreCase(adminEmail).isEmpty()) {
                 AppUser admin = new AppUser();
@@ -27,6 +33,21 @@ public class AdminSeeder {
                 admin.setEnabled(true);
                 repo.save(admin);
                 System.out.println("✅ Seeded ADMIN: " + adminEmail + " (change password ASAP)");
+            }
+
+            if (!techEmail.isBlank() && repo.findByEmailIgnoreCase(techEmail).isEmpty()) {
+                if (techPassword == null || techPassword.isBlank()) {
+                    System.out.println("⚠️  SEED_TECH_PASSWORD not set — skipping TECH seed for " + techEmail);
+                } else {
+                    AppUser tech = new AppUser();
+                    tech.setEmail(techEmail);
+                    tech.setRole(Role.TECH);
+                    tech.setPasswordHash(encoder.encode(techPassword));
+                    tech.setEnabled(true);
+                    tech.setGetReminders(true);
+                    repo.save(tech);
+                    System.out.println("✅ Seeded TECH: " + techEmail);
+                }
             }
 
             if (!devEmail.isBlank()) {

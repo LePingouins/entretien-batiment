@@ -13,6 +13,7 @@ import { DndBoard, isBottomZone, getStatusFromBottomZone } from './AdminWorkOrde
 import { FilterBar } from './AdminWorkOrders/FilterBar';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { SharedEditModal } from '../components/SharedEditModal';
+import { openSecureFile } from '../lib/secureFile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DragEndEvent } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
@@ -998,14 +999,13 @@ function AdminWorkOrdersPage() {
               <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.attachments || 'Attachments'}</label>
               {existingEditAttachmentUrl && !removeEditAttachment && (
                 <div className={`mb-2 flex items-center gap-2 p-2 rounded ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-gray-50 border border-gray-200'}`}>
-                  <a
-                    href={existingEditAttachmentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => existingEditAttachmentUrl && openSecureFile(existingEditAttachmentUrl)}
                     className={`text-sm truncate underline ${colorScheme === 'dark' ? 'text-brand-300' : 'text-brand-700'}`}
                   >
                     {editModal.workOrder?.attachmentFilename || 'Current attachment'}
-                  </a>
+                  </button>
                   <button
                     type="button"
                     className={`ml-auto rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-600' : 'text-gray-600 hover:bg-gray-200'}`}
@@ -1075,9 +1075,9 @@ function AdminWorkOrdersPage() {
               {editModal.workOrder?.invoiceFilename && !removeEditInvoice && (
                 <div className={`mb-2 flex items-center gap-2 p-2 rounded ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-green-50 border border-green-200'}`}>
                   <span className="text-lg">📄</span>
-                  <a href={editModal.workOrder.invoiceDownloadUrl || `/api/files/workorders/${editModal.workOrder.invoiceFilename}`} target="_blank" rel="noopener noreferrer" className={`text-sm truncate underline ${colorScheme === 'dark' ? 'text-brand-300' : 'text-green-700'}`}>
+                  <button type="button" onClick={() => openSecureFile(editModal.workOrder?.invoiceDownloadUrl || `/api/files/workorders/${editModal.workOrder?.invoiceFilename}`)} className={`text-sm truncate underline ${colorScheme === 'dark' ? 'text-brand-300' : 'text-green-700'}`}>
                     {editModal.workOrder.invoiceFilename}
-                  </a>
+                  </button>
                   <button type="button" className={`ml-auto rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-600' : 'text-gray-600 hover:bg-gray-200'}`} aria-label="Remove invoice" onClick={() => setRemoveEditInvoice(true)}>×</button>
                 </div>
               )}

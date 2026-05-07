@@ -9,6 +9,8 @@ import com.entretienbatiment.backend.modules.workorders.dto.CreateWorkOrderMulti
 import com.entretienbatiment.backend.modules.workorders.dto.UpdateWorkOrderMultipartRequest;
 import com.entretienbatiment.backend.modules.workorders.dto.MoveWorkOrderRequest;
 import com.entretienbatiment.backend.modules.workorders.dto.ReorderWorkOrdersRequest;
+import com.entretienbatiment.backend.modules.audit.service.AuditLogService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -26,9 +28,11 @@ import org.springframework.data.domain.Pageable;
 public class AdminWorkOrderController {
 
     private final WorkOrderService service;
+    private final AuditLogService auditLogService;
 
-    public AdminWorkOrderController(WorkOrderService service) {
+    public AdminWorkOrderController(WorkOrderService service, AuditLogService auditLogService) {
         this.service = service;
+        this.auditLogService = auditLogService;
     }
 
 
@@ -105,8 +109,9 @@ public class AdminWorkOrderController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable Long id, HttpServletRequest httpReq) {
         service.delete(id);
+        auditLogService.log("DELETE_WORK_ORDER", "WORK_ORDER", id, null, null, httpReq);
     }
 
     // ==================== KANBAN ORDERING ENDPOINTS ====================
@@ -184,16 +189,20 @@ public class AdminWorkOrderController {
      * Manually archive a work order.
      */
     @PatchMapping("/{id}/archive")
-    public WorkOrderResponse archive(@PathVariable Long id) {
-        return service.archiveWorkOrder(id);
+    public WorkOrderResponse archive(@PathVariable Long id, HttpServletRequest httpReq) {
+        WorkOrderResponse r = service.archiveWorkOrder(id);
+        auditLogService.log("ARCHIVE_WORK_ORDER", "WORK_ORDER", id, r.title(), null, httpReq);
+        return r;
     }
 
     /**
      * Unarchive (restore) a work order.
      */
     @PatchMapping("/{id}/unarchive")
-    public WorkOrderResponse unarchive(@PathVariable Long id) {
-        return service.unarchiveWorkOrder(id);
+    public WorkOrderResponse unarchive(@PathVariable Long id, HttpServletRequest httpReq) {
+        WorkOrderResponse r = service.unarchiveWorkOrder(id);
+        auditLogService.log("UNARCHIVE_WORK_ORDER", "WORK_ORDER", id, r.title(), null, httpReq);
+        return r;
     }
 
     /**

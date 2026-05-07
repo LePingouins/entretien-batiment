@@ -183,6 +183,7 @@ const AdminLayout: React.FC = () => {
     if (canAccess('INVENTORY_PRODUCTS')) items.push({ label: t.invProductsNav || 'Inventory Products', path: '/admin/inventory/products', group: lang === 'fr' ? 'Ressources' : 'Resources' });
     if (canAccess('SUBSCRIPTIONS')) items.push({ label: t.subNav || 'Subscriptions', path: '/admin/subscriptions', group: lang === 'fr' ? 'Ressources' : 'Resources' });
     if (role === 'DEVELOPPER') items.push({ label: t.debugDashboardNav || 'Debug Dashboard', path: '/admin/debug', group: 'Dev' });
+    if (role === 'DEVELOPPER') items.push({ label: 'Dev Insights', path: '/admin/insights', group: 'Dev' });
     return items;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canAccess, t, lang, role]);
@@ -248,7 +249,14 @@ const AdminLayout: React.FC = () => {
               <Link to={pagePath('USERS')} className={linkCls(window.location.pathname.includes(pagePath('USERS')))}>{t.adminUsersNav || 'Users'}</Link>
             )}
             {role === 'DEVELOPPER' && (
-              <Link to="/admin/debug" className={`px-3 py-1.5 rounded-lg font-medium transition-colors text-sm ${window.location.pathname.includes('/admin/debug') ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-amber-300 hover:text-amber-200 hover:bg-surface-800' : 'text-amber-700 hover:text-amber-800 hover:bg-amber-50'}`}>{t.debugDashboardNav || 'Debug'}</Link>
+              <NavDropdown
+                isDark={colorScheme === 'dark'}
+                label="Dev"
+                items={[
+                  { label: t.debugDashboardNav || 'Debug Dashboard', path: '/admin/debug', isActive: window.location.pathname.includes('/admin/debug') },
+                  { label: '✦ Dev Insights', path: '/admin/insights', isActive: window.location.pathname.includes('/admin/insights') },
+                ]}
+              />
             )}
             <NavSearch isDark={colorScheme === 'dark'} lang={lang} items={searchItems} />
             <BugReportButton />
@@ -339,7 +347,10 @@ const AdminLayout: React.FC = () => {
               <Link to={pagePath('USERS')} onClick={() => setNavOpen(false)} className={linkCls(window.location.pathname.includes(pagePath('USERS')))}>{t.adminUsersNav || 'Users'}</Link>
             )}
             {role === 'DEVELOPPER' && (
-              <Link to="/admin/debug" onClick={() => setNavOpen(false)} className={`px-3 py-1.5 rounded-lg font-medium transition-colors text-sm ${window.location.pathname.includes('/admin/debug') ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-amber-300 hover:text-amber-200 hover:bg-surface-800' : 'text-amber-700 hover:text-amber-800 hover:bg-amber-50'}`}>{t.debugDashboardNav || 'Debug'}</Link>
+              <>
+                <Link to="/admin/debug" onClick={() => setNavOpen(false)} className={`px-3 py-1.5 rounded-lg font-medium transition-colors text-sm ${window.location.pathname.includes('/admin/debug') ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-amber-300 hover:text-amber-200 hover:bg-surface-800' : 'text-amber-700 hover:text-amber-800 hover:bg-amber-50'}`}>{t.debugDashboardNav || 'Debug'}</Link>
+                <Link to="/admin/insights" onClick={() => setNavOpen(false)} className={`px-3 py-1.5 rounded-lg font-medium transition-colors text-sm ${window.location.pathname.includes('/admin/insights') ? 'text-violet-500' : colorScheme === 'dark' ? 'text-violet-300 hover:text-violet-200 hover:bg-surface-800' : 'text-violet-700 hover:text-violet-800 hover:bg-violet-50'}`}>✦ Dev Insights</Link>
+              </>
             )}
             <div className={`my-1 h-px ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`} />
             <NavSearch isDark={colorScheme === 'dark'} lang={lang} items={searchItems} />

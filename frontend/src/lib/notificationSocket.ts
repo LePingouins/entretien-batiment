@@ -1,13 +1,14 @@
 import SockJS from 'sockjs-client';
 import { Client, Stomp } from '@stomp/stompjs';
 
-export function createNotificationSocket(onUpdate: () => void, userId?: string | number) {
+export function createNotificationSocket(onUpdate: () => void, userId?: string | number, accessToken?: string) {
   const wsBase = import.meta.env.VITE_API_URL || window.location.origin;
   const socket = new SockJS(`${wsBase}/ws-notifications`);
   const stompClient = Stomp.over(socket);
   let connected = false;
 
-  stompClient.connect({}, () => {
+  const connectHeaders = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+  stompClient.connect(connectHeaders, () => {
     connected = true;
     if (userId) {
       stompClient.subscribe(`/topic/notifications/${userId}`, () => {

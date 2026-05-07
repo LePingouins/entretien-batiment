@@ -9,6 +9,7 @@ import com.entretienbatiment.backend.modules.auth.service.AuthService;
 import com.entretienbatiment.backend.modules.auth.util.CookieUtil;
 import com.entretienbatiment.backend.modules.auth.dto.LoginRequest;
 import com.entretienbatiment.backend.modules.auth.dto.LoginResponse;
+import com.entretienbatiment.backend.modules.audit.service.AuditLogService;
 
 
 @RestController
@@ -18,22 +19,26 @@ public class AuthController {
     private final AuthService authService;
     private final CookieUtil cookieUtil;
     private final int refreshDays;
+    private final AuditLogService auditLogService;
 
     public AuthController(
             AuthService authService,
             CookieUtil cookieUtil,
-            @Value("${security.jwt.refresh-days}") int refreshDays
+            @Value("${security.jwt.refresh-days}") int refreshDays,
+            AuditLogService auditLogService
     ) {
         this.authService = authService;
         this.cookieUtil = cookieUtil;
         this.refreshDays = refreshDays;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest req, HttpServletResponse res) {
+    public LoginResponse login(@RequestBody LoginRequest req, HttpServletResponse res, HttpServletRequest request) {
         AuthService.LoginResult result = authService.login(req.email(), req.password(), req.rememberMeEnabled());
         writeRefreshCookie(res, result.refreshTokenValue(), result.persistent());
-
+        auditLogService.logWithUser("LOGIN", result.userId(), result.email(), result.role(),
+                null, null, null, null, request);
         return new LoginResponse(result.accessToken());
     }
 
@@ -48,6 +53,8 @@ public class AuthController {
 
     @PostMapping("/logout")
     public void logout(HttpServletRequest request, HttpServletResponse res) {
+        // Log before revoking so the SecurityContext still holds user info
+        auditLogService.log("LOGOUT", null, null, null, null, request);
         String cookieValue = readCookie(request, cookieUtil.getCookieName());
         authService.logout(cookieValue);
         cookieUtil.clearRefreshCookie(res);

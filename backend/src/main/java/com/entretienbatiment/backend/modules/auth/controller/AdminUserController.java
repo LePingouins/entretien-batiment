@@ -21,7 +21,7 @@ import com.entretienbatiment.backend.modules.auth.dto.UserResponse;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 
-    private static final String DEFAULT_PASSWORD = System.getenv().getOrDefault("DEFAULT_USER_PASSWORD", "ChangeMe123!");
+    private static final String DEFAULT_PASSWORD = System.getenv("DEFAULT_USER_PASSWORD");
     private static final String LOCKED_DEVELOPPER_EMAIL = System.getenv().getOrDefault("SEED_DEV_EMAIL", "");
 
     private final AppUserRepository userRepo;
@@ -36,6 +36,10 @@ public class AdminUserController {
 
     @PostMapping
     public UserResponse invite(@RequestBody CreateUserRequest req) {
+        if (DEFAULT_PASSWORD == null || DEFAULT_PASSWORD.isBlank()) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+                    "DEFAULT_USER_PASSWORD env var is required but not set");
+        }
         String normalizedEmail = normalizeEmail(req.email());
         if (normalizedEmail == null) {
             throw badRequest("email is required");

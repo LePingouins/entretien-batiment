@@ -29,6 +29,7 @@ const AnalyticsPage          = lazy(() => import('../pages/AnalyticsPage'));
 const AdminUsersPage         = lazy(() => import('../pages/AdminUsersPage'));
 const NotificationsPage      = lazy(() => import('../pages/NotificationsPage'));
 const DevelopperDebugPage    = lazy(() => import('../pages/DevelopperDebugPage'));
+const DevInsightsPage        = lazy(() => import('../pages/DevInsightsPage'));
 const NoAccessPage           = lazy(() => import('../pages/NoAccessPage'));
 const DocumentsPage          = lazy(() => import('../pages/DocumentsPage'));
 const MaterialsShoppingListPage = lazy(() => import('../pages/MaterialsShoppingListPage'));
@@ -202,6 +203,20 @@ const router = createBrowserRouter([
                   {
                     index: true,
                     element: <DevelopperDebugPage />,
+                  },
+                ],
+              },
+              {
+                path: 'insights',
+                element: <ProtectedRoute requiredRole="DEVELOPPER" />,
+                children: [
+                  {
+                    index: true,
+                    element: (
+                      <React.Suspense fallback={<PageLoader />}>
+                        <DevInsightsPage />
+                      </React.Suspense>
+                    ),
                   },
                 ],
               },

@@ -95,9 +95,9 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchNotifications();
     let socketCleanup: { disconnect: () => void } | undefined;
     if (accessToken && userId) {
-      socketCleanup = createNotificationSocket(fetchNotifications, userId);
+      socketCleanup = createNotificationSocket(fetchNotifications, userId, accessToken);
     } else if (accessToken) {
-      socketCleanup = createNotificationSocket(fetchNotifications);
+      socketCleanup = createNotificationSocket(fetchNotifications, undefined, accessToken);
     }
     return () => {
       if (socketCleanup) socketCleanup.disconnect();

@@ -442,3 +442,78 @@ export interface SubscriptionReportResponse {
   countByStatus: Record<string, number>;
   upcomingRenewals: SubscriptionResponse[];
 }
+
+// ─── Audit Trail / Developer Insights ─────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: string;
+  userId: number | null;
+  userEmail: string | null;
+  userRole: string | null;
+  action: string;
+  entityType: string | null;
+  entityId: number | null;
+  entityTitle: string | null;
+  details: string | null;
+  ipAddress: string | null;
+  occurredAt: string;
+}
+
+export interface AuditStatsResponse {
+  totalAll: number;
+  totalInRange: number;
+  uniqueUsers: number;
+  loginsInRange: number;
+  logoutsInRange: number;
+  workOrdersCreatedInRange: number;
+  urgentWorkOrdersCreatedInRange: number;
+  eventsToday: number;
+  mostCommonAction: string | null;
+  mostActiveUserEmail: string | null;
+  rangeDays: number;
+}
+
+export interface AuditUserStat {
+  userId: number;
+  userEmail: string;
+  userRole: string;
+  totalActions: number;
+  loginCount: number;
+  logoutCount: number;
+  workOrdersCreated: number;
+  urgentWorkOrdersCreated: number;
+  lastSeen: string | null;
+}
+
+export interface AuditActionEntry {
+  action: string;
+  count: number;
+}
+
+export interface AuditTimelineEntry {
+  date: string;
+  count: number;
+}
+
+export interface AuditLogsPage {
+  content: AuditLogEntry[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+export interface JobStatus {
+  id: string;
+  name: string;
+  description: string;
+  schedule: string;
+  running: boolean;
+  progressPercent: number;
+  status: 'IDLE' | 'RUNNING' | 'SUCCESS' | 'FAILED';
+  lastRunAt: string | null;
+  lastRunMessage: string | null;
+  nextRunAt: string | null;
+  recentBackups: string[];
+  lastBackupSizeBytes: number;
+}

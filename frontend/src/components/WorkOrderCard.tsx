@@ -4,9 +4,8 @@ import { WorkOrderStatus, WorkOrderPriority, WorkOrderResponse } from '../types/
 import { MaterialsButton } from './MaterialsButton';
 import { useLang } from '../context/LangContext';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
-
-// Global image cache to prevent flashing when components remount (e.g., during drag)
-const loadedImagesCache = new Set<string>();
+import { SecureImage } from './SecureImage';
+import { openSecureFile } from '../lib/secureFile';
 
 // Dark mode color mappings for status badges
 const statusColorsDark: Record<WorkOrderStatus, string> = {
@@ -82,59 +81,9 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchi
   const { colorScheme } = React.useContext(ColorSchemeContext);
   const { t } = useLang();
   const isImage = workOrder.attachmentContentType?.startsWith('image/');
-  // Use relative URL for attachments (works with proxy in dev/preview)
   const attachmentUrl = workOrder.attachmentDownloadUrl
     ? workOrder.attachmentDownloadUrl
     : undefined;
-
-  // Check if image is already in global cache (prevents flash on remount)
-  const isImageCached = attachmentUrl ? loadedImagesCache.has(attachmentUrl) : false;
-
-  // Use refs to track previous values and avoid unnecessary resets
-  const prevAttachmentUrlRef = React.useRef<string | undefined>(attachmentUrl);
-  const placeholderImg = '/placeholder.png'; // You can provide a real placeholder image
-
-  // Initialize image state - if cached, skip loading state
-  const [imgState, setImgState] = React.useState(() => ({
-    src: isImage && attachmentUrl ? attachmentUrl : undefined,
-    triedApi: false,
-    triedPlaceholder: false,
-    loaded: isImageCached, // Start as loaded if in cache
-  }));
-
-  // Only reset image state when the actual attachment URL changes
-  React.useEffect(() => {
-    if (prevAttachmentUrlRef.current !== attachmentUrl) {
-      prevAttachmentUrlRef.current = attachmentUrl;
-      const cached = attachmentUrl ? loadedImagesCache.has(attachmentUrl) : false;
-      setImgState({
-        src: isImage && attachmentUrl ? attachmentUrl : undefined,
-        triedApi: false,
-        triedPlaceholder: false,
-        loaded: cached,
-      });
-    }
-  }, [attachmentUrl, isImage]);
-
-  const handleImageLoad = React.useCallback(() => {
-    if (attachmentUrl) {
-      loadedImagesCache.add(attachmentUrl);
-    }
-    setImgState(prev => ({ ...prev, loaded: true }));
-  }, [attachmentUrl]);
-
-  const handleImageError = React.useCallback(() => {
-    setImgState(prev => {
-      if (!prev.triedApi && prev.src !== attachmentUrl) {
-        return { ...prev, src: attachmentUrl || '', triedApi: true, loaded: false };
-      } else if (!prev.triedPlaceholder) {
-        return { ...prev, src: placeholderImg, triedPlaceholder: true, loaded: false };
-      } else {
-        // Hide image if all fail
-        return { ...prev, src: undefined, loaded: true };
-      }
-    });
-  }, [attachmentUrl]);
 
   // Card styles based on color scheme
   const cardClass = colorScheme === 'dark'
@@ -203,38 +152,31 @@ const WorkOrderCardComponent = ({ workOrder, onOpenMaterials, onDeleted, onArchi
 
       {/* Attachment preview or download */}
       {attachmentUrl && (
-        <div className="mb-2" style={{ minHeight: isImage && imgState.src ? 32 : undefined }}>
+        <div className="mb-2">
           {isImage ? (
-            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
-              {imgState.src && (
-                <img
-                  src={imgState.src}
-                  alt={workOrder.attachmentFilename || 'Attachment'}
-                  className={`max-h-32 rounded shadow mb-1 ${colorScheme === 'dark' ? 'border border-surface-700' : 'border'}`}
-                  style={{ 
-                    maxWidth: '100%', 
-                    objectFit: 'contain',
-                    // Instant display if cached, otherwise fade in
-                    opacity: imgState.loaded ? 1 : 0,
-                    transition: imgState.loaded ? 'none' : 'opacity 0.15s ease-in',
-                  }}
-                  loading="eager"
-                  decoding="sync"
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                />
-              )}
-            </a>
+            <button
+              type="button"
+              onClick={() => openSecureFile(attachmentUrl)}
+              className="block w-full text-left"
+            >
+              <SecureImage
+                src={attachmentUrl}
+                alt={workOrder.attachmentFilename || 'Attachment'}
+                className={`max-h-32 rounded shadow mb-1 max-w-full object-contain ${
+                  colorScheme === 'dark' ? 'border border-surface-700' : 'border'
+                }`}
+              />
+            </button>
           ) : (
-            <a
-              href={attachmentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`underline text-xs ${colorScheme === 'dark' ? 'text-brand-400' : 'text-blue-700'}`}
-              download={workOrder.attachmentFilename}
+            <button
+              type="button"
+              onClick={() => openSecureFile(attachmentUrl)}
+              className={`underline text-xs ${
+                colorScheme === 'dark' ? 'text-brand-400' : 'text-blue-700'
+              }`}
             >
               {workOrder.attachmentFilename || 'Download attachment'}
-            </a>
+            </button>
           )}
         </div>
       )}

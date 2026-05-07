@@ -2,8 +2,10 @@ package com.entretienbatiment.backend.modules.auth.service;
 
 import com.entretienbatiment.backend.common.security.JwtService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import com.entretienbatiment.backend.modules.auth.model.AppUser;
@@ -42,10 +44,10 @@ public class AuthService {
     public LoginResult login(String email, String rawPassword, boolean rememberMe) {
         AppUser user = userRepo.findByEmailIgnoreCase(email)
                 .filter(AppUser::isEnabled)
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
         if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
         // Create access token
@@ -63,23 +65,23 @@ public class AuthService {
         rt.setRevoked(false);
         refreshRepo.save(rt);
 
-        return new LoginResult(accessToken, refreshValue, rememberMe);
+        return new LoginResult(accessToken, refreshValue, rememberMe, user.getId(), user.getEmail(), user.getRole().name());
     }
 
     public RefreshResult refresh(String refreshCookieValue) {
         if (refreshCookieValue == null || refreshCookieValue.isBlank()) {
-            throw new RuntimeException("Missing refresh token");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing refresh token");
         }
 
         String presentedHash = TokenUtil.sha256(refreshCookieValue);
 
         RefreshToken existing = refreshRepo.findByTokenHashAndRevokedFalse(presentedHash)
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
 
         if (existing.getExpiresAt().isBefore(Instant.now())) {
             existing.setRevoked(true);
             refreshRepo.save(existing);
-            throw new RuntimeException("Refresh token expired");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expired");
         }
 
         // Rotate: revoke old, create new
@@ -88,7 +90,7 @@ public class AuthService {
 
         AppUser user = existing.getUser();
         if (!user.isEnabled()) {
-            throw new RuntimeException("User disabled");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User disabled");
         }
         boolean persistent = existing.isPersistent();
 
@@ -126,6 +128,6 @@ public class AuthService {
         return sessionRefreshHours * 3600L;
     }
 
-    public record LoginResult(String accessToken, String refreshTokenValue, boolean persistent) {}
+    public record LoginResult(String accessToken, String refreshTokenValue, boolean persistent, Long userId, String email, String role) {}
     public record RefreshResult(String accessToken, String refreshTokenValue, boolean persistent) {}
 }

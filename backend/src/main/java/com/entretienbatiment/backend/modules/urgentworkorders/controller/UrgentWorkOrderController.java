@@ -3,6 +3,8 @@ package com.entretienbatiment.backend.modules.urgentworkorders.controller;
 import com.entretienbatiment.backend.modules.auth.repository.AppUserRepository;
 import com.entretienbatiment.backend.modules.auth.model.Role;
 import com.entretienbatiment.backend.modules.notifications.service.NotificationService;
+import com.entretienbatiment.backend.modules.audit.service.AuditLogService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,24 +17,31 @@ import com.entretienbatiment.backend.modules.urgentworkorders.service.UrgentWork
 import com.entretienbatiment.backend.modules.urgentworkorders.dto.UrgentWorkOrderRequestDto;
 import com.entretienbatiment.backend.modules.urgentworkorders.dto.UrgentWorkOrderMultipartRequest;
 
+import org.springframework.beans.factory.annotation.Value;
+
 @RestController
 @RequestMapping("/api/urgent-work-orders")
 @PreAuthorize("@pageAccessService.canAccess(authentication, 'URGENT_WORK_ORDERS')")
 public class UrgentWorkOrderController {
-    private static final String DEFAULT_TECHNICIAN_EMAIL = "andre@gmail.com";
+    private final String defaultTechnicianEmail;
 
     private final UrgentWorkOrderService service;
     private final NotificationService notificationService;
     private final AppUserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     public UrgentWorkOrderController(
             UrgentWorkOrderService service,
             NotificationService notificationService,
-            AppUserRepository userRepository
+            AppUserRepository userRepository,
+            AuditLogService auditLogService,
+            @Value("${app.default-technician-email:}") String defaultTechnicianEmail
     ) {
         this.service = service;
         this.notificationService = notificationService;
         this.userRepository = userRepository;
+        this.auditLogService = auditLogService;
+        this.defaultTechnicianEmail = defaultTechnicianEmail;
     }
 
     @GetMapping
@@ -66,7 +75,8 @@ public class UrgentWorkOrderController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public UrgentWorkOrder createMultipart(
             @ModelAttribute UrgentWorkOrderMultipartRequest request,
-            Authentication auth
+            Authentication auth,
+            HttpServletRequest httpReq
     ) {
         Long createdByUserId = extractUserId(auth);
         UrgentWorkOrder urgentWorkOrder = new UrgentWorkOrder(
@@ -89,6 +99,7 @@ public class UrgentWorkOrderController {
             storeInvoice(urgentWorkOrder, request.getInvoiceFiles().get(0));
         }
         UrgentWorkOrder saved = service.save(urgentWorkOrder);
+        auditLogService.log("CREATE_URGENT_WORK_ORDER", "URGENT_WORK_ORDER", saved.getId(), saved.getTitle(), null, httpReq);
         notificationService.notifyAdmins(
                 "New Urgent Work Order",
                 "Urgent work order \"" + saved.getTitle() + "\" was created.",
@@ -109,7 +120,7 @@ public class UrgentWorkOrderController {
 
     // Support JSON requests (no files)
     @PostMapping(consumes = {"application/json"})
-    public UrgentWorkOrder createJson(@RequestBody UrgentWorkOrderRequestDto request, Authentication auth) {
+    public UrgentWorkOrder createJson(@RequestBody UrgentWorkOrderRequestDto request, Authentication auth, HttpServletRequest httpReq) {
         Long createdByUserId = extractUserId(auth);
         UrgentWorkOrder urgentWorkOrder = new UrgentWorkOrder(
                 request.getTitle(),
@@ -124,6 +135,7 @@ public class UrgentWorkOrderController {
             urgentWorkOrder.setDueDate(parseDateTimeValue(request.getDueDate()));
         }
         UrgentWorkOrder saved = service.save(urgentWorkOrder);
+        auditLogService.log("CREATE_URGENT_WORK_ORDER", "URGENT_WORK_ORDER", saved.getId(), saved.getTitle(), null, httpReq);
         notificationService.notifyAdmins(
                 "New Urgent Work Order",
                 "Urgent work order \"" + saved.getTitle() + "\" was created.",
@@ -289,7 +301,7 @@ public class UrgentWorkOrderController {
             return requireActiveTechId(requestedAssigneeUserId);
         }
 
-        return userRepository.findByEmailIgnoreCase(DEFAULT_TECHNICIAN_EMAIL)
+        return userRepository.findByEmailIgnoreCase(defaultTechnicianEmail)
                 .filter(user -> user.isEnabled() && user.getRole() == Role.TECH)
                 .map(user -> user.getId())
                 .orElse(null);

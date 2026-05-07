@@ -4,6 +4,8 @@ import { useOutletContext } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
 import { getWorkOrdersWithInvoices, getUrgentWorkOrdersWithInvoices } from '../lib/api';
 import type { WorkOrderResponse, UrgentWorkOrderResponse } from '../types/api';
+import { SecureImage } from '../components/SecureImage';
+import { openSecureFile, downloadSecureFile } from '../lib/secureFile';
 
 type ColorScheme = 'default' | 'dark' | 'performance' | string;
 
@@ -180,7 +182,7 @@ function DocumentsPage() {
                 {/* Preview Area */}
                 <div className={`relative flex items-center justify-center h-36 ${isDark ? 'bg-surface-900' : 'bg-gray-50'}`}>
                   {isImage(doc.invoiceFilename) ? (
-                    <img
+                    <SecureImage
                       src={doc.invoiceDownloadUrl}
                       alt={doc.invoiceFilename}
                       className="h-full w-full object-cover"
@@ -220,21 +222,20 @@ function DocumentsPage() {
                     )}
                   </div>
                   <div className="flex gap-2 mt-2">
-                    <a
-                      href={doc.invoiceDownloadUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => openSecureFile(doc.invoiceDownloadUrl)}
                       className={`flex-1 text-center px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${isDark ? 'border-surface-600 hover:bg-surface-700 text-surface-200' : 'border-gray-300 hover:bg-gray-50 text-gray-700'}`}
                     >
                       {t.viewInvoice || 'View'}
-                    </a>
-                    <a
-                      href={doc.invoiceDownloadUrl}
-                      download={doc.invoiceFilename}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadSecureFile(doc.invoiceDownloadUrl, doc.invoiceFilename)}
                       className={`flex-1 text-center px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isDark ? 'bg-green-700 hover:bg-green-600 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
                     >
                       {t.download || 'Download'}
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>

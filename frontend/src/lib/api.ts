@@ -729,3 +729,76 @@ export async function getSubscriptionReport(): Promise<SubscriptionReportRespons
   return res.data;
 }
 
+// ─── Audit Trail / Developer Insights ───────────────────────────────────────
+
+import type {
+  AuditStatsResponse,
+  AuditLogsPage,
+  AuditUserStat,
+  AuditActionEntry,
+  AuditTimelineEntry,
+} from '../types/api';
+
+// ─── Dev Jobs ────────────────────────────────────────────────────────────────
+
+export async function getJobs(): Promise<import('../types/api').JobStatus[]> {
+  const res = await api.get('/api/dev/jobs');
+  return res.data;
+}
+
+export async function triggerJob(id: string): Promise<import('../types/api').JobStatus> {
+  const res = await api.post(`/api/dev/jobs/${id}/trigger`);
+  return res.data;
+}
+
+export async function getAuditStats(range: number = 7): Promise<AuditStatsResponse> {
+  const res = await api.get<AuditStatsResponse>('/api/developper/audit/stats', { params: { range } });
+  return res.data;
+}
+
+export async function getAuditLogs(params: {
+  page?: number;
+  size?: number;
+  userId?: number | null;
+  action?: string | null;
+  from?: string | null;
+  to?: string | null;
+}): Promise<AuditLogsPage> {
+  const res = await api.get<AuditLogsPage>('/api/developper/audit/logs', {
+    params: {
+      page: params.page ?? 0,
+      size: params.size ?? 50,
+      ...(params.userId   ? { userId: params.userId }     : {}),
+      ...(params.action   ? { action: params.action }     : {}),
+      ...(params.from     ? { from:   params.from }       : {}),
+      ...(params.to       ? { to:     params.to }         : {}),
+    },
+  });
+  return res.data;
+}
+
+export async function getAuditUserStats(range: number = 30): Promise<AuditUserStat[]> {
+  const res = await api.get<AuditUserStat[]>('/api/developper/audit/user-stats', { params: { range } });
+  return res.data;
+}
+
+export async function getAuditActionBreakdown(range: number = 30): Promise<AuditActionEntry[]> {
+  const res = await api.get<AuditActionEntry[]>('/api/developper/audit/action-breakdown', { params: { range } });
+  return res.data;
+}
+
+export async function getAuditTimeline(range: number = 30): Promise<AuditTimelineEntry[]> {
+  const res = await api.get<AuditTimelineEntry[]>('/api/developper/audit/timeline', { params: { range } });
+  return res.data;
+}
+
+export async function postAuditTrack(payload: {
+  action: string;
+  entityType?: string;
+  entityId?: number;
+  entityTitle?: string;
+  details?: string;
+}): Promise<void> {
+  await api.post('/api/developper/audit/track', payload);
+}
+
