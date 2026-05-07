@@ -40,18 +40,23 @@ public class AdminWorkOrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public WorkOrderResponse createMultipart(
             @ModelAttribute CreateWorkOrderMultipartRequest req,
-            Authentication auth
+            Authentication auth,
+            HttpServletRequest httpReq
     ) {
         Long userId = extractUserId(auth);
-        return service.createMultipart(req, userId);
+        WorkOrderResponse r = service.createMultipart(req, userId);
+        auditLogService.log("CREATE_WORK_ORDER", "WORK_ORDER", r.id(), r.title(), null, httpReq);
+        return r;
     }
 
     // Keep the original JSON endpoint for backward compatibility (optional)
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public WorkOrderResponse create(@Valid @RequestBody CreateWorkOrderRequest req, Authentication auth) {
+    public WorkOrderResponse create(@Valid @RequestBody CreateWorkOrderRequest req, Authentication auth, HttpServletRequest httpReq) {
         Long userId = extractUserId(auth);
-        return service.create(req, userId);
+        WorkOrderResponse r = service.create(req, userId);
+        auditLogService.log("CREATE_WORK_ORDER", "WORK_ORDER", r.id(), r.title(), null, httpReq);
+        return r;
     }
 
 //    @GetMapping
@@ -94,17 +99,23 @@ public class AdminWorkOrderController {
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public WorkOrderResponse updateMultipart(
             @PathVariable Long id,
-            @ModelAttribute UpdateWorkOrderMultipartRequest req
+            @ModelAttribute UpdateWorkOrderMultipartRequest req,
+            HttpServletRequest httpReq
     ) {
-        return service.updateMultipart(id, req);
+        WorkOrderResponse r = service.updateMultipart(id, req);
+        auditLogService.log("UPDATE_WORK_ORDER", "WORK_ORDER", r.id(), r.title(), null, httpReq);
+        return r;
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public WorkOrderResponse update(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateWorkOrderRequest req
+            @Valid @RequestBody UpdateWorkOrderRequest req,
+            HttpServletRequest httpReq
     ) {
-        return service.update(id, req);
+        WorkOrderResponse r = service.update(id, req);
+        auditLogService.log("UPDATE_WORK_ORDER", "WORK_ORDER", r.id(), r.title(), null, httpReq);
+        return r;
     }
 
     @DeleteMapping("/{id}")

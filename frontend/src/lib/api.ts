@@ -802,3 +802,22 @@ export async function postAuditTrack(payload: {
   await api.post('/api/developper/audit/track', payload);
 }
 
+// ─── Presence / Online Users ────────────────────────────────────────────────
+
+export interface OnlineUser {
+  id: number;
+  email: string;
+  role: string;
+  lastActiveAt: string;
+}
+
+/** Ping to mark the current user as active. Accessible to all roles. */
+export async function postPresencePing(): Promise<void> {
+  await api.post('/api/presence/ping');
+}
+
+/** Returns users who pinged within the last 5 minutes (DEVELOPER only). */
+export async function getOnlineUsers(): Promise<OnlineUser[]> {
+  const res = await api.get<OnlineUser[]>('/api/presence/online');
+  return res.data;
+}

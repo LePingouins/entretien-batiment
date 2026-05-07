@@ -8,7 +8,9 @@ import {
   getAuditTimeline,
   getJobs,
   triggerJob,
+  getOnlineUsers,
 } from '../lib/api';
+import type { OnlineUser } from '../lib/api';
 import type {
   AuditStatsResponse,
   AuditLogEntry,
@@ -259,6 +261,17 @@ const DevInsightsPage: React.FC = () => {
   const [users,     setUsers]     = React.useState<AuditUserStat[]>([]);
   const [feed,      setFeed]      = React.useState<AuditLogsPage | null>(null);
 
+  // Online users (refreshed independently every 60s)
+  const [onlineUsers, setOnlineUsers] = React.useState<OnlineUser[]>([]);
+  const fetchOnlineUsers = React.useCallback(() => {
+    getOnlineUsers().then(setOnlineUsers).catch(() => {});
+  }, []);
+  React.useEffect(() => {
+    fetchOnlineUsers();
+    const interval = setInterval(fetchOnlineUsers, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchOnlineUsers]);
+
   // Feed filters
   const [feedPage,   setFeedPage]   = React.useState(0);
   const [feedAction, setFeedAction] = React.useState('');
@@ -289,8 +302,10 @@ const DevInsightsPage: React.FC = () => {
   }, [range]);
 
   // Load feed
+  const [feedError, setFeedError] = React.useState<string | null>(null);
   const loadFeed = React.useCallback(async () => {
     setFeedLoading(true);
+    setFeedError(null);
     try {
       const data = await getAuditLogs({
         page: feedPage,
@@ -298,8 +313,8 @@ const DevInsightsPage: React.FC = () => {
         action: feedAction || null,
       });
       setFeed(data);
-    } catch {
-      // ignore
+    } catch (err: any) {
+      setFeedError(err?.response?.data?.message || err?.message || 'Failed to load activity feed');
     } finally {
       setFeedLoading(false);
     }
@@ -471,6 +486,51 @@ const DevInsightsPage: React.FC = () => {
               </div>
             )}
 
+            {/* Online Now */}
+            <div className={`rounded-2xl border p-5 ${card}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <h2 className={`text-sm font-semibold ${strong}`}>Online Now</h2>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700'}`}>
+                    {onlineUsers.length}
+                  </span>
+                </div>
+                <button
+                  onClick={fetchOnlineUsers}
+                  title="Refresh"
+                  className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-surface-500 hover:text-surface-300 hover:bg-surface-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0 1 14.9-2.7M20 15a8 8 0 0 1-14.9 2.7"/></svg>
+                </button>
+              </div>
+              {onlineUsers.length === 0 ? (
+                <p className={`text-xs ${muted}`}>No users active in the last 15 min.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {onlineUsers.map(u => {
+                    const rm = roleMeta(u.role);
+                    const initials = (u.email || '?')[0].toUpperCase();
+                    return (
+                      <div key={u.id} title={u.email} className="flex items-center gap-2 group">
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center text-white text-xs font-black">
+                            {initials}
+                          </div>
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface-900" />
+                        </div>
+                        <div className="hidden sm:flex flex-col leading-none">
+                          <span className={`text-xs font-semibold max-w-[120px] truncate ${strong}`}>{u.email?.split('@')[0]}</span>
+                          <span className={`text-[10px] ${rm.color}`}>{u.role}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className={`text-[10px] mt-3 ${muted}`}>Active within the last 5 minutes · refreshes every 60s</p>
+            </div>
+
             {/* Timeline + Action Breakdown side by side */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* Activity Timeline */}
@@ -576,6 +636,11 @@ const DevInsightsPage: React.FC = () => {
               {feedLoading ? (
                 <div className="py-12 flex justify-center">
                   <div className="w-7 h-7 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : feedError ? (
+                <div className="py-10 text-center">
+                  <p className="text-sm text-red-400 font-semibold">Failed to load activity feed</p>
+                  <p className={`text-xs mt-1 ${muted}`}>{feedError}</p>
                 </div>
               ) : filteredFeed.length === 0 ? (
                 <div className={`py-10 text-center text-sm ${muted}`}>No events found</div>

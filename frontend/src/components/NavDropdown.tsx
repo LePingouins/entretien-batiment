@@ -12,9 +12,10 @@ interface NavDropdownProps {
   items: NavDropdownItem[];
   isDark: boolean;
   isMobileOpen?: boolean;
+  onItemClick?: () => void;
 }
 
-const NavDropdown: React.FC<NavDropdownProps> = ({ label, items, isDark, isMobileOpen }) => {
+const NavDropdown: React.FC<NavDropdownProps> = ({ label, items, isDark, isMobileOpen, onItemClick }) => {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -58,7 +59,7 @@ const NavDropdown: React.FC<NavDropdownProps> = ({ label, items, isDark, isMobil
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={() => setOpen(false)}
+                onClick={() => { setOpen(false); onItemClick?.(); }}
                 className={`block px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${item.isActive ? 'text-yellow-500' : isDark ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`}
               >
                 {item.label}

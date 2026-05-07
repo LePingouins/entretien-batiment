@@ -32,6 +32,9 @@ public class AppUser {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
+    @Column(name = "last_active_at")
+    private Instant lastActiveAt;
+
     // getters/setters (generate with IntelliJ)
     // keep it simple for now
     public Long getId() { return id; }
@@ -45,4 +48,6 @@ public class AppUser {
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public boolean isGetReminders() { return getReminders; }
     public void setGetReminders(boolean getReminders) { this.getReminders = getReminders; }
+    public Instant getLastActiveAt() { return lastActiveAt; }
+    public void setLastActiveAt(Instant lastActiveAt) { this.lastActiveAt = lastActiveAt; }
 }

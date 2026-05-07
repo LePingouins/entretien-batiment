@@ -7,7 +7,7 @@ import { usePageAccess } from '../context/PageAccessContext';
 import { ColorSchemeContext, ColorSchemeType } from '../context/ColorSchemeContext';
 import NotificationsIcon from './NotificationsIcon';
 import BugReportButton from './BugReportButton';
-import { getCurrentUser, updateUserSettings } from '../lib/api';
+import { getCurrentUser, updateUserSettings, postPresencePing } from '../lib/api';
 import { getRolePagePath } from '../lib/pageAccess';
 import PasswordChangeSection from './PasswordChangeSection';
 import NavDropdown from './NavDropdown';
@@ -142,6 +142,13 @@ const AdminLayout: React.FC = () => {
   }, [showSettings, closeSettings]);
   const [navOpen, setNavOpen] = React.useState(false);
   const handleHamburger = () => setNavOpen((open) => !open);
+
+  // Heartbeat — keeps last_active_at fresh so the Dev Insights "Online Now" panel works
+  React.useEffect(() => {
+    postPresencePing().catch(() => {});
+    const interval = setInterval(() => postPresencePing().catch(() => {}), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Sticky nav: header becomes fixed only after it has fully scrolled out of view
   const headerRef = React.useRef<HTMLElement | null>(null);
@@ -313,6 +320,7 @@ const AdminLayout: React.FC = () => {
                 isDark={colorScheme === 'dark'}
                 label={t.workOrders}
                 isMobileOpen
+                onItemClick={() => setNavOpen(false)}
                 items={[
                   ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('WORK_ORDERS'), isActive: window.location.pathname.includes(pagePath('WORK_ORDERS')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') }] : []),
                   ...(canAccess('URGENT_WORK_ORDERS') ? [{ label: t.urgentWorkOrders || 'Urgent', path: pagePath('URGENT_WORK_ORDERS'), isActive: window.location.pathname.includes(pagePath('URGENT_WORK_ORDERS')) }] : []),
@@ -325,6 +333,7 @@ const AdminLayout: React.FC = () => {
                 isDark={colorScheme === 'dark'}
                 label={lang === 'fr' ? 'Opérations' : 'Operations'}
                 isMobileOpen
+                onItemClick={() => setNavOpen(false)}
                 items={[
                   ...(canAccess('MILEAGE') ? [{ label: t.mileage, path: pagePath('MILEAGE'), isActive: window.location.pathname.includes(pagePath('MILEAGE')) }] : []),
                   ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('ANALYTICS'), isActive: window.location.pathname.includes(pagePath('ANALYTICS')) }] : []),
@@ -335,6 +344,7 @@ const AdminLayout: React.FC = () => {
               isDark={colorScheme === 'dark'}
               label={lang === 'fr' ? 'Ressources' : 'Resources'}
               isMobileOpen
+              onItemClick={() => setNavOpen(false)}
               items={[
                 { label: t.documentsPage || 'Documents', path: '/admin/documents', isActive: window.location.pathname.includes('/admin/documents') },
                 { label: t.shoppingList || 'Shopping List', path: '/admin/shopping-list', isActive: window.location.pathname.includes('/admin/shopping-list') },

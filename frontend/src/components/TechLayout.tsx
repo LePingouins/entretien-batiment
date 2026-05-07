@@ -7,7 +7,7 @@ import { usePageAccess } from '../context/PageAccessContext';
 import { ColorSchemeContext, ColorSchemeType } from '../context/ColorSchemeContext';
 import NotificationsIcon from './NotificationsIcon';
 import BugReportButton from './BugReportButton';
-import { getCurrentUser, updateUserSettings } from '../lib/api';
+import { getCurrentUser, updateUserSettings, postPresencePing } from '../lib/api';
 import PasswordChangeSection from './PasswordChangeSection';
 import NavDropdown from './NavDropdown';
 import NavSearch, { NavSearchItem } from './NavSearch';
@@ -146,6 +146,13 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
 
   const [navOpen, setNavOpen] = React.useState(false);
   const handleHamburger = () => setNavOpen((open) => !open);
+
+  // Heartbeat — keeps last_active_at fresh so the Dev Insights "Online Now" panel works
+  React.useEffect(() => {
+    postPresencePing().catch(() => {});
+    const interval = setInterval(() => postPresencePing().catch(() => {}), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Sticky nav: header becomes fixed only after it has fully scrolled out of view
   const headerRef = React.useRef<HTMLElement | null>(null);
@@ -299,6 +306,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
                 isDark={colorScheme === 'dark'}
                 label={t.workOrders}
                 isMobileOpen
+                onItemClick={() => setNavOpen(false)}
                 items={[
                   ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('work-orders'), isActive: window.location.pathname.includes(pagePath('work-orders')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') }] : []),
                   ...(canAccess('URGENT_WORK_ORDERS') ? [{ label: t.urgentWorkOrders || 'Urgent', path: pagePath('urgent-work-orders'), isActive: window.location.pathname.includes(pagePath('urgent-work-orders')) }] : []),
@@ -311,6 +319,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
                 isDark={colorScheme === 'dark'}
                 label={lang === 'fr' ? 'Opérations' : 'Operations'}
                 isMobileOpen
+                onItemClick={() => setNavOpen(false)}
                 items={[
                   ...(canAccess('MILEAGE') ? [{ label: t.mileage, path: pagePath('mileage'), isActive: window.location.pathname.includes(pagePath('mileage')) }] : []),
                   ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('analytics'), isActive: window.location.pathname.includes(pagePath('analytics')) }] : []),
@@ -321,6 +330,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
               isDark={colorScheme === 'dark'}
               label={lang === 'fr' ? 'Ressources' : 'Resources'}
               isMobileOpen
+              onItemClick={() => setNavOpen(false)}
               items={[
                 { label: t.documentsPage || 'Documents', path: pagePath('documents'), isActive: window.location.pathname.includes(pagePath('documents')) },
                 { label: t.shoppingList || 'Shopping List', path: pagePath('shopping-list'), isActive: window.location.pathname.includes(pagePath('shopping-list')) },
