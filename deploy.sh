@@ -48,7 +48,7 @@ step "Backend JAR: $JAR_FILE"
 # ─── 3. Build frontend ────────────────────────────────────────────────────────
 step "Building frontend..."
 cd "$FRONTEND_DIR"
-npm install --silent
+npm install --legacy-peer-deps --silent
 npm run build
 step "Frontend built → $FRONTEND_DIR/dist/"
 
