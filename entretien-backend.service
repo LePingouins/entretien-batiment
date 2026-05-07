@@ -1,0 +1,31 @@
+[Unit]
+Description=Entretien-Batiment Backend
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/entretien-batiment
+
+# Load all variables from .env
+EnvironmentFile=/root/entretien-batiment/.env
+
+# Find and run the JAR (glob expanded by shell)
+ExecStart=/bin/bash -c 'exec java -jar /root/entretien-batiment/backend/build/libs/$(ls /root/entretien-batiment/backend/build/libs/*.jar | grep -v plain | xargs -n1 basename | head -n1)'
+ExecStop=/bin/kill -SIGTERM $MAINPID
+
+# Restart automatically if it crashes
+Restart=on-failure
+RestartSec=10
+
+# Give it time to start (Flyway migrations can take a moment)
+TimeoutStartSec=120
+
+# Logs go to journald — view with: journalctl -u entretien-backend -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=entretien-backend
+
+[Install]
+WantedBy=multi-user.target
