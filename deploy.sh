@@ -50,7 +50,10 @@ step "Building frontend..."
 cd "$FRONTEND_DIR"
 npm install --legacy-peer-deps --silent
 npm run build
-step "Frontend built → $FRONTEND_DIR/dist/"
+step "Deploying frontend to /var/www/entretien-batiment..."
+rm -rf /var/www/entretien-batiment
+cp -r "$FRONTEND_DIR/dist" /var/www/entretien-batiment
+step "Frontend deployed → /var/www/entretien-batiment"
 
 # ─── 4. Restart backend ───────────────────────────────────────────────────────
 cd "$REPO_DIR"
