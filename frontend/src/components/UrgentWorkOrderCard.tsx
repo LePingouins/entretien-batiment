@@ -7,6 +7,8 @@ import { MaterialsButton } from './MaterialsButton';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { PriorityBadge } from './WorkOrderCard';
 import { useLang } from '../context/LangContext';
+import { SecureImage } from './SecureImage';
+import { openSecureFile, downloadSecureFile } from '../lib/secureFile';
 
 interface UrgentWorkOrderCardProps {
   workOrder: UrgentWorkOrderResponse;
@@ -114,26 +116,21 @@ export const UrgentWorkOrderCard: React.FC<UrgentWorkOrderCardProps> = ({ workOr
       {attachmentUrl && (
         <div className="mb-2" style={{ minHeight: isImage ? 32 : undefined }}>
           {isImage ? (
-            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
-              <img
+            <button type="button" onClick={() => openSecureFile(attachmentUrl)} className="block w-full text-left">
+              <SecureImage
                 src={attachmentUrl}
                 alt={workOrder.attachmentFilename || 'Attachment'}
-                className={`max-h-32 rounded shadow-sm mb-1 ${colorScheme === 'dark' ? 'border border-surface-700' : 'border border-surface-200'}`}
-                style={{ maxWidth: '100%', objectFit: 'contain' }}
-                loading="eager"
-                decoding="sync"
+                className={`max-h-32 max-w-full object-contain rounded shadow-sm mb-1 ${colorScheme === 'dark' ? 'border border-surface-700' : 'border border-surface-200'}`}
               />
-            </a>
+            </button>
           ) : (
-            <a
-              href={attachmentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => downloadSecureFile(attachmentUrl, workOrder.attachmentFilename || 'attachment')}
               className={`underline text-xs ${colorScheme === 'dark' ? 'text-brand-400' : 'text-brand-600'}`}
-              download={workOrder.attachmentFilename}
             >
               {workOrder.attachmentFilename || 'Download attachment'}
-            </a>
+            </button>
           )}
         </div>
       )}

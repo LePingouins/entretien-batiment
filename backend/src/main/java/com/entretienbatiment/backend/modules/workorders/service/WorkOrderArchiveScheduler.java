@@ -33,10 +33,11 @@ public class WorkOrderArchiveScheduler {
     }
 
     /**
-     * Run every minute for testing. (In production: @Scheduled(cron = "0 0 0 1 1,4,7,10 *"))
-     * Archives items older than 3 months.
+     * Archives all items older than 3 months.
+     * Scheduling is now handled by {@link com.entretienbatiment.backend.modules.jobs.service.ArchiveJob},
+     * which also registers this logic in the Dev Jobs system for manual triggering.
+     * This method can still be called directly if needed.
      */
-    @Scheduled(fixedRate = 60000)
     public void archiveOldData() {
         log.info("Starting scheduled archiving...");
         

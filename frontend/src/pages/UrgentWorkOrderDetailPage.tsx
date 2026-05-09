@@ -10,6 +10,8 @@ import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import { UrgentWorkOrderResponse, WorkOrderPriority } from '../types/api';
+import { SecureImage } from '../components/SecureImage';
+import { openSecureFile, downloadSecureFile } from '../lib/secureFile';
 
 const UrgentWorkOrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -243,20 +245,19 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
                   <div className={`rounded-xl overflow-hidden border ${isDark ? 'bg-surface-950 border-surface-700' : 'bg-gray-50 border-gray-200'}`}>
                     {isImage ? (
                       <div className="relative group">
-                         <img 
-                          src={attachmentUrl} 
-                          alt="Attachment" 
-                          className="w-full max-h-[500px] object-contain bg-black/5" 
+                         <SecureImage
+                          src={attachmentUrl}
+                          alt="Attachment"
+                          className="w-full max-h-[500px] object-contain bg-black/5"
                         />
                          <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
-                           <a 
-                            href={attachmentUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
+                           <button
+                            type="button"
+                            onClick={() => openSecureFile(attachmentUrl)}
                             className="bg-white text-gray-900 px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-gray-100"
                           >
                             {t.openOriginal}
-                          </a>
+                          </button>
                         </div>
                       </div>
                     ) : (
@@ -272,13 +273,13 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
                             <p className="text-xs opacity-60">{t.clickToDownload}</p>
                           </div>
                         </div>
-                        <a 
-                          href={attachmentUrl} 
-                          download
+                        <button
+                          type="button"
+                          onClick={() => downloadSecureFile(attachmentUrl, workOrder.attachmentFilename || 'attachment')}
                           className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${isDark ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-50'}`}
                         >
                           {t.download}
-                        </a>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -295,11 +296,11 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
                   <div className={`rounded-xl overflow-hidden border ${isDark ? 'bg-surface-950 border-surface-700' : 'bg-green-50 border-green-200'}`}>
                     {isInvoiceImage ? (
                       <div className="relative group">
-                        <img src={invoiceUrl} alt="Invoice" className="w-full max-h-[500px] object-contain bg-black/5" />
+                        <SecureImage src={invoiceUrl} alt="Invoice" className="w-full max-h-[500px] object-contain bg-black/5" />
                         <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
-                          <a href={invoiceUrl} target="_blank" rel="noopener noreferrer" className="bg-white text-gray-900 px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-gray-100">
+                          <button type="button" onClick={() => openSecureFile(invoiceUrl)} className="bg-white text-gray-900 px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-gray-100">
                             {t.openOriginal}
-                          </a>
+                          </button>
                         </div>
                       </div>
                     ) : (
@@ -315,9 +316,9 @@ const UrgentWorkOrderDetailPage: React.FC = () => {
                             <p className="text-xs opacity-60">{t.clickToDownload}</p>
                           </div>
                         </div>
-                        <a href={invoiceUrl} download className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${isDark ? 'border-gray-600 hover:bg-gray-700' : 'border-green-300 bg-green-100 hover:bg-green-200 text-green-800'}`}>
+                        <button type="button" onClick={() => downloadSecureFile(invoiceUrl, workOrder.invoiceFilename || 'invoice')} className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${isDark ? 'border-gray-600 hover:bg-gray-700' : 'border-green-300 bg-green-100 hover:bg-green-200 text-green-800'}`}>
                           {t.download}
-                        </a>
+                        </button>
                       </div>
                     )}
                   </div>

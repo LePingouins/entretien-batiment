@@ -32,6 +32,17 @@ public class UrgentWorkOrder {
     private LocalDateTime updatedAt;
     private LocalDateTime completedAt;
 
+    @PrePersist
+    private void onCreate() {
+        if (createdAt == null) createdAt = LocalDateTime.now();
+        if (updatedAt == null) updatedAt = createdAt;
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
     private String attachmentFilename;
     private String attachmentContentType;
     private String attachmentDownloadUrl;

@@ -10,7 +10,7 @@ import com.entretienbatiment.backend.modules.urgentworkorders.model.UrgentWorkOr
 
 public interface UrgentWorkOrderRepository extends JpaRepository<UrgentWorkOrder, Long>, JpaSpecificationExecutor<UrgentWorkOrder> {
 
-    @Query("SELECT u FROM UrgentWorkOrder u WHERE u.archived = false AND u.status IN :statuses AND u.updatedAt < :cutoffTime")
+    @Query("SELECT u FROM UrgentWorkOrder u WHERE u.archived = false AND u.status IN :statuses AND COALESCE(u.updatedAt, u.createdAt) < :cutoffTime")
     List<UrgentWorkOrder> findUrgentWorkOrdersToArchive(
         @Param("statuses") List<String> statuses,
         @Param("cutoffTime") java.time.LocalDateTime cutoffTime

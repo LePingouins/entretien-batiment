@@ -547,6 +547,7 @@ function UrgentWorkOrdersPage() {
         reset();
         setCreateInvoiceFiles([]);
         setShowModal(false);
+        setOptimisticUrgentData(undefined);
         queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
       } catch (err) {
         alert('Failed to create urgent work order');
@@ -775,11 +776,11 @@ function UrgentWorkOrdersPage() {
                     try {
                       await updateUrgentWorkOrder(from.id, { status: overId });
                       await import('../lib/api').then(api => api.reorderUrgentWorkOrders(overId, newOrder));
-                      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] }), 300);
                     } catch (e) {
                       setOptimisticUrgentData(undefined);
                     } finally {
-                      queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                      await queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                      setOptimisticUrgentData(undefined);
                     }
                   }
                   return;
@@ -800,11 +801,11 @@ function UrgentWorkOrdersPage() {
                       await updateUrgentWorkOrder(from.id, { status });
                       const newOrder = [...others.map(wo => wo.id), from.id];
                       await import('../lib/api').then(api => api.reorderUrgentWorkOrders(status, newOrder));
-                      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] }), 300);
                     } catch (e) {
                       setOptimisticUrgentData(undefined);
                     } finally {
-                      queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                      await queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                      setOptimisticUrgentData(undefined);
                     }
                   }
                   return;
@@ -830,11 +831,11 @@ function UrgentWorkOrdersPage() {
                   setOptimisticUrgentData([...newUrgentData]);
                   try {
                     await import('../lib/api').then(api => api.reorderUrgentWorkOrders(from.status, newCol.map(w => w.id)));
-                    setTimeout(() => queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] }), 300);
                   } catch (e) {
                     setOptimisticUrgentData(undefined);
                   } finally {
-                    queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                    await queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                    setOptimisticUrgentData(undefined);
                   }
                 }
               }}
@@ -854,7 +855,8 @@ function UrgentWorkOrdersPage() {
                     alert('Failed to delete urgent work order');
                     setOptimisticUrgentData(undefined);
                   } finally {
-                    queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                    await queryClient.invalidateQueries({ queryKey: ['urgentWorkOrders'] });
+                    setOptimisticUrgentData(undefined);
                   }
                 }}
               onCardClick={() => {}}

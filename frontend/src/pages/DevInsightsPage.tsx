@@ -1,5 +1,6 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
+import { useLang } from '../context/LangContext';
 import {
   getAuditStats,
   getAuditLogs,
@@ -23,13 +24,7 @@ import type {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const RANGE_OPTIONS = [
-  { label: 'Today',   value: 1  },
-  { label: '7 Days',  value: 7  },
-  { label: '30 Days', value: 30 },
-  { label: '90 Days', value: 90 },
-  { label: 'All Time',value: 0  },
-];
+const RANGE_VALUES = [1, 7, 30, 90, 0] as const;
 
 const ACTION_META: Record<string, { color: string; bg: string; label: string; category: string }> = {
   LOGIN:                      { color: 'text-emerald-400', bg: 'bg-emerald-500/15', label: 'Login',                   category: 'Auth' },
@@ -65,6 +60,15 @@ const ROLE_META: Record<string, { color: string; bg: string }> = {
 
 const TABS = ['Overview', 'Activity Feed', 'Users', 'Actions', 'Jobs'] as const;
 type Tab = typeof TABS[number];
+
+/** Returns days until next quarterly archive date (Jan 1, Apr 1, Jul 1, Oct 1). */
+function daysToNextTrimester(): number {
+  const now = new Date();
+  const y = now.getFullYear();
+  const quarters = [0, 3, 6, 9].map(m => new Date(y, m, 1));
+  const next = quarters.find(d => d > now) ?? new Date(y + 1, 0, 1);
+  return Math.ceil((next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
 
 function actionMeta(action: string) {
   return ACTION_META[action] ?? { color: 'text-slate-400', bg: 'bg-slate-500/15', label: action, category: 'Other' };
@@ -248,7 +252,26 @@ const FeedItem: React.FC<{ entry: AuditLogEntry; isDark: boolean; compact?: bool
 
 const DevInsightsPage: React.FC = () => {
   const { colorScheme } = React.useContext(ColorSchemeContext);
+  const { t } = useLang();
   const isDark = colorScheme === 'dark';
+
+  // Translate range labels
+  const rangeLabel = (v: number) => {
+    if (v === 1)  return t.devInsightsRangeToday;
+    if (v === 7)  return t.devInsightsRange7Days;
+    if (v === 30) return t.devInsightsRange30Days;
+    if (v === 90) return t.devInsightsRange90Days;
+    return t.devInsightsRangeAllTime;
+  };
+
+  // Translate tab labels
+  const tabLabel = (tabName: Tab) => {
+    if (tabName === 'Overview')      return t.devInsightsTabOverview;
+    if (tabName === 'Activity Feed') return t.devInsightsTabFeed;
+    if (tabName === 'Users')         return t.devInsightsTabUsers;
+    if (tabName === 'Actions')       return t.devInsightsTabActions;
+    return t.devInsightsTabJobs;
+  };
 
   // Range
   const [range, setRange] = React.useState(7);
@@ -314,7 +337,7 @@ const DevInsightsPage: React.FC = () => {
       });
       setFeed(data);
     } catch (err: any) {
-      setFeedError(err?.response?.data?.message || err?.message || 'Failed to load activity feed');
+      setFeedError(err?.response?.data?.message || err?.message || t.devInsightsFeedLoadError);
     } finally {
       setFeedLoading(false);
     }
@@ -357,25 +380,25 @@ const DevInsightsPage: React.FC = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse" />
-              <h1 className={`text-xl font-black tracking-tight ${strong}`}>Dev Insights</h1>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isDark ? 'bg-violet-500/20 text-violet-400' : 'bg-violet-100 text-violet-700'}`}>DEVELOPPER</span>
+              <h1 className={`text-xl font-black tracking-tight ${strong}`}>{t.devInsightsTitle}</h1>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isDark ? 'bg-violet-500/20 text-violet-400' : 'bg-violet-100 text-violet-700'}`}>{t.devInsightsBadge}</span>
             </div>
-            <p className={`text-xs mt-0.5 ${muted}`}>Full system audit trail — every action, every user, captured.</p>
+            <p className={`text-xs mt-0.5 ${muted}`}>{t.devInsightsSubtitle}</p>
           </div>
 
           {/* Range selector */}
           <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-slate-100 border-slate-200'}`}>
-            {RANGE_OPTIONS.map(opt => (
+            {RANGE_VALUES.map(v => (
               <button
-                key={opt.value}
-                onClick={() => setRange(opt.value)}
+                key={v}
+                onClick={() => setRange(v)}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  range === opt.value
+                  range === v
                     ? 'bg-brand-500 text-white shadow'
                     : isDark ? 'text-surface-400 hover:text-surface-200' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                {opt.label}
+                {rangeLabel(v)}
               </button>
             ))}
           </div>
@@ -383,17 +406,17 @@ const DevInsightsPage: React.FC = () => {
 
         {/* Tabs */}
         <div className="max-w-[1600px] mx-auto px-6 flex gap-0 border-t overflow-x-auto" style={{ borderColor: 'transparent' }}>
-          {TABS.map(t => (
+          {TABS.map(tabName => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tabName}
+              onClick={() => setTab(tabName)}
               className={`px-5 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
-                tab === t
+                tab === tabName
                   ? `border-brand-500 ${isDark ? 'text-surface-100' : 'text-slate-900'}`
                   : `border-transparent ${muted} hover:${isDark ? 'text-surface-300' : 'text-slate-700'}`
               }`}
             >
-              {t}
+              {tabLabel(tabName)}
             </button>
           ))}
         </div>
@@ -409,49 +432,49 @@ const DevInsightsPage: React.FC = () => {
             {/* Stat Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
               <StatCard
-                label="Total Events"
+                label={t.devInsightsTotalEvents}
                 value={statsLoading ? '—' : (stats?.totalAll ?? 0)}
-                sub="All time"
+                sub={t.devInsightsAllTime}
                 isDark={isDark}
                 accent="bg-blue-500"
                 icon={<svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>}
               />
               <StatCard
-                label="In Range"
+                label={t.devInsightsInRange}
                 value={statsLoading ? '—' : (stats?.totalInRange ?? 0)}
-                sub={RANGE_OPTIONS.find(o => o.value === range)?.label}
+                sub={rangeLabel(range)}
                 isDark={isDark}
                 accent="bg-violet-500"
                 icon={<svg className="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18v2H3zM3 10h12v2H3zM3 16h6v2H3z"/></svg>}
               />
               <StatCard
-                label="Active Users"
+                label={t.devInsightsActiveUsers}
                 value={statsLoading ? '—' : (stats?.uniqueUsers ?? 0)}
-                sub="Unique in range"
+                sub={t.devInsightsUniqueInRange}
                 isDark={isDark}
                 accent="bg-emerald-500"
                 icon={<svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
               />
               <StatCard
-                label="Logins"
+                label={t.devInsightsLogins}
                 value={statsLoading ? '—' : (stats?.loginsInRange ?? 0)}
-                sub="In range"
+                sub={t.devInsightsInRange}
                 isDark={isDark}
                 accent="bg-teal-500"
                 icon={<svg className="w-4 h-4 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>}
               />
               <StatCard
-                label="WOs Created"
+                label={t.devInsightsWOsCreated}
                 value={statsLoading ? '—' : ((stats?.workOrdersCreatedInRange ?? 0) + (stats?.urgentWorkOrdersCreatedInRange ?? 0))}
-                sub={statsLoading ? '' : `${stats?.workOrdersCreatedInRange ?? 0} normal · ${stats?.urgentWorkOrdersCreatedInRange ?? 0} urgent`}
+                sub={statsLoading ? '' : `${stats?.workOrdersCreatedInRange ?? 0} ${t.devInsightsTotalNormal} · ${stats?.urgentWorkOrdersCreatedInRange ?? 0} ${t.devInsightsTotalUrgent}`}
                 isDark={isDark}
                 accent="bg-amber-500"
                 icon={<svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>}
               />
               <StatCard
-                label="Events Today"
+                label={t.devInsightsEventsToday}
                 value={statsLoading ? '—' : (stats?.eventsToday ?? 0)}
-                sub="Since midnight UTC"
+                sub={t.devInsightsSinceMidnight}
                 isDark={isDark}
                 accent="bg-rose-500"
                 icon={<svg className="w-4 h-4 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>}
@@ -467,7 +490,7 @@ const DevInsightsPage: React.FC = () => {
                       {stats.mostActiveUserEmail[0].toUpperCase()}
                     </div>
                     <div>
-                      <div className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${muted}`}>Most Active User</div>
+                      <div className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${muted}`}>{t.devInsightsMostActiveUser}</div>
                       <div className={`font-bold truncate ${strong}`}>{stats.mostActiveUserEmail}</div>
                     </div>
                   </div>
@@ -478,7 +501,7 @@ const DevInsightsPage: React.FC = () => {
                       <svg className={`w-5 h-5 ${actionMeta(stats.mostCommonAction).color}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                     </div>
                     <div>
-                      <div className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${muted}`}>Top Action</div>
+                      <div className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${muted}`}>{t.devInsightsTopAction}</div>
                       <ActionBadge action={stats.mostCommonAction} />
                     </div>
                   </div>
@@ -491,7 +514,7 @@ const DevInsightsPage: React.FC = () => {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <h2 className={`text-sm font-semibold ${strong}`}>Online Now</h2>
+                  <h2 className={`text-sm font-semibold ${strong}`}>{t.devInsightsOnlineNow}</h2>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700'}`}>
                     {onlineUsers.length}
                   </span>
@@ -505,7 +528,7 @@ const DevInsightsPage: React.FC = () => {
                 </button>
               </div>
               {onlineUsers.length === 0 ? (
-                <p className={`text-xs ${muted}`}>No users active in the last 15 min.</p>
+                <p className={`text-xs ${muted}`}>{t.devInsightsNoUsersOnline}</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {onlineUsers.map(u => {
@@ -528,7 +551,7 @@ const DevInsightsPage: React.FC = () => {
                   })}
                 </div>
               )}
-              <p className={`text-[10px] mt-3 ${muted}`}>Active within the last 5 minutes · refreshes every 60s</p>
+              <p className={`text-[10px] mt-3 ${muted}`}>{t.devInsightsOnlineRefresh}</p>
             </div>
 
             {/* Timeline + Action Breakdown side by side */}
@@ -536,8 +559,8 @@ const DevInsightsPage: React.FC = () => {
               {/* Activity Timeline */}
               <div className={`xl:col-span-2 rounded-2xl border p-6 ${card}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className={`text-sm font-semibold ${strong}`}>Activity Timeline</h2>
-                  <span className={`text-xs ${muted}`}>{RANGE_OPTIONS.find(o => o.value === range)?.label}</span>
+                  <h2 className={`text-sm font-semibold ${strong}`}>{t.devInsightsActivityTimeline}</h2>
+                  <span className={`text-xs ${muted}`}>{rangeLabel(range)}</span>
                 </div>
                 {timelineLoading ? (
                   <div className="h-24 flex items-center justify-center">
@@ -557,13 +580,13 @@ const DevInsightsPage: React.FC = () => {
 
               {/* Top 8 Actions */}
               <div className={`rounded-2xl border p-6 ${card}`}>
-                <h2 className={`text-sm font-semibold mb-4 ${strong}`}>Top Actions</h2>
+                <h2 className={`text-sm font-semibold mb-4 ${strong}`}>{t.devInsightsTopActions}</h2>
                 {actionsLoading ? (
                   <div className="flex items-center justify-center h-24">
                     <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : actions.length === 0 ? (
-                  <p className={`text-sm ${muted}`}>No data</p>
+                  <p className={`text-sm ${muted}`}>{t.devInsightsNoData}</p>
                 ) : (
                   <div className="space-y-3">
                     {actions.slice(0, 8).map((a, i) => (
@@ -577,12 +600,12 @@ const DevInsightsPage: React.FC = () => {
             {/* Recent Feed preview */}
             <div className={`rounded-2xl border p-6 ${card}`}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-sm font-semibold ${strong}`}>Recent Activity</h2>
+                <h2 className={`text-sm font-semibold ${strong}`}>{t.devInsightsRecentActivity}</h2>
                 <button
                   onClick={() => setTab('Activity Feed')}
                   className="text-xs text-brand-500 hover:text-brand-400 font-semibold"
                 >
-                  View all →
+                  {t.devInsightsViewAll}
                 </button>
               </div>
               <RecentPreview isDark={isDark} />
@@ -599,7 +622,7 @@ const DevInsightsPage: React.FC = () => {
             <div className={`p-5 border-b flex flex-wrap gap-3 ${isDark ? 'border-surface-800' : 'border-slate-100'}`}>
               <input
                 type="text"
-                placeholder="Filter by email…"
+                placeholder={t.devInsightsFilterEmail}
                 value={feedEmail}
                 onChange={e => setFeedEmail(e.target.value)}
                 className={`px-3 py-1.5 rounded-lg text-sm border outline-none ${
@@ -613,7 +636,7 @@ const DevInsightsPage: React.FC = () => {
                   isDark ? 'bg-surface-800 border-surface-700 text-surface-100' : 'bg-white border-slate-200 text-slate-900'
                 }`}
               >
-                <option value="">All actions</option>
+                <option value="">{t.devInsightsAllActions}</option>
                 {Object.entries(ACTION_META).map(([key, m]) => (
                   <option key={key} value={key}>{m.label}</option>
                 ))}
@@ -622,11 +645,11 @@ const DevInsightsPage: React.FC = () => {
                 onClick={() => loadFeed()}
                 className="px-3 py-1.5 text-sm bg-brand-500 text-white rounded-lg font-semibold hover:bg-brand-600 transition-colors"
               >
-                Refresh
+                {t.debugDashboardRefresh}
               </button>
               {feed && (
                 <span className={`ml-auto text-xs self-center ${muted}`}>
-                  {feed.totalElements.toLocaleString()} total events
+                  {feed.totalElements.toLocaleString()} {t.devInsightsTotalEventsCount}
                 </span>
               )}
             </div>
@@ -639,11 +662,11 @@ const DevInsightsPage: React.FC = () => {
                 </div>
               ) : feedError ? (
                 <div className="py-10 text-center">
-                  <p className="text-sm text-red-400 font-semibold">Failed to load activity feed</p>
+                  <p className="text-sm text-red-400 font-semibold">{t.devInsightsFeedLoadError}</p>
                   <p className={`text-xs mt-1 ${muted}`}>{feedError}</p>
                 </div>
               ) : filteredFeed.length === 0 ? (
-                <div className={`py-10 text-center text-sm ${muted}`}>No events found</div>
+                <div className={`py-10 text-center text-sm ${muted}`}>{t.devInsightsNoEventsFound}</div>
               ) : (
                 filteredFeed.map(entry => (
                   <FeedItem key={entry.id} entry={entry} isDark={isDark} />
@@ -661,9 +684,9 @@ const DevInsightsPage: React.FC = () => {
                     isDark ? 'bg-surface-800 text-surface-200 hover:bg-surface-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  ← Previous
+                  ← {t.prev}
                 </button>
-                <span className={`text-xs ${muted}`}>Page {feedPage + 1} / {feed.totalPages}</span>
+                <span className={`text-xs ${muted}`}>{t.page} {feedPage + 1} / {feed.totalPages}</span>
                 <button
                   disabled={feedPage >= feed.totalPages - 1}
                   onClick={() => setFeedPage(p => p + 1)}
@@ -671,7 +694,7 @@ const DevInsightsPage: React.FC = () => {
                     isDark ? 'bg-surface-800 text-surface-200 hover:bg-surface-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  Next →
+                  {t.next} →
                 </button>
               </div>
             )}
@@ -684,9 +707,9 @@ const DevInsightsPage: React.FC = () => {
         {tab === 'Users' && (
           <div className={`rounded-2xl border overflow-hidden ${card}`}>
             <div className={`px-6 py-4 border-b ${isDark ? 'border-surface-800' : 'border-slate-100'}`}>
-              <h2 className={`text-sm font-semibold ${strong}`}>Per-User Breakdown</h2>
+              <h2 className={`text-sm font-semibold ${strong}`}>{t.devInsightsPerUserBreakdown}</h2>
               <p className={`text-xs mt-0.5 ${muted}`}>
-                {RANGE_OPTIONS.find(o => o.value === range)?.label} · {users.length} user{users.length !== 1 ? 's' : ''} active
+                {rangeLabel(range)} · {users.length} {t.devInsightsUsersActive}
               </p>
             </div>
 
@@ -695,20 +718,20 @@ const DevInsightsPage: React.FC = () => {
                 <div className="w-7 h-7 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : users.length === 0 ? (
-              <div className={`py-12 text-center text-sm ${muted}`}>No user activity in this range</div>
+              <div className={`py-12 text-center text-sm ${muted}`}>{t.devInsightsNoUserActivity}</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className={`text-left text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-surface-500 bg-surface-900' : 'text-slate-500 bg-slate-50'}`}>
-                      <th className="px-6 py-3">User</th>
-                      <th className="px-6 py-3">Role</th>
-                      <th className="px-6 py-3 text-right">Total Actions</th>
-                      <th className="px-6 py-3 text-right">Logins</th>
-                      <th className="px-6 py-3 text-right">WOs Created</th>
-                      <th className="px-6 py-3 text-right">Urgent WOs</th>
-                      <th className="px-6 py-3 text-right">Last Seen</th>
-                      <th className="px-6 py-3">Activity Bar</th>
+                      <th className="px-6 py-3">{t.devInsightsUserColUser}</th>
+                      <th className="px-6 py-3">{t.devInsightsUserColRole}</th>
+                      <th className="px-6 py-3 text-right">{t.devInsightsUserColTotal}</th>
+                      <th className="px-6 py-3 text-right">{t.devInsightsUserColLogins}</th>
+                      <th className="px-6 py-3 text-right">{t.devInsightsUserColWOs}</th>
+                      <th className="px-6 py-3 text-right">{t.devInsightsUserColUrgent}</th>
+                      <th className="px-6 py-3 text-right">{t.devInsightsUserColLastSeen}</th>
+                      <th className="px-6 py-3">{t.devInsightsUserColActivity}</th>
                     </tr>
                   </thead>
                   <tbody className={`divide-y ${divider}`}>
@@ -766,8 +789,8 @@ const DevInsightsPage: React.FC = () => {
           <div className="space-y-6">
             <div className={`rounded-2xl border p-6 ${card}`}>
               <div className="flex items-center justify-between mb-5">
-                <h2 className={`text-sm font-semibold ${strong}`}>Action Breakdown</h2>
-                <span className={`text-xs ${muted}`}>{RANGE_OPTIONS.find(o => o.value === range)?.label} · {actions.reduce((s,a)=>s+a.count, 0).toLocaleString()} total</span>
+                <h2 className={`text-sm font-semibold ${strong}`}>{t.devInsightsActionBreakdown}</h2>
+                <span className={`text-xs ${muted}`}>{rangeLabel(range)} · {actions.reduce((s,a)=>s+a.count, 0).toLocaleString()} {t.devInsightsTotalEventsCount}</span>
               </div>
 
               {actionsLoading ? (
@@ -775,7 +798,7 @@ const DevInsightsPage: React.FC = () => {
                   <div className="w-7 h-7 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : actions.length === 0 ? (
-                <p className={`text-sm ${muted}`}>No actions in this range.</p>
+                <p className={`text-sm ${muted}`}>{t.devInsightsNoActionsInRange}</p>
               ) : (
                 <div className="space-y-3">
                   {actions.map((a, i) => {
@@ -810,7 +833,7 @@ const DevInsightsPage: React.FC = () => {
                         {/* Count + % */}
                         <div className="text-right shrink-0 w-28">
                           <div className={`text-base font-black tabular-nums ${strong}`}>{a.count.toLocaleString()}</div>
-                          <div className={`text-[10px] ${muted}`}>{pct}% of range</div>
+                          <div className={`text-[10px] ${muted}`}>{pct}{t.devInsightsPctOfRange}</div>
                         </div>
                       </div>
                     );
@@ -838,6 +861,7 @@ const DevInsightsPage: React.FC = () => {
 // ─── Recent-preview inner component ──────────────────────────────────────────
 
 const RecentPreview: React.FC<{ isDark: boolean }> = ({ isDark }) => {
+  const { t } = useLang();
   const [data, setData] = React.useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -855,7 +879,7 @@ const RecentPreview: React.FC<{ isDark: boolean }> = ({ isDark }) => {
   );
 
   if (!data.length) return (
-    <p className={`py-4 text-sm ${isDark ? 'text-surface-500' : 'text-slate-400'}`}>No events yet.</p>
+    <p className={`py-4 text-sm ${isDark ? 'text-surface-500' : 'text-slate-400'}`}>{t.devInsightsNoEventsYet}</p>
   );
 
   return (
@@ -874,6 +898,7 @@ const ActionCategorySummary: React.FC<{
   strong: string;
   muted: string;
 }> = ({ actions, isDark, card, strong, muted }) => {
+  const { t } = useLang();
   type Bucket = { count: number; actions: string[] };
   const cats = actions.reduce<Record<string, Bucket>>((acc, a) => {
     const cat = actionMeta(a.action).category;
@@ -898,13 +923,13 @@ const ActionCategorySummary: React.FC<{
 
   return (
     <div className={`rounded-2xl border p-6 ${card}`}>
-      <h3 className={`text-sm font-semibold mb-4 ${strong}`}>By Category</h3>
+      <h3 className={`text-sm font-semibold mb-4 ${strong}`}>{t.devInsightsByCategory}</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {entries.map(([cat, data]) => (
           <div key={cat} className={`rounded-xl border p-4 ${catColors[cat] ?? 'bg-slate-500/20 border-slate-500/30'}`}>
             <div className={`text-xs font-semibold uppercase tracking-wider mb-1 ${muted}`}>{cat}</div>
             <div className={`text-2xl font-black tabular-nums ${isDark ? 'text-surface-100' : 'text-slate-900'}`}>{data.count.toLocaleString()}</div>
-            <div className={`text-[10px] mt-1 ${muted}`}>{data.actions.length} action type{data.actions.length !== 1 ? 's' : ''}</div>
+            <div className={`text-[10px] mt-1 ${muted}`}>{data.actions.length} {data.actions.length !== 1 ? t.devInsightsActionTypes : t.devInsightsActionType}</div>
             <div className={`mt-2 h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-surface-800' : 'bg-white/50'}`}>
               <div className={`h-full rounded-full bg-current opacity-60`} style={{ width: `${(data.count / maxCat) * 100}%` }} />
             </div>
@@ -925,6 +950,7 @@ const STATUS_CONFIG = {
 } as const;
 
 const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
+  const { t } = useLang();
   const [jobs, setJobs]           = React.useState<JobStatus[]>([]);
   const [loadingJobs, setLoading] = React.useState(true);
   const [triggering, setTriggering] = React.useState<string | null>(null);
@@ -995,7 +1021,7 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
   }
 
   function fmtTime(isoStr: string | null): string {
-    if (!isoStr) return 'Never';
+    if (!isoStr) return t.devInsightsNeverRan;
     return new Date(isoStr).toLocaleString(undefined, {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
@@ -1010,7 +1036,7 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
   if (jobs.length === 0) return (
     <div className={`rounded-2xl border p-12 text-center ${card}`}>
       <div className="text-5xl mb-3">⚙️</div>
-      <p className={`text-sm ${muted}`}>No jobs registered.</p>
+      <p className={`text-sm ${muted}`}>{t.devInsightsNoJobs}</p>
     </div>
   );
 
@@ -1019,10 +1045,10 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
       {/* Header */}
       <div className={`rounded-2xl border p-5 flex items-center justify-between ${card}`}>
         <div>
-          <h2 className={`text-sm font-semibold uppercase tracking-widest ${muted} mb-0.5`}>Scheduled Jobs</h2>
+          <h2 className={`text-sm font-semibold uppercase tracking-widest ${muted} mb-0.5`}>{t.devInsightsScheduledJobs}</h2>
           <p className={`text-xs ${muted}`}>
-            {jobs.length} job{jobs.length !== 1 ? 's' : ''} registered
-            · Click “Run Now” to trigger any job manually
+            {jobs.length} {jobs.length !== 1 ? t.devInsightsJobsRegisteredPlural : t.devInsightsJobsRegistered}
+            · {t.devInsightsJobsTriggerHint}
           </p>
         </div>
         <div className={`text-xs px-3 py-1 rounded-full font-semibold ${
@@ -1030,7 +1056,7 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
             ? 'bg-blue-500/15 text-blue-400 animate-pulse'
             : isDark ? 'bg-surface-800 text-surface-400' : 'bg-slate-100 text-slate-500'
         }`}>
-          {jobs.some(j => j.running) ? 'Job running...' : 'All idle'}
+          {jobs.some(j => j.running) ? t.devInsightsJobRunning : t.devInsightsJobsIdle}
         </div>
       </div>
 
@@ -1073,12 +1099,15 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
                   {/* Title row */}
                   <div className="flex flex-wrap items-center gap-3 mb-2">
                     <div className={`p-2.5 rounded-xl shrink-0 ${isDark ? 'bg-surface-800' : 'bg-slate-100'}`}>
-                      {/* DB icon */}
-                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                           className={isDark ? 'text-violet-400' : 'text-violet-600'}>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                      </svg>
+                      {job.id === 'quarterly-archive' ? (
+                        <span className="text-[18px] leading-none">📦</span>
+                      ) : (
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                             className={isDark ? 'text-violet-400' : 'text-violet-600'}>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                        </svg>
+                      )}
                     </div>
                     <div>
                       <h3 className={`font-bold text-base leading-tight ${strong}`}>{job.name}</h3>
@@ -1087,7 +1116,12 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${sc.bg} ${sc.color} ${
                       job.running ? 'animate-pulse' : ''
                     }`}>
-                      {job.running ? `Running — ${job.progressPercent}%` : sc.label}
+                      {job.running ? `${t.devInsightsStatusRunning} — ${job.progressPercent}%` : (
+                        job.status === 'IDLE'    ? t.devInsightsStatusIdle :
+                        job.status === 'RUNNING' ? t.devInsightsStatusRunning :
+                        job.status === 'SUCCESS' ? t.devInsightsStatusSuccess :
+                        t.devInsightsStatusFailed
+                      )}
                     </span>
                   </div>
 
@@ -1096,10 +1130,10 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
                   {/* Stats grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                     {[
-                      { label: 'Schedule',   value: job.schedule },
-                      { label: 'Next Run',   value: countdown(job.nextRunAt), mono: true, accent: !!job.nextRunAt },
-                      { label: 'Last Run',   value: fmtTime(job.lastRunAt) },
-                      { label: 'Last Size',  value: fmtBytes(job.lastBackupSizeBytes) },
+                      { label: t.devInsightsJobStatSchedule, value: job.schedule },
+                      { label: t.devInsightsJobStatNextRun,  value: countdown(job.nextRunAt), mono: true, accent: !!job.nextRunAt },
+                      { label: t.devInsightsJobStatLastRun,  value: fmtTime(job.lastRunAt) },
+                      { label: t.devInsightsJobStatLastSize, value: fmtBytes(job.lastBackupSizeBytes) },
                     ].map(({ label, value, mono, accent }) => (
                       <div key={label} className={`rounded-xl p-3 ${
                         isDark ? 'bg-surface-800' : 'bg-slate-50 border border-slate-100'
@@ -1129,7 +1163,7 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
                   {job.recentBackups.length > 0 && (
                     <div className="mt-3">
                       <div className={`text-[10px] font-semibold uppercase tracking-wider mb-2 ${muted}`}>
-                        Recent Backups
+                        {t.devInsightsRecentBackups}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {job.recentBackups.map(f => (
@@ -1142,6 +1176,31 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
                       </div>
                     </div>
                   )}
+
+                  {/* Trimester countdown — only for quarterly-archive job */}
+                  {job.id === 'quarterly-archive' && (() => {
+                    const days = daysToNextTrimester();
+                    const urgent = days <= 14;
+                    return (
+                      <div className={`mt-3 flex items-center gap-3 rounded-xl px-4 py-3 ${
+                        urgent
+                          ? (isDark ? 'bg-amber-500/15 border border-amber-500/30' : 'bg-amber-50 border border-amber-200')
+                          : (isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200')
+                      }`}>
+                        <span className="text-2xl shrink-0">📦</span>
+                        <div>
+                          <div className={`text-[10px] font-semibold uppercase tracking-wider ${urgent ? 'text-amber-400' : 'text-blue-400'}`}>
+                            {t.devInsightsNextTrimesterLabel}
+                          </div>
+                          <div className={`text-xl font-black tabular-nums ${
+                            urgent ? 'text-amber-300' : (isDark ? 'text-surface-100' : 'text-slate-900')
+                          }`}>
+                            {days === 0 ? t.devInsightsTodayTrimester : `${days} ${t.devInsightsDays}`}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* === Right: Run Now button === */}
@@ -1160,14 +1219,14 @@ const JobsTab: React.FC<{ isDark: boolean }> = ({ isDark }) => {
                     {job.running || isTriggering ? (
                       <>
                         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        Running
+                        {t.devInsightsStatusRunning}
                       </>
                     ) : (
                       <>
                         <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
                         </svg>
-                        Run Now
+                        {t.devInsightsRunNow}
                       </>
                     )}
                   </button>

@@ -460,24 +460,11 @@ public class WorkOrderService {
     }
 
     /**
-     * Archive old completed/cancelled work orders.
-     * Called by a scheduled job.
+     * Archive completed/cancelled work orders updated before the given cutoff time.
+     * Pass {@code Instant.now()} to archive all of them regardless of age.
      */
     @Transactional
-    public int archiveOldWorkOrders() {
-        // ╔════════════════════════════════════════════════════════════════════════════╗
-        // ║  ARCHIVE TIME SETTING                                                       ║
-        // ║  Change the value and unit below to control how long work orders stay      ║
-        // ║  in COMPLETED/CANCELLED before being archived.                              ║
-        // ║                                                                             ║
-        // ║  Examples:                                                                  ║
-        // ║    - 3 MONTHS (quarterly): .minus(90, ChronoUnit.DAYS)                     ║
-        // ║    - 7 DAYS (production): .minus(7, ChronoUnit.DAYS)                       ║
-        // ║    - 1 MINUTE (testing):  .minus(1, ChronoUnit.MINUTES)                    ║
-        // ║    - 1 HOUR:              .minus(1, ChronoUnit.HOURS)                      ║
-        // ╚════════════════════════════════════════════════════════════════════════════╝
-        // Archive items older than 3 months (approx 90 days)
-        java.time.Instant cutoffTime = java.time.Instant.now().minus(90, java.time.temporal.ChronoUnit.DAYS);
+    public int archiveWorkOrdersBefore(java.time.Instant cutoffTime) {
         List<WorkOrder> toArchive = repo.findWorkOrdersToArchive(
             List.of(WorkOrderStatus.COMPLETED, WorkOrderStatus.CANCELLED),
             cutoffTime
@@ -494,6 +481,12 @@ public class WorkOrderService {
         }
 
         return toArchive.size();
+    }
+
+    /** Convenience overload — archives WOs older than 90 days. */
+    @Transactional
+    public int archiveOldWorkOrders() {
+        return archiveWorkOrdersBefore(java.time.Instant.now().minus(90, java.time.temporal.ChronoUnit.DAYS));
     }
 
     /**
