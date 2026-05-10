@@ -1,9 +1,8 @@
 package com.entretienbatiment.backend.modules.audit.repository;
 
 import com.entretienbatiment.backend.modules.audit.model.AuditLog;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -11,7 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
+public interface AuditLogRepository extends JpaRepository<AuditLog, UUID>, JpaSpecificationExecutor<AuditLog> {
 
     long countByOccurredAtAfter(Instant from);
 
@@ -48,19 +47,5 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
             """, nativeQuery = true)
     List<Object[]> findTimelineAfter(@Param("from") Instant from);
 
-    @Query("""
-            SELECT a FROM AuditLog a
-            WHERE (:userId IS NULL OR a.userId = :userId)
-              AND (:action IS NULL OR a.action = :action)
-              AND (:from   IS NULL OR a.occurredAt >= :from)
-              AND (:to     IS NULL OR a.occurredAt <= :to)
-            ORDER BY a.occurredAt DESC
-            """)
-    Page<AuditLog> findFiltered(
-            @Param("userId") Long userId,
-            @Param("action") String action,
-            @Param("from")   Instant from,
-            @Param("to")     Instant to,
-            Pageable pageable
-    );
+
 }

@@ -2,10 +2,12 @@ package com.entretienbatiment.backend.modules.audit.service;
 
 import com.entretienbatiment.backend.modules.audit.model.AuditLog;
 import com.entretienbatiment.backend.modules.audit.repository.AuditLogRepository;
+import jakarta.persistence.criteria.Predicate;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -142,7 +144,15 @@ public class AuditLogService {
                                           String action, Instant from, Instant to) {
         int safeSize = Math.min(Math.max(size, 1), 200);
         PageRequest pr = PageRequest.of(page, safeSize, Sort.by("occurredAt").descending());
-        return repo.findFiltered(userId, action, from, to, pr).map(this::toResponse);
+        Specification<AuditLog> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (userId != null) predicates.add(cb.equal(root.get("userId"), userId));
+            if (action != null) predicates.add(cb.equal(root.get("action"), action));
+            if (from   != null) predicates.add(cb.greaterThanOrEqualTo(root.get("occurredAt"), from));
+            if (to     != null) predicates.add(cb.lessThanOrEqualTo(root.get("occurredAt"), to));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return repo.findAll(spec, pr).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
