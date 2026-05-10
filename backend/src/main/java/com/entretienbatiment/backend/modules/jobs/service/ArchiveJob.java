@@ -2,6 +2,7 @@ package com.entretienbatiment.backend.modules.jobs.service;
 
 import com.entretienbatiment.backend.modules.mileage.model.MileageEntry;
 import com.entretienbatiment.backend.modules.mileage.repository.MileageEntryRepository;
+import com.entretienbatiment.backend.modules.notifications.service.NotificationService;
 import com.entretienbatiment.backend.modules.urgentworkorders.service.UrgentWorkOrderService;
 import com.entretienbatiment.backend.modules.workorders.service.WorkOrderService;
 import jakarta.annotation.PostConstruct;
@@ -33,6 +34,7 @@ public class ArchiveJob {
     @Autowired private WorkOrderService        workOrderService;
     @Autowired private UrgentWorkOrderService  urgentWorkOrderService;
     @Autowired private MileageEntryRepository  mileageRepository;
+    @Autowired private NotificationService     notificationService;
 
     // ─── Registration ─────────────────────────────────────────────────────────
 
@@ -56,6 +58,15 @@ public class ArchiveJob {
         doRun();
         archiveMileage();
         jobService.refreshNextRun(JOB_ID);
+        JobService.JobEntry state = jobService.getEntry(JOB_ID).orElse(null);
+        if (state != null) {
+            notificationService.notifyDevelopers(
+                    "Scheduled Job: " + state.getName(),
+                    state.getLastRunMessage() != null ? state.getLastRunMessage() : state.getStatus(),
+                    "/admin/insights",
+                    "job-run"
+            );
+        }
     }
 
     // ─── Core logic (manual "Run Now" + scheduled WO/urgent archiving) ────────

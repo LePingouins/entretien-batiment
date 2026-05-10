@@ -309,6 +309,11 @@ export const en = {
   notifTitleReminder: 'Due Soon',
   notifMsgReminder: 'The work order "{name}" is due tomorrow.',
   filterReminders: 'Reminders',
+  filterDeveloper: 'Developer',
+  filterDevError: 'Error Detected',
+  filterJobRun: 'Scheduled Job Run',
+  notifTitleDevError: 'New Error Detected',
+  notifTitleJobRun: 'Scheduled Job Completed',
 
   // Admin Users
   adminUsersNav: 'Users',
@@ -1012,6 +1017,11 @@ export const fr = {
   notifTitleReminder: 'Échéance imminente',
   notifMsgReminder: 'Le bon de travail "{name}" arrive à échéance demain.',
   filterReminders: 'Rappels',
+  filterDeveloper: 'Développeur',
+  filterDevError: 'Erreur Détectée',
+  filterJobRun: 'Tâche Planifiée Exécutée',
+  notifTitleDevError: 'Nouvelle Erreur Détectée',
+  notifTitleJobRun: 'Tâche Planifiée Terminée',
 
   // Admin Users
   adminUsersNav: 'Utilisateurs',

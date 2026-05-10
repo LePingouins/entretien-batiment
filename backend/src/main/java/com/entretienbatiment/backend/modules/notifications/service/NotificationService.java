@@ -169,6 +169,22 @@ public class NotificationService {
         webSocketSender.sendBroadcastUpdate();
     }
 
+    public void notifyDevelopers(String title, String message, String href, String source) {
+        List<AppUser> devs = userRepository.findByRoleIn(Set.of(Role.DEVELOPPER));
+        for (AppUser dev : devs) {
+            if (!dev.isEnabled()) continue;
+            Notification n = new Notification();
+            n.setId(UUID.randomUUID().toString());
+            n.setTargetUserId(dev.getId());
+            n.setTitle(title);
+            n.setMessage(message);
+            n.setHref(href);
+            n.setSource(source);
+            notificationRepository.save(n);
+            webSocketSender.sendNotificationUpdate(dev.getId());
+        }
+    }
+
     public void notifyAdmins(String title, String message, String href, String source) {
         notifyAdmins(title, message, href, source, null);
     }

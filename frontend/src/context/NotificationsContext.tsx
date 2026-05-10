@@ -56,6 +56,8 @@ export const NotificationsContext = React.createContext<NotificationsContextType
     'user-deactivate': true,
     'bug-report-confirmed': true,
     'broadcast': true,
+    'dev-error': true,
+    'job-run': true,
     other: true,
   },
   setFilters: () => {},
@@ -127,6 +129,8 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       'user-deactivate': true,
       'bug-report-confirmed': true,
       'broadcast': true,
+      'dev-error': true,
+      'job-run': true,
       other: true,
     };
   });
@@ -148,6 +152,8 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       'user-deactivate': true,
       'bug-report-confirmed': true,
       'broadcast': true,
+      'dev-error': true,
+      'job-run': true,
       other: true,
     });
   }, []);

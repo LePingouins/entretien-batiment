@@ -1,5 +1,6 @@
 package com.entretienbatiment.backend.modules.jobs.service;
 
+import com.entretienbatiment.backend.modules.notifications.service.NotificationService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,6 +56,9 @@ public class PgDumpJob {
     @Autowired
     private JobService jobService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     // ─── Registration ─────────────────────────────────────────────────────────
 
     @PostConstruct
@@ -76,6 +80,15 @@ public class PgDumpJob {
     public void scheduledRun() {
         doRun();
         jobService.refreshNextRun(JOB_ID);
+        JobService.JobEntry state = jobService.getEntry(JOB_ID).orElse(null);
+        if (state != null) {
+            notificationService.notifyDevelopers(
+                    "Scheduled Job: " + state.getName(),
+                    state.getLastRunMessage() != null ? state.getLastRunMessage() : state.getStatus(),
+                    "/admin/insights",
+                    "job-run"
+            );
+        }
     }
 
     // ─── Core logic ───────────────────────────────────────────────────────────

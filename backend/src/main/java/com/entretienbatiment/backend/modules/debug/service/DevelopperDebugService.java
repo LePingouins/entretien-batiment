@@ -1,6 +1,9 @@
 package com.entretienbatiment.backend.modules.debug.service;
 
+import com.entretienbatiment.backend.modules.notifications.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,10 @@ public class DevelopperDebugService {
 
     private final DebugErrorLogRepository debugErrorLogRepository;
 
+    @Lazy
+    @Autowired
+    private NotificationService notificationService;
+
     public DevelopperDebugService(DebugErrorLogRepository debugErrorLogRepository) {
         this.debugErrorLogRepository = debugErrorLogRepository;
     }
@@ -40,6 +47,8 @@ public class DevelopperDebugService {
             String message = throwable.getMessage();
             String fingerprint = fingerprint(exceptionType, message, methodName);
 
+            boolean isNewFingerprint = debugErrorLogRepository.countByFingerprint(fingerprint) == 0;
+
             DebugErrorLog log = new DebugErrorLog();
             log.setFingerprint(fingerprint);
             log.setExceptionType(exceptionType);
@@ -52,6 +61,22 @@ public class DevelopperDebugService {
             log.setContext(buildContext(request));
             log.setStackTrace(toStackTrace(throwable));
             debugErrorLogRepository.save(log);
+
+            if (isNewFingerprint) {
+                try {
+                    String exShortType = exceptionType.contains(".") ? exceptionType.substring(exceptionType.lastIndexOf('.') + 1) : exceptionType;
+                    String path = request != null ? request.getMethod() + " " + request.getRequestURI() : "";
+                    notificationService.notifyDevelopers(
+                            "New Error: " + exShortType,
+                            (message != null && !message.isBlank() ? message : exShortType)
+                                    + (path.isBlank() ? "" : "\n" + path),
+                            "/admin/debug",
+                            "dev-error"
+                    );
+                } catch (Exception notifEx) {
+                    // Never let notification failure affect error logging
+                }
+            }
         } catch (Exception ignored) {
             // Never let debug logging break API responses.
         }

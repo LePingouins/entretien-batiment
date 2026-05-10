@@ -1,7 +1,7 @@
 import React from 'react';
 import { NotificationsContext, NotificationType, NotificationsContextType } from '../context/NotificationsContext';
 import { useNavigate } from 'react-router-dom';
-import { RiFilter3Line, RiCheckDoubleLine, RiNotification4Line, RiCheckLine, RiDeleteBinLine, RiArrowRightLine, RiToolsLine, RiAlarmWarningLine, RiCarLine, RiBroadcastLine, RiInformationLine, RiTimeLine } from 'react-icons/ri';
+import { RiFilter3Line, RiCheckDoubleLine, RiNotification4Line, RiCheckLine, RiDeleteBinLine, RiArrowRightLine, RiToolsLine, RiAlarmWarningLine, RiCarLine, RiBroadcastLine, RiInformationLine, RiTimeLine, RiErrorWarningLine, RiPlayCircleLine } from 'react-icons/ri';
 import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
 import { confirmBugReport } from '../lib/api';
@@ -14,6 +14,8 @@ const getNotificationIcon = (source?: string) => {
   if (source.includes('broadcast')) return RiBroadcastLine;
   if (source.includes('bug-report')) return RiInformationLine;
   if (source.includes('REMINDER')) return RiTimeLine;
+  if (source === 'dev-error') return RiErrorWarningLine;
+  if (source === 'job-run') return RiPlayCircleLine;
   return RiInformationLine;
 };
 
@@ -129,6 +131,10 @@ const getTranslatedNotification = (n: NotificationType, t: any) => {
         .replace('{title}', parsed.reportTitle)
         .replace('{admin}', parsed.admin);
     message = parsed.description ? `${confirmedMessage}\n\n${parsed.description}` : confirmedMessage;
+  } else if (n.source === 'dev-error') {
+    title = t.notifTitleDevError || title;
+  } else if (n.source === 'job-run') {
+    title = t.notifTitleJobRun || title;
   }
 
   return { title, message };
@@ -136,8 +142,10 @@ const getTranslatedNotification = (n: NotificationType, t: any) => {
 
 const NotificationsPage: React.FC = () => {
   const { t } = useLang();
+  const { role } = useAuth();
+  const isDeveloper = role === 'DEVELOPPER';
   
-  const filterGroups = {
+  const filterGroups: Record<string, { key: string; label: string }[]> = {
     [t.filterWorkOrders]: [
       { key: 'workorder-create', label: t.filterWorkOrderCreated },
       { key: 'workorder-delete', label: t.filterWorkOrderDeleted },
@@ -163,7 +171,13 @@ const NotificationsPage: React.FC = () => {
       { key: 'user-delete', label: t.filterUserDelete || 'User Deleted' },
       { key: 'user-activate', label: t.filterUserActivate || 'User Activated' },
       { key: 'user-deactivate', label: t.filterUserDeactivate || 'User Deactivated' },
-    ]
+    ],
+    ...(isDeveloper ? {
+      [t.filterDeveloper || 'Developer']: [
+        { key: 'dev-error', label: t.filterDevError || 'Error Detected' },
+        { key: 'job-run', label: t.filterJobRun || 'Scheduled Job Run' },
+      ],
+    } : {}),
   };
 
   const ctx = React.useContext(NotificationsContext) as NotificationsContextType;
