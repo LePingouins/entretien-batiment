@@ -22,6 +22,8 @@ public interface DebugErrorLogRepository extends JpaRepository<DebugErrorLog, Lo
 
     List<DebugErrorLog> findTop25ByFingerprintOrderByOccurredAtDesc(String fingerprint);
 
+    void deleteAllByFingerprint(String fingerprint);
+
     @Query(value = """
             select
                 fingerprint as fingerprint,

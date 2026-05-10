@@ -428,6 +428,14 @@ export async function getDevelopperDebugErrorDetail(
   return res.data;
 }
 
+export async function deleteDevelopperDebugError(fingerprint: string): Promise<void> {
+  await api.delete(`/api/developper/debug/errors/${encodeURIComponent(fingerprint)}`);
+}
+
+export async function deleteAllDevelopperDebugErrors(): Promise<void> {
+  await api.delete('/api/developper/debug/errors');
+}
+
 // --- Notifications API ---
 import type { NotificationType } from '../context/NotificationsContext';
 

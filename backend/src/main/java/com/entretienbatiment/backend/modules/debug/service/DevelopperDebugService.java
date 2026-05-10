@@ -92,6 +92,14 @@ public class DevelopperDebugService {
         return new DevelopperDebugErrorDetailResponse(fingerprint, occurrences, entries);
     }
 
+    public void deleteByFingerprint(String fingerprint) {
+        debugErrorLogRepository.deleteAllByFingerprint(fingerprint);
+    }
+
+    public void deleteAll() {
+        debugErrorLogRepository.deleteAll();
+    }
+
     private DebugErrorOccurrenceResponse toOccurrence(DebugErrorLog log) {
         if (log == null) {
             return null;

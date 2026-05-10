@@ -4,6 +4,8 @@ import { useLang } from '../context/LangContext';
 import {
   getDevelopperDebugDashboard,
   getDevelopperDebugErrorDetail,
+  deleteDevelopperDebugError,
+  deleteAllDevelopperDebugErrors,
 } from '../lib/api';
 import type {
   DebugErrorGroup,
@@ -23,6 +25,32 @@ const DevelopperDebugPage: React.FC = () => {
   const [detailLoading, setDetailLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
+  const [resolvedFingerprints, setResolvedFingerprints] = React.useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = React.useState(false);
+
+  const handleDeleteOne = React.useCallback(async (fingerprint: string) => {
+    setDeleting(true);
+    try {
+      await deleteDevelopperDebugError(fingerprint);
+      if (selectedFingerprint === fingerprint) setSelectedFingerprint('');
+      setResolvedFingerprints((prev) => { const next = new Set(prev); next.delete(fingerprint); return next; });
+      await loadDashboard();
+    } finally {
+      setDeleting(false);
+    }
+  }, [selectedFingerprint]);
+
+  const handleDeleteAll = React.useCallback(async () => {
+    setDeleting(true);
+    try {
+      await deleteAllDevelopperDebugErrors();
+      setSelectedFingerprint('');
+      setResolvedFingerprints(new Set());
+      await loadDashboard();
+    } finally {
+      setDeleting(false);
+    }
+  }, []);
 
   const loadDashboard = React.useCallback(async () => {
     setLoading(true);
@@ -105,13 +133,24 @@ const DevelopperDebugPage: React.FC = () => {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => void loadDashboard()}
-              className="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700"
-            >
-              {t.debugDashboardRefresh || 'Refresh'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void handleDeleteAll()}
+                disabled={visibleErrors.length === 0 || deleting}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {t.debugDashboardDeleteAll || 'Delete All Errors'}
+              </button>
+              <button
+                type="button"
+                onClick={() => void loadDashboard()}
+                disabled={loading || deleting}
+                className="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+              >
+                {t.debugDashboardRefresh || 'Refresh'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -160,22 +199,63 @@ const DevelopperDebugPage: React.FC = () => {
               ) : (
                 visibleErrors.map((item) => {
                   const selected = item.fingerprint === selectedFingerprint;
+                  const isResolved = resolvedFingerprints.has(item.fingerprint);
                   return (
-                    <button
+                    <div
                       key={item.fingerprint}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setSelectedFingerprint(item.fingerprint)}
-                      className={`w-full text-left rounded-xl border p-3 transition-colors ${selected
-                        ? (isDark ? 'border-brand-500 bg-brand-900/20' : 'border-brand-300 bg-brand-50')
-                        : (isDark ? 'border-surface-800 hover:bg-surface-800/70' : 'border-surface-200 hover:bg-surface-50')}`}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedFingerprint(item.fingerprint); }}
+                      className={`w-full text-left rounded-xl border-2 p-3 transition-colors cursor-pointer ${
+                        isResolved
+                          ? (isDark ? 'border-green-500 bg-green-900/20' : 'border-green-500 bg-green-50')
+                          : selected
+                            ? (isDark ? 'border-red-500 bg-red-900/10' : 'border-red-400 bg-red-50/60')
+                            : (isDark ? 'border-red-800 hover:bg-surface-800/70' : 'border-red-300 hover:bg-surface-50')
+                      }`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className={`text-xs font-semibold uppercase ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
+                        <span className={`text-xs font-semibold uppercase truncate ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
                           {item.exceptionType || 'Exception'}
                         </span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isDark ? 'bg-surface-800 text-surface-200' : 'bg-surface-100 text-surface-700'}`}>
-                          {item.occurrences}x
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isDark ? 'bg-surface-800 text-surface-200' : 'bg-surface-100 text-surface-700'}`}>
+                            {item.occurrences}x
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setResolvedFingerprints((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(item.fingerprint)) next.delete(item.fingerprint);
+                                else next.add(item.fingerprint);
+                                return next;
+                              });
+                            }}
+                            className={`text-xs px-2 py-0.5 rounded-full font-semibold transition-colors ${
+                              isResolved
+                                ? (isDark ? 'bg-green-700 text-green-100 hover:bg-green-800' : 'bg-green-500 text-white hover:bg-green-600')
+                                : (isDark ? 'bg-surface-700 text-surface-300 hover:bg-green-900/40 hover:text-green-300' : 'bg-surface-100 text-surface-600 hover:bg-green-100 hover:text-green-700')
+                            }`}
+                            title={isResolved ? 'Mark as unresolved' : 'Mark as resolved'}
+                          >
+                            {isResolved ? '✓ Resolved' : 'Resolve'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleDeleteOne(item.fingerprint);
+                            }}
+                            disabled={deleting}
+                            className={`text-xs px-2 py-0.5 rounded-full font-semibold transition-colors disabled:opacity-40 ${isDark ? 'bg-surface-700 text-surface-300 hover:bg-red-900/40 hover:text-red-300' : 'bg-surface-100 text-surface-600 hover:bg-red-100 hover:text-red-600'}`}
+                            title="Delete this error"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
 
                       <p className={`text-sm font-medium line-clamp-2 ${isDark ? 'text-surface-100' : 'text-surface-900'}`}>
@@ -185,7 +265,7 @@ const DevelopperDebugPage: React.FC = () => {
                       <p className={`text-xs mt-2 break-all ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
                         {item.methodName || t.debugDashboardUnknownMethod || 'Unknown method'}
                       </p>
-                    </button>
+                    </div>
                   );
                 })
               )}
