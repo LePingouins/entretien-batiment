@@ -19,6 +19,7 @@ import { getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
 import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
 
 // Reusable modal component for creating/updating
+const { t } = useLang();
 const UrgentWorkOrderModal = ({
   open,
   onClose,
