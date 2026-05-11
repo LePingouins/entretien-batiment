@@ -63,7 +63,8 @@ api.interceptors.response.use(
     // Handle both 401 (Unauthorized) and 403 (Forbidden) for token refresh
     // Some backends return 403 for expired tokens
     const status = error.response?.status;
-    const shouldRefresh = (status === 401 || status === 403) && !originalRequest._retry;
+    const isLoginRequest = originalRequest.url?.includes('/api/auth/login');
+    const shouldRefresh = (status === 401 || status === 403) && !originalRequest._retry && !isLoginRequest;
     
     if (shouldRefresh) {
       if (isRefreshing) {

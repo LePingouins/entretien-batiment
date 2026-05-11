@@ -4,6 +4,7 @@ import { DndContext, closestCenter, rectIntersection, PointerSensor, TouchSensor
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { WorkOrderResponse, WorkOrderStatus } from '../../types/api';
 import { WorkOrderCard } from '../../components/WorkOrderCard';
+import { useLang } from '../../context/LangContext';
 
 // Allow passing a custom DragOverlayCard for urgent work orders
 
@@ -132,6 +133,7 @@ type DndBoardProps = {
 export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activeWorkOrder, activeId, colorScheme, DroppableColumn, SortableCard, onOpenMaterials, onDeleted, onArchived, onCardClick, DragOverlayCard }: DndBoardProps) {
   // Memoize sensors to prevent recreation
   const sensors = useDndSensors();
+  const { t } = useLang();
   
   return (
     <DndContext
@@ -151,7 +153,7 @@ export function DndBoard({ grouped, statusOptions, onDragStart, onDragEnd, activ
               >
                 <div className="flex-1 flex flex-col gap-4 min-h-[180px]">
                   {(grouped[status]?.length ?? 0) === 0 ? (
-                    <div className="text-gray-400 text-center py-4">No work orders</div>
+                    <div className="text-gray-400 text-center py-4">{t.noWorkOrders}</div>
                   ) : (
                     grouped[status]?.map((wo: WorkOrderResponse) => (
                       <SortableCard 
