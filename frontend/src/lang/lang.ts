@@ -35,6 +35,7 @@ export const en = {
   incomplete: 'Incomplete',
   errorLoading: 'Error loading work orders',
   noWorkOrders: 'No work orders',
+  noUrgentWorkOrders: 'No urgent work orders',
   confirmDelete: 'Are you sure you want to delete this work order?',
   // Add priority and status translations
   priorityLow: 'Low',
@@ -743,6 +744,7 @@ export const fr = {
   incomplete: 'Incomplet',
   errorLoading: 'Erreur de chargement des ordres de travail',
   noWorkOrders: 'Aucun ordre de travail',
+  noUrgentWorkOrders: 'Aucun ordre urgent',
   confirmDelete: 'Êtes-vous sûr de vouloir supprimer cet ordre de travail ?',
   // Add priority and status translations
   priorityLow: 'Faible',

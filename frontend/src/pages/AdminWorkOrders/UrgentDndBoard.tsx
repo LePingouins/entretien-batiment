@@ -89,7 +89,7 @@ const UrgentDndBoard = () => {
           >
             <div className="flex-1 flex flex-col gap-4 min-h-[180px]">
               {(grouped[status]?.length ?? 0) === 0 ? (
-                <div className="text-gray-400 text-center py-4">No urgent work orders</div>
+                <div className="text-gray-400 text-center py-4">{t.noUrgentWorkOrders}</div>
               ) : (
                 grouped[status]?.map(wo => (
                   <div key={wo.id} className="relative group">
