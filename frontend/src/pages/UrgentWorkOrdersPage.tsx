@@ -19,7 +19,6 @@ import { getColorSchemeClass } from './AdminWorkOrders/colorSchemes';
 import styles from './AdminWorkOrders/AdminWorkOrdersPage.module.css';
 
 // Reusable modal component for creating/updating
-const { t } = useLang();
 const UrgentWorkOrderModal = ({
   open,
   onClose,
@@ -103,6 +102,7 @@ function UrgentDndBoard({ columns, workOrders, onMove, onOpenMaterials, onDelete
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [activeWorkOrder, setActiveWorkOrder] = React.useState<any>(null);
   const sensors = useDndSensors();
+  const { t } = useLang();
 
   const findWorkOrder = (id: any) => workOrders.find((w: any) => w.id.toString() === id);
 

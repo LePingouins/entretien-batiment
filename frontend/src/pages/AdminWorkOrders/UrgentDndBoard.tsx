@@ -2,7 +2,6 @@
 // TODO: Implement urgent work order logic, categories, checkmark, photo, date, and archiving
 
 import * as React from 'react';
-import { useLang } from '../../context/LangContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api, { moveWorkOrder, reorderWorkOrders, archiveWorkOrder } from '../../lib/api';
 import { WorkOrderResponse, WorkOrderStatus, WorkOrderPriority } from '../../types/api';
@@ -10,6 +9,7 @@ import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent, DragOve
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { WorkOrderCard } from '../../components/WorkOrderCard';
 import { ColorSchemeContext } from '../../context/ColorSchemeContext';
+import { useLang } from '../../context/LangContext';
 
 const STATUS_OPTIONS = [WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.COMPLETED];
 
@@ -23,6 +23,7 @@ function groupByStatus(workOrders: WorkOrderResponse[]) {
 const UrgentDndBoard = () => {
   const queryClient = useQueryClient();
   const { colorScheme } = React.useContext(ColorSchemeContext);
+  const { t } = useLang();
   const { data: urgentWorkOrders = [], isLoading, refetch } = useQuery({
     queryKey: ['urgentWorkOrders'],
     queryFn: async () => {
@@ -76,7 +77,6 @@ const UrgentDndBoard = () => {
     queryClient.invalidateQueries({ queryKey: ['archivedWorkOrders'] });
   };
 
-  const { t } = useLang();
   return (
     <div className="flex flex-col sm:flex-row gap-4 pb-12 px-2 sm:px-4 pt-4 w-full justify-evenly overflow-x-auto md:overflow-x-visible">
       {STATUS_OPTIONS.map(status => (

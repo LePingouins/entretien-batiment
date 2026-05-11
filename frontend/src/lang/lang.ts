@@ -744,7 +744,7 @@ export const fr = {
   incomplete: 'Incomplet',
   errorLoading: 'Erreur de chargement des ordres de travail',
   noWorkOrders: 'Aucun ordre de travail',
-  noUrgentWorkOrders: 'Aucun ordre urgent',
+  noUrgentWorkOrders: 'Aucun ordre de travail urgent',
   confirmDelete: 'Êtes-vous sûr de vouloir supprimer cet ordre de travail ?',
   // Add priority and status translations
   priorityLow: 'Faible',
