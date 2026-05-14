@@ -943,4 +943,59 @@ public class WorkOrderService {
 
         return tech;
     }
+
+    @Transactional(readOnly = true)
+    public String exportCsv() {
+        List<WorkOrder> all = repo.findAll();
+        // BOM so Excel opens UTF-8 correctly
+        StringBuilder sb = new StringBuilder("\uFEFF");
+        sb.append("ID,Titre,Description,Emplacement,Priorite,Statut,Technicien assigne,Cree par,Date requete,Date echeance,Cree le,Mis a jour le,Archive\n");
+        for (WorkOrder wo : all) {
+            sb.append(escapeCsv(String.valueOf(wo.getId()))).append(',');
+            sb.append(escapeCsv(wo.getTitle())).append(',');
+            sb.append(escapeCsv(wo.getDescription())).append(',');
+            sb.append(escapeCsv(wo.getLocation())).append(',');
+            sb.append(escapeCsv(translatePriority(wo.getPriority()))).append(',');
+            sb.append(escapeCsv(translateStatus(wo.getStatus()))).append(',');
+            sb.append(escapeCsv(wo.getAssignedTo() != null ? wo.getAssignedTo().getEmail() : "")).append(',');
+            sb.append(escapeCsv(wo.getCreatedBy() != null ? wo.getCreatedBy().getEmail() : "")).append(',');
+            sb.append(escapeCsv(wo.getRequestedDate() != null ? wo.getRequestedDate().toString() : "")).append(',');
+            sb.append(escapeCsv(wo.getDueDate() != null ? wo.getDueDate().toString() : "")).append(',');
+            sb.append(escapeCsv(wo.getCreatedAt() != null ? wo.getCreatedAt().toString() : "")).append(',');
+            sb.append(escapeCsv(wo.getUpdatedAt() != null ? wo.getUpdatedAt().toString() : "")).append(',');
+            sb.append(escapeCsv(wo.isArchived() ? "Oui" : "Non")).append('\n');
+        }
+        return sb.toString();
+    }
+
+    private String translatePriority(WorkOrderPriority p) {
+        if (p == null) return "";
+        switch (p) {
+            case LOW:    return "Basse";
+            case MEDIUM: return "Moyenne";
+            case HIGH:   return "Haute";
+            case URGENT: return "Urgente";
+            default:     return p.name();
+        }
+    }
+
+    private String translateStatus(WorkOrderStatus s) {
+        if (s == null) return "";
+        switch (s) {
+            case OPEN:        return "Ouvert";
+            case ASSIGNED:    return "Assign\u00e9";
+            case IN_PROGRESS: return "En cours";
+            case COMPLETED:   return "Termin\u00e9";
+            case CANCELLED:   return "Annul\u00e9";
+            default:          return s.name();
+        }
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
 }

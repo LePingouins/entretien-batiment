@@ -308,12 +308,28 @@ const MileagePage: React.FC = () => {
   return (
     <main className={`${bg} flex flex-col w-full`}>
       <div className={(colorScheme === 'dark' ? 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8' : 'flex-1 pt-2 px-2 sm:px-4 lg:px-8 pb-8')}>
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center gap-3 mb-4 flex-wrap">
             <button
-              className={`mt-2 w-full sm:w-auto px-5 py-2.5 text-white rounded-lg shadow-sm font-semibold transition-colors duration-150 ${colorScheme === 'dark' ? 'bg-brand-600 hover:bg-brand-700' : 'bg-brand-600 hover:bg-brand-700'}`}
+              className={`mt-2 px-5 py-2.5 text-white rounded-lg shadow-sm font-semibold transition-colors duration-150 ${colorScheme === 'dark' ? 'bg-brand-600 hover:bg-brand-700' : 'bg-brand-600 hover:bg-brand-700'}`}
               onClick={handleCreate}
             >
               {t.create} {t.mileage}
+            </button>
+            <button
+              onClick={async () => {
+                const res = await api.get('/api/mileage/export', { responseType: 'blob' });
+                const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
+                const a = document.createElement('a');
+                a.href = url; a.download = 'kilometrages.csv'; a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className={`mt-2 px-5 py-2.5 rounded-lg shadow-sm font-semibold transition-colors duration-150 flex items-center gap-2 ${colorScheme === 'dark' ? 'bg-surface-700 text-surface-100 border border-surface-600 hover:bg-surface-600' : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'}`}
+              title={t.exportCsv}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              {t.exportCsv}
             </button>
           </div>
           <div className="grid gap-4">

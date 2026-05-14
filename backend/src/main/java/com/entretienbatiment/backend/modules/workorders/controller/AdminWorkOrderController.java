@@ -11,9 +11,11 @@ import com.entretienbatiment.backend.modules.workorders.dto.MoveWorkOrderRequest
 import com.entretienbatiment.backend.modules.workorders.dto.ReorderWorkOrdersRequest;
 import com.entretienbatiment.backend.modules.audit.service.AuditLogService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -227,6 +229,24 @@ public class AdminWorkOrderController {
     }
 
     // ==================== END ARCHIVE ENDPOINTS ====================
+
+    // ==================== EXPORT ====================
+
+    /**
+     * Export all work orders (active and archived) as a CSV file.
+     */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCsv() {
+        String csv = service.exportCsv();
+        byte[] bytes = csv.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=bons-de-travail.csv")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .contentLength(bytes.length)
+                .body(bytes);
+    }
+
+    // ==================== END EXPORT ====================
 
         // Serve uploaded files
     // Moved to FilesController

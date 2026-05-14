@@ -134,7 +134,7 @@ const WorkOrderDetailPage: React.FC = () => {
         @media print {
           body * { visibility: hidden; }
           .printable-content, .printable-content * { visibility: visible !important; }
-          .printable-content { left: 0; top: 0; width: 100vw; background: white; color: black; }
+          .printable-content { position: absolute; left: 0; top: 0; width: 100%; background: white; color: black; }
           .no-print { display: none !important; }
         }
       `}</style>

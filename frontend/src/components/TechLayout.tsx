@@ -154,27 +154,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Sticky nav: header becomes fixed only after it has fully scrolled out of view
-  const headerRef = React.useRef<HTMLElement | null>(null);
-  const [isSticky, setIsSticky] = React.useState(false);
-  const [headerHeight, setHeaderHeight] = React.useState(0);
-
-  React.useEffect(() => {
-    const header = headerRef.current;
-    if (!header) return;
-    const ro = new ResizeObserver(() => setHeaderHeight(header.offsetHeight));
-    ro.observe(header);
-    setHeaderHeight(header.offsetHeight);
-    return () => ro.disconnect();
-  }, []);
-
-  React.useEffect(() => {
-    if (headerHeight === 0) return;
-    const handleScroll = () => setIsSticky(window.scrollY >= headerHeight);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [headerHeight]);
+  // Sticky nav: use CSS sticky for reliable behavior on all devices including mobile Chrome
 
   const linkCls = (isActive: boolean) =>
     `px-3 py-1.5 rounded-lg font-medium transition-colors text-sm ${isActive ? 'text-yellow-500' : colorScheme === 'dark' ? 'text-surface-300 hover:text-white hover:bg-surface-800' : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'}`;
@@ -199,8 +179,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
     <div className={`min-h-screen flex flex-col justify-between transition-colors ${colorScheme === 'dark' ? 'dark bg-surface-950' : 'bg-slate-100'}`}>
       <header
-        ref={headerRef}
-        className={`${isSticky ? 'fixed top-0 left-0 right-0 w-full nav-slide-down' : ''} z-40 backdrop-blur-xl border-b ${colorScheme === 'dark' ? 'bg-surface-900/90 text-surface-100 border-surface-700' : 'bg-white text-slate-800 border-slate-200 shadow-sm'}`}
+        className={`sticky top-0 z-40 backdrop-blur-xl border-b ${colorScheme === 'dark' ? 'bg-surface-900/90 text-surface-100 border-surface-700' : 'bg-white text-slate-800 border-slate-200 shadow-sm'}`}
       >
         <div className="w-full px-4 sm:px-6 py-2.5 flex justify-between items-center gap-2">
           <div className="flex items-center gap-3">
@@ -345,7 +324,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
           </div>
         )}
       </header>
-      {isSticky && <div style={{ height: headerHeight }} aria-hidden="true" />}
+
       
       {/* Settings Modal */}
       {showSettings && (

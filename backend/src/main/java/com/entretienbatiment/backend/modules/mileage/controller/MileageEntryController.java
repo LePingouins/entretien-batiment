@@ -2,6 +2,9 @@ package com.entretienbatiment.backend.modules.mileage.controller;
 
 import com.entretienbatiment.backend.modules.notifications.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.entretienbatiment.backend.modules.workorders.model.WorkOrder;
@@ -140,5 +143,38 @@ public class MileageEntryController {
             entry.setArchivedAt(null);
             repository.save(entry);
         });
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCsv() {
+        java.util.List<MileageEntry> all = repository.findAll();
+        // BOM so Excel opens UTF-8 correctly
+        StringBuilder sb = new StringBuilder("\uFEFF");
+        sb.append("ID,Date,Fournisseur,Km debut,Km fin,Km total,BT lie,BT urgent lie,Archive\n");
+        for (MileageEntry e : all) {
+            sb.append(e.getId()).append(',');
+            sb.append(e.getDate() != null ? e.getDate().toString() : "").append(',');
+            sb.append(escapeCsv(e.getSupplier())).append(',');
+            sb.append(e.getStartKm() != null ? e.getStartKm() : "").append(',');
+            sb.append(e.getEndKm() != null ? e.getEndKm() : "").append(',');
+            sb.append(e.getTotalKm() != null ? e.getTotalKm() : "").append(',');
+            sb.append(e.getWorkOrder() != null ? e.getWorkOrder().getId() : "").append(',');
+            sb.append(e.getUrgentWorkOrder() != null ? e.getUrgentWorkOrder().getId() : "").append(',');
+            sb.append(Boolean.TRUE.equals(e.getArchived()) ? "Oui" : "Non").append('\n');
+        }
+        byte[] bytes = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=kilometrages.csv")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .contentLength(bytes.length)
+                .body(bytes);
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 }
