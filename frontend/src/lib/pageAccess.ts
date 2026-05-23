@@ -11,6 +11,7 @@ export const PAGE_KEYS: PageKey[] = [
   'NOTIFICATIONS',
   'INVENTORY',
   'INVENTORY_PRODUCTS',
+  'REP_TRIPS',
 ];
 
 const PAGE_SEGMENTS: Record<PageKey, string> = {
@@ -24,6 +25,8 @@ const PAGE_SEGMENTS: Record<PageKey, string> = {
   NOTIFICATIONS: 'notifications',
   INVENTORY: 'inventory',
   INVENTORY_PRODUCTS: 'inventory/products',
+  SUBSCRIPTIONS: 'subscriptions',
+  REP_TRIPS: 'rep-trips',
 };
 
 const ADMIN_FALLBACK_ORDER: PageKey[] = [
@@ -37,6 +40,7 @@ const ADMIN_FALLBACK_ORDER: PageKey[] = [
   'ANALYTICS',
   'INVENTORY',
   'INVENTORY_PRODUCTS',
+  'REP_TRIPS',
 ];
 
 const NON_ADMIN_FALLBACK_ORDER: PageKey[] = [
@@ -50,6 +54,7 @@ const NON_ADMIN_FALLBACK_ORDER: PageKey[] = [
   'USERS',
   'INVENTORY',
   'INVENTORY_PRODUCTS',
+  'REP_TRIPS',
 ];
 
 export function getRoleBasePath(role: UserRole | null | undefined): '/admin' | '/tech' | '/worker' {

@@ -78,7 +78,8 @@ public class SecurityConfig {
             "http://10.0.0.109:4173",
             "http://10.0.0.109:5173",
             "https://entretien-batiment.com",
-            "https://www.entretien-batiment.com"
+            "https://www.entretien-batiment.com",
+            "https://violate-sprint-commode.ngrok-free.dev"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
@@ -112,7 +113,7 @@ public class SecurityConfig {
                         "style-src 'self' 'unsafe-inline'; " +
                         "img-src 'self' data: blob:; " +
                         "font-src 'self' data:; " +
-                        "connect-src 'self' wss://entretien-batiment.com wss://www.entretien-batiment.com; " +
+                        "connect-src 'self' wss://entretien-batiment.com wss://www.entretien-batiment.com https://nominatim.openstreetmap.org https://router.project-osrm.org; " +
                         "frame-ancestors 'none'; " +
                         "base-uri 'self'; " +
                         "form-action 'self';"
@@ -120,7 +121,7 @@ public class SecurityConfig {
                 )
                 .addHeaderWriter(new StaticHeadersWriter(
                     "Permissions-Policy",
-                    "camera=(), microphone=(), geolocation=(), payment=()"
+                    "camera=(), microphone=(), geolocation=(self), payment=()"
                 ))
             )
             .authorizeHttpRequests(auth -> auth
@@ -151,6 +152,7 @@ public class SecurityConfig {
                 // Common secured endpoints
                 // Explicitly allow archived endpoints if they are causing issues with authenticated()
                 .requestMatchers("/api/mileage/**").authenticated()
+                .requestMatchers("/api/rep-trips/**").authenticated()
                 .requestMatchers("/api/urgent-work-orders/**").authenticated()
                 
                 // Catch-all

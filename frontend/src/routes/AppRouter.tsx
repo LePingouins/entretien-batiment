@@ -37,6 +37,8 @@ const InventoryProductsPage       = lazy(() => import('../pages/InventoryProduct
 const InventoryCountSessionsPage  = lazy(() => import('../pages/InventoryCountSessionsPage'));
 const InventoryCountLivePage      = lazy(() => import('../pages/InventoryCountLivePage'));
 const SubscriptionsPage           = lazy(() => import('../pages/SubscriptionsPage'));
+const RepTripsPage                = lazy(() => import('../pages/RepTripsPage'));
+const AdminTripsPage              = lazy(() => import('../pages/AdminTripsPage'));
 
 /** Shown while a lazy page chunk is being downloaded */
 const PageLoader = () => (
@@ -197,6 +199,22 @@ const router = createBrowserRouter([
                 ),
               },
               {
+                path: 'rep-trips',
+                element: (
+                  <RequirePageAccess pageKey="REP_TRIPS">
+                    <RepTripsPage />
+                  </RequirePageAccess>
+                ),
+              },
+              {
+                path: 'admin-trips',
+                element: (
+                  <RequirePageAccess pageKey="REP_TRIPS">
+                    <AdminTripsPage />
+                  </RequirePageAccess>
+                ),
+              },
+              {
                 path: 'debug',
                 element: <ProtectedRoute requiredRole="DEVELOPPER" />,
                 children: [
@@ -336,6 +354,14 @@ const router = createBrowserRouter([
                   </RequirePageAccess>
                 ),
               },
+              {
+                path: 'rep-trips',
+                element: (
+                  <RequirePageAccess pageKey="REP_TRIPS">
+                    <RepTripsPage />
+                  </RequirePageAccess>
+                ),
+              },
             ],
           },
         ],
@@ -449,6 +475,14 @@ const router = createBrowserRouter([
                 element: (
                   <RequirePageAccess pageKey="INVENTORY">
                     <InventoryCountLivePage />
+                  </RequirePageAccess>
+                ),
+              },
+              {
+                path: 'rep-trips',
+                element: (
+                  <RequirePageAccess pageKey="REP_TRIPS">
+                    <RepTripsPage />
                   </RequirePageAccess>
                 ),
               },

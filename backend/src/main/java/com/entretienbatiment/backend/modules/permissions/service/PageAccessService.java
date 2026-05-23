@@ -39,6 +39,7 @@ public class PageAccessService {
     public static final String PAGE_INVENTORY = "INVENTORY";
     public static final String PAGE_INVENTORY_PRODUCTS = "INVENTORY_PRODUCTS";
     public static final String PAGE_SUBSCRIPTIONS = "SUBSCRIPTIONS";
+    public static final String PAGE_REP_TRIPS    = "REP_TRIPS";
 
     private static final List<String> MANAGED_PAGE_KEYS = List.of(
             PAGE_DASHBOARD,
@@ -51,7 +52,8 @@ public class PageAccessService {
             PAGE_NOTIFICATIONS,
             PAGE_INVENTORY,
             PAGE_INVENTORY_PRODUCTS,
-            PAGE_SUBSCRIPTIONS
+            PAGE_SUBSCRIPTIONS,
+            PAGE_REP_TRIPS
     );
 
     private static final Map<Role, Set<String>> DEFAULT_ALLOWED_BY_ROLE = defaultAllowedByRole();
@@ -396,7 +398,8 @@ public class PageAccessService {
                 PAGE_NOTIFICATIONS,
                 PAGE_INVENTORY,
                 PAGE_INVENTORY_PRODUCTS,
-                PAGE_SUBSCRIPTIONS
+                PAGE_SUBSCRIPTIONS,
+                PAGE_REP_TRIPS
         ));
 
         defaults.put(Role.DEVELOPPER, defaults.get(Role.ADMIN));
@@ -414,7 +417,8 @@ public class PageAccessService {
                 PAGE_WORK_ORDERS,
                 PAGE_URGENT_WORK_ORDERS,
                 PAGE_MILEAGE,
-                PAGE_NOTIFICATIONS
+                PAGE_NOTIFICATIONS,
+                PAGE_REP_TRIPS
         ));
 
         return defaults;

@@ -67,7 +67,7 @@ const AdminLayout: React.FC = () => {
   };
 
   const { lang, setLang, t } = useLang();
-  const pagePath = React.useCallback((pageKey: 'DASHBOARD' | 'WORK_ORDERS' | 'URGENT_WORK_ORDERS' | 'MILEAGE' | 'ANALYTICS' | 'USERS' | 'ARCHIVE') => {
+  const pagePath = React.useCallback((pageKey: 'DASHBOARD' | 'WORK_ORDERS' | 'URGENT_WORK_ORDERS' | 'MILEAGE' | 'ANALYTICS' | 'USERS' | 'ARCHIVE' | 'REP_TRIPS') => {
     return getRolePagePath(role, pageKey);
   }, [role]);
   // Add/remove dark class on body for dark mode
@@ -163,6 +163,8 @@ const AdminLayout: React.FC = () => {
     if (canAccess('ARCHIVE')) items.push({ label: t.archive, path: pagePath('ARCHIVE'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
     if (canAccess('MILEAGE')) items.push({ label: t.mileage, path: pagePath('MILEAGE'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('ANALYTICS')) items.push({ label: t.analyticsTitle || 'Analytics', path: pagePath('ANALYTICS'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
+    if (canAccess('REP_TRIPS')) items.push({ label: t.repTripsNav || 'Rep Trips', path: pagePath('REP_TRIPS'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
+    if (canAccess('REP_TRIPS')) items.push({ label: t.repTripsAdminTitle || 'Rep Trips Admin', path: '/admin/admin-trips', group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('USERS')) items.push({ label: t.adminUsersNav || 'Users', path: pagePath('USERS'), group: lang === 'fr' ? 'Administration' : 'Administration' });
     items.push({ label: t.documentsPage || 'Documents', path: '/admin/documents', group: lang === 'fr' ? 'Ressources' : 'Resources' });
     items.push({ label: t.shoppingList || 'Shopping List', path: '/admin/shopping-list', group: lang === 'fr' ? 'Ressources' : 'Resources' });
@@ -210,13 +212,15 @@ const AdminLayout: React.FC = () => {
                 ]}
               />
             )}
-            {(canAccess('MILEAGE') || canAccess('ANALYTICS')) && (
+            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS')) && (
               <NavDropdown
                 isDark={colorScheme === 'dark'}
                 label={lang === 'fr' ? 'Opérations' : 'Operations'}
                 items={[
                   ...(canAccess('MILEAGE') ? [{ label: t.mileage, path: pagePath('MILEAGE'), isActive: window.location.pathname.includes(pagePath('MILEAGE')) }] : []),
                   ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('ANALYTICS'), isActive: window.location.pathname.includes(pagePath('ANALYTICS')) }] : []),
+                  ...(canAccess('REP_TRIPS') ? [{ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('REP_TRIPS'), isActive: window.location.pathname.endsWith('/rep-trips') }] : []),
+                  ...(canAccess('REP_TRIPS') ? [{ label: (t.repTripsAdminTitle || 'Admin Trajets'), path: '/admin/admin-trips', isActive: window.location.pathname.includes('/admin/admin-trips') }] : []),
                 ]}
               />
             )}
@@ -307,7 +311,7 @@ const AdminLayout: React.FC = () => {
                 ]}
               />
             )}
-            {(canAccess('MILEAGE') || canAccess('ANALYTICS')) && (
+            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS')) && (
               <NavDropdown
                 isDark={colorScheme === 'dark'}
                 label={lang === 'fr' ? 'Opérations' : 'Operations'}
@@ -316,6 +320,8 @@ const AdminLayout: React.FC = () => {
                 items={[
                   ...(canAccess('MILEAGE') ? [{ label: t.mileage, path: pagePath('MILEAGE'), isActive: window.location.pathname.includes(pagePath('MILEAGE')) }] : []),
                   ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('ANALYTICS'), isActive: window.location.pathname.includes(pagePath('ANALYTICS')) }] : []),
+                  ...(canAccess('REP_TRIPS') ? [{ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('REP_TRIPS'), isActive: window.location.pathname.endsWith('/rep-trips') }] : []),
+                  ...(canAccess('REP_TRIPS') ? [{ label: (t.repTripsAdminTitle || 'Admin Trajets'), path: '/admin/admin-trips', isActive: window.location.pathname.includes('/admin/admin-trips') }] : []),
                 ]}
               />
             )}

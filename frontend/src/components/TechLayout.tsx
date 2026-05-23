@@ -140,7 +140,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     navigate('/login');
   };
 
-  const pagePath = React.useCallback((segment: '' | 'work-orders' | 'urgent-work-orders' | 'mileage' | 'archive' | 'analytics' | 'documents' | 'shopping-list' | 'inventory' | 'inventory/products') => {
+  const pagePath = React.useCallback((segment: '' | 'work-orders' | 'urgent-work-orders' | 'mileage' | 'archive' | 'analytics' | 'documents' | 'shopping-list' | 'inventory' | 'inventory/products' | 'rep-trips') => {
     return segment ? `${basePath}/${segment}` : basePath;
   }, [basePath]);
 
@@ -167,6 +167,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     if (canAccess('ARCHIVE')) items.push({ label: t.archive, path: pagePath('archive'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
     if (canAccess('MILEAGE')) items.push({ label: t.mileage, path: pagePath('mileage'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('ANALYTICS')) items.push({ label: t.analyticsTitle || 'Analytics', path: pagePath('analytics'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
+    if (canAccess('REP_TRIPS')) items.push({ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('rep-trips'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     items.push({ label: t.documentsPage || 'Documents', path: pagePath('documents'), group: lang === 'fr' ? 'Ressources' : 'Resources' });
     items.push({ label: t.shoppingList || 'Shopping List', path: pagePath('shopping-list'), group: lang === 'fr' ? 'Ressources' : 'Resources' });
     if (canAccess('INVENTORY')) items.push({ label: t.invSessionsTitle || 'Inventory', path: pagePath('inventory'), group: lang === 'fr' ? 'Ressources' : 'Resources' });
@@ -210,13 +211,14 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
                 ]}
               />
             )}
-            {(canAccess('MILEAGE') || canAccess('ANALYTICS')) && (
+            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS')) && (
               <NavDropdown
                 isDark={colorScheme === 'dark'}
                 label={lang === 'fr' ? 'Opérations' : 'Operations'}
                 items={[
                   ...(canAccess('MILEAGE') ? [{ label: t.mileage, path: pagePath('mileage'), isActive: window.location.pathname.includes(pagePath('mileage')) }] : []),
                   ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('analytics'), isActive: window.location.pathname.includes(pagePath('analytics')) }] : []),
+                  ...(canAccess('REP_TRIPS') ? [{ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('rep-trips'), isActive: window.location.pathname.endsWith('/rep-trips') }] : []),
                 ]}
               />
             )}
@@ -293,7 +295,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
                 ]}
               />
             )}
-            {(canAccess('MILEAGE') || canAccess('ANALYTICS')) && (
+            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS')) && (
               <NavDropdown
                 isDark={colorScheme === 'dark'}
                 label={lang === 'fr' ? 'Opérations' : 'Operations'}
@@ -302,6 +304,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
                 items={[
                   ...(canAccess('MILEAGE') ? [{ label: t.mileage, path: pagePath('mileage'), isActive: window.location.pathname.includes(pagePath('mileage')) }] : []),
                   ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('analytics'), isActive: window.location.pathname.includes(pagePath('analytics')) }] : []),
+                  ...(canAccess('REP_TRIPS') ? [{ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('rep-trips'), isActive: window.location.pathname.endsWith('/rep-trips') }] : []),
                 ]}
               />
             )}

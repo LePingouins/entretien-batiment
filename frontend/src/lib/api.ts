@@ -730,6 +730,101 @@ export async function updateSubscription(id: number, data: SubscriptionRequest):
   const res = await api.put<SubscriptionResponse>(`/api/admin/subscriptions/${id}`, data);
   return res.data;
 }
+
+// --- Rep Trips API ---
+import type { RepTrip, RepTripStop } from '../types/api';
+
+export async function getRepTrips(): Promise<RepTrip[]> {
+  const res = await api.get<RepTrip[]>('/api/rep-trips');
+  return res.data;
+}
+
+export async function startRepTrip(payload: Partial<RepTrip>): Promise<RepTrip> {
+  const res = await api.post<RepTrip>('/api/rep-trips', payload);
+  return res.data;
+}
+
+export async function updateRepTrip(id: number, payload: Record<string, unknown>): Promise<RepTrip> {
+  const res = await api.patch<RepTrip>(`/api/rep-trips/${id}`, payload);
+  return res.data;
+}
+
+export async function deleteRepTrip(id: number): Promise<void> {
+  await api.delete(`/api/rep-trips/${id}`);
+}
+
+export async function addRepTripStop(tripId: number, payload: Partial<RepTripStop>): Promise<RepTripStop> {
+  const res = await api.post<RepTripStop>(`/api/rep-trips/${tripId}/stops`, payload);
+  return res.data;
+}
+
+export async function deleteRepTripStop(tripId: number, stopId: number): Promise<void> {
+  await api.delete(`/api/rep-trips/${tripId}/stops/${stopId}`);
+}
+
+export async function getAdminRepTrips(params?: {
+  startDate?: string;
+  endDate?: string;
+  userId?: number;
+}): Promise<RepTrip[]> {
+  const res = await api.get<RepTrip[]>('/api/rep-trips/admin/all', { params });
+  return res.data;
+}
+
+export function getAdminRepTripsExportUrl(params?: {
+  startDate?: string;
+  endDate?: string;
+  userId?: number;
+}): string {
+  const base = (import.meta.env.VITE_API_URL || '') + '/api/rep-trips/admin/export';
+  const qs = new URLSearchParams();
+  if (params?.startDate) qs.set('startDate', params.startDate);
+  if (params?.endDate) qs.set('endDate', params.endDate);
+  if (params?.userId) qs.set('userId', String(params.userId));
+  const q = qs.toString();
+  return q ? `${base}?${q}` : base;
+}
+
+/** Reverse-geocode a lat/lng to a human-readable address via Nominatim (OpenStreetMap, free). */
+export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+      { headers: { 'Accept-Language': 'fr-CA,fr;q=0.9,en;q=0.8' } }
+    );
+    if (!res.ok) return '';
+    const data = await res.json();
+    // Build a short readable address: street number + street, city
+    const a = data.address || {};
+    const parts: string[] = [];
+    const street = [a.house_number, a.road || a.pedestrian || a.footway].filter(Boolean).join(' ');
+    if (street) parts.push(street);
+    const city = a.city || a.town || a.village || a.municipality;
+    if (city) parts.push(city);
+    return parts.join(', ') || data.display_name || '';
+  } catch {
+    return '';
+  }
+}
+
+/** Returns road distance in km using the OSRM public routing API (OpenStreetMap).
+ *  OSRM expects coordinates in lng,lat order (reversed from lat,lng). */
+export async function osrmRouteKm(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number,
+): Promise<number | null> {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=false`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const meters: number | undefined = data.routes?.[0]?.distance;
+    if (meters != null) return Math.round(meters / 100) / 10; // metres → km, 1 decimal
+  } catch {
+    // ignore network / parse errors; caller falls back to Haversine
+  }
+  return null;
+}
 export async function deleteSubscription(id: number): Promise<void> {
   await api.delete(`/api/admin/subscriptions/${id}`);
 }

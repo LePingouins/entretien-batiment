@@ -98,7 +98,8 @@ export type PageKey =
   | 'NOTIFICATIONS'
   | 'INVENTORY'
   | 'INVENTORY_PRODUCTS'
-  | 'SUBSCRIPTIONS';
+  | 'SUBSCRIPTIONS'
+  | 'REP_TRIPS';
 
 export type AccessOverrideState = 'DEFAULT' | 'ALLOW' | 'DENY';
 
@@ -221,6 +222,41 @@ export interface MileageEntry {
   archivedAt?: string;
   workOrderId?: number;
   urgentWorkOrderId?: number;
+}
+
+// --- Rep Trips Types ---
+export type RepTripStatus = 'IN_PROGRESS' | 'COMPLETED';
+export type RepTripStopReason = 'CLIENT' | 'RESTAURANT' | 'GAS' | 'OFFICE' | 'OTHER';
+
+export interface RepTripStop {
+  id: number;
+  tripId: number;
+  address?: string;
+  lat?: number;
+  lng?: number;
+  reason: RepTripStopReason;
+  notes?: string;
+  stoppedAt: string;
+}
+
+export interface RepTrip {
+  id: number;
+  userId: number;
+  distanceMethod?: string;    // 'HAVERSINE' | 'ROAD'
+  userEmail?: string;
+  date: string;
+  status: RepTripStatus;
+  purpose?: string;
+  notes?: string;
+  startAddress?: string;
+  startLat?: number;
+  startLng?: number;
+  endAddress?: string;
+  endLat?: number;
+  endLng?: number;
+  totalKm?: number;
+  createdAt: string;
+  stops: RepTripStop[];
 }
 
 // --- Dashboard Types ---
