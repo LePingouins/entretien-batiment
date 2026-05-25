@@ -179,7 +179,7 @@ export async function googleRouteKm(waypoints: Waypoint[]): Promise<number | nul
 
 export async function addStop(
   tripId: number,
-  payload: { reason: RepTripStopReason; address?: string; lat?: number; lng?: number; notes?: string }
+  payload: { reason: RepTripStopReason; address?: string; lat?: number; lng?: number; notes?: string; stoppedAt?: string }
 ): Promise<RepTripStop> {
   const res = await api.post<RepTripStop>(`/api/rep-trips/${tripId}/stops`, payload);
   return res.data;

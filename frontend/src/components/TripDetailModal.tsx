@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from
 import type { RepTrip } from '../types/api';
 import { findIdlePeriods, formatDuration, formatDurationMs } from '../lib/tripUtils';
 import type { Waypoint } from '../lib/tripUtils';
-import { updateRepTrip } from '../lib/api';
+import { updateRepTrip, reverseGeocode } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 interface TripDetailModalProps {
@@ -93,6 +93,19 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
 
   const [flyCoord, setFlyCoord] = useState<[number, number] | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+
+  // Reverse-geocoded addresses for auto-detected idle periods
+  const [idleAddresses, setIdleAddresses] = useState<Record<number, string>>({});
+  useEffect(() => {
+    if (idlePeriods.length === 0) return;
+    let cancelled = false;
+    idlePeriods.forEach((idle, idx) => {
+      reverseGeocode(idle.lat, idle.lng)
+        .then(addr => { if (!cancelled) setIdleAddresses(prev => ({ ...prev, [idx]: addr })); })
+        .catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, [idlePeriods]);
 
   function flyTo(coord: [number, number] | null) {
     if (!coord) return;
@@ -321,15 +334,26 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
             </div>
           )}
 
-          {/* Audit trail */}
-          {(trip.startAddress || trip.stops.length > 0 || trip.endAddress) && (() => {
+          {/* Parcours timeline — manual stops + auto-detected idle periods merged */}
+          {(trip.startAddress || trip.stops.length > 0 || trip.endAddress || idlePeriods.length > 0) && (() => {
             const endIso = trip.endedAt
               ?? (trip.durationMinutes != null ? new Date(new Date(trip.createdAt).getTime() + trip.durationMinutes * 60000).toISOString() : null);
             const reasonLabels: Record<string, string> = {
               CLIENT: 'Client', RESTAURANT: 'Restaurant',
               GAS: 'Carburant', OFFICE: 'Bureau', OTHER: 'Autre',
             };
-            const events: { type: 'start'|'stop'|'end'; time: string|null; label: string; sublabel?: string; coord: [number,number]|null; notes?: string }[] = [
+            type TimelineEvent = {
+              type: 'start' | 'stop' | 'idle' | 'end';
+              time: string | null;
+              label: string;
+              sublabel?: string;
+              coord: [number, number] | null;
+              notes?: string;
+              // idle-only fields
+              resumeTime?: string;
+              durationMs?: number;
+            };
+            const events: TimelineEvent[] = [
               {
                 type: 'start', time: trip.createdAt, label: 'Départ',
                 sublabel: trip.startAddress,
@@ -339,14 +363,27 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                 type: 'stop' as const, time: s.stoppedAt,
                 label: reasonLabels[s.reason] ?? s.reason,
                 sublabel: s.address, notes: s.notes,
-                coord: (s.lat != null && s.lng != null ? [s.lat, s.lng] : null) as [number,number]|null,
+                coord: (s.lat != null && s.lng != null ? [s.lat, s.lng] : null) as [number, number] | null,
+              })),
+              ...idlePeriods.map((idle, idx) => ({
+                type: 'idle' as const,
+                time: new Date(idle.startTime).toISOString(),
+                resumeTime: new Date(idle.resumeTime ?? idle.endTime).toISOString(),
+                durationMs: idle.durationMs,
+                label: 'Arrêt détecté',
+                sublabel: idleAddresses[idx],
+                coord: [idle.lat, idle.lng] as [number, number],
               })),
               ...(endIso || trip.endAddress ? [{
                 type: 'end' as const, time: endIso, label: 'Arrivée',
                 sublabel: trip.endAddress,
-                coord: (polyline.length >= 2 ? polyline[polyline.length - 1] : hasEndCoords ? [trip.endLat!, trip.endLng!] : null) as [number,number]|null,
+                coord: (polyline.length >= 2 ? polyline[polyline.length - 1] : hasEndCoords ? [trip.endLat!, trip.endLng!] : null) as [number, number] | null,
               }] : []),
-            ];
+            ].sort((a, b) => {
+              if (!a.time) return 1;
+              if (!b.time) return -1;
+              return new Date(a.time).getTime() - new Date(b.time).getTime();
+            });
 
             return (
               <div className={`px-5 py-4 border-t ${divider}`}>
@@ -377,6 +414,7 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                       : event.type === 'end'
                       ? 'hover:bg-red-50 dark:hover:bg-red-900/20'
                       : 'hover:bg-amber-50 dark:hover:bg-amber-900/20';
+                    const dotIcon = event.type === 'start' ? 'D' : event.type === 'end' ? 'A' : event.type === 'idle' ? '🅿' : '⏸';
                     return (
                       <div key={idx}>
                         <div
@@ -384,15 +422,25 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                           onClick={() => flyTo(event.coord)}
                         >
                           <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 z-10 font-bold ${dotClass}`}>
-                            {event.type === 'start' ? 'D' : event.type === 'end' ? 'A' : '⏸'}
+                            {dotIcon}
                           </div>
                           <div className="flex-1 min-w-0 pt-0.5">
                             <div className="flex items-center gap-2 flex-wrap">
                               {event.time && <span className={`text-xs font-semibold ${timeClass}`}>{fmtTime(event.time)}</span>}
                               <span className="text-xs font-medium">{event.label}</span>
+                              {event.type === 'idle' && event.durationMs != null && (
+                                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${isDark ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'}`}>
+                                  {formatDurationMs(event.durationMs)}
+                                </span>
+                              )}
                               {event.coord && <span className={`text-xs ${isDark ? 'text-surface-500' : 'text-slate-400'}`}>🗺️</span>}
                             </div>
                             {event.sublabel && <p className={`text-xs mt-0.5 ${sub}`}>{event.sublabel}</p>}
+                            {event.type === 'idle' && event.resumeTime && (
+                              <p className={`text-xs mt-0.5 ${sub}`}>
+                                Reprise à {fmtTime(event.resumeTime)}
+                              </p>
+                            )}
                             {event.notes && <p className={`text-xs mt-0.5 italic ${sub}`}>{event.notes}</p>}
                           </div>
                         </div>
@@ -416,24 +464,7 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
             );
           })()}
 
-          {/* Idle periods list */}
-          {idlePeriods.length > 0 && (
-            <div className={`px-5 py-4 border-t ${divider}`}>
-              <h3 className="text-sm font-semibold mb-2">Arrêts détectés</h3>
-              <div className="space-y-1.5">
-                {idlePeriods.map((idle, idx) => (
-                  <div key={idx} className={`flex items-center justify-between text-sm ${sub}`}>
-                    <span>
-                      🟡 {new Date(idle.startTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                      {' – '}
-                      {new Date(idle.endTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <span className="font-medium">{formatDurationMs(idle.durationMs)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* Notes */}
           {trip.notes && (

@@ -4,6 +4,7 @@ export type Waypoint = [number, number, number];
 export interface IdlePeriod {
   startTime: number;
   endTime: number;
+  resumeTime: number | null; // timestamp of first waypoint OUTSIDE the radius (actual departure)
   durationMs: number;
   lat: number;
   lng: number;
@@ -60,6 +61,7 @@ export function findIdlePeriods(
       periods.push({
         startTime: anchorT,
         endTime: lastInWindow[2],
+        resumeTime: waypoints[j]?.[2] ?? null,
         durationMs,
         lat: anchorLat,
         lng: anchorLng,
@@ -81,7 +83,13 @@ export function formatDuration(minutes: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
-/** Format milliseconds as "Xh Ym" or "Ym" */
+/** Format milliseconds as "Xh Ym Zs", "Ym Zs", or "Zs" */
 export function formatDurationMs(ms: number): string {
-  return formatDuration(Math.round(ms / 60_000));
+  const totalSec = Math.round(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  return `${s}s`;
 }

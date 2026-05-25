@@ -38,6 +38,7 @@ import {
   getCurrentLocation,
   reverseGeocode,
   calculateTotalKm,
+  detectCurrentIdle,
 } from '../lib/gps';
 
 // Expo Go blocks background location on Android — use foreground polling instead
@@ -102,6 +103,9 @@ export default function TripsScreen({ onLogout }: Props) {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const waypointRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Tracks the startTime (ms) of the idle period for which we already auto-submitted a stop,
+  // so we don't send the same stop twice during the same idle window.
+  const idleStopSentAtRef = useRef<number | null>(null);
 
   // ─── Load initial state ───────────────────────────────────────────────────
 
@@ -154,16 +158,45 @@ export default function TripsScreen({ onLogout }: Props) {
     };
   }, [activeTripStart]);
 
-  // ─── Waypoint count refresh ───────────────────────────────────────────────
+  // ─── Waypoint count refresh + auto idle-stop detection ─────────────────────
 
   useEffect(() => {
     if (activeTripId) {
       waypointRefreshRef.current = setInterval(async () => {
         const wps = await getWaypoints(activeTripId);
         setWaypointCount(wps.length);
+
+        // ── Auto-detect stops (idle >= 4 min within 100 m) ──────────────────
+        const idle = detectCurrentIdle(wps);
+        if (idle) {
+          // Only send once per idle window (compare by startTime)
+          if (idleStopSentAtRef.current !== idle.startTime) {
+            idleStopSentAtRef.current = idle.startTime;
+            try {
+              const addr = await reverseGeocode(idle.lat, idle.lng);
+              await addStop(activeTripId, {
+                reason: 'OTHER',
+                address: addr,
+                lat: idle.lat,
+                lng: idle.lng,
+                stoppedAt: new Date(idle.startTime).toISOString(),
+              });
+              // Refresh trip list so the new stop appears if the user looks
+              const updated = await getMyTrips();
+              setTrips(updated);
+            } catch {
+              // Non-fatal — will retry on next 15 s tick if still idle
+              idleStopSentAtRef.current = null;
+            }
+          }
+        } else {
+          // Device is moving again — reset so the next stop is picked up
+          idleStopSentAtRef.current = null;
+        }
       }, 15_000);
     } else {
       if (waypointRefreshRef.current) clearInterval(waypointRefreshRef.current);
+      idleStopSentAtRef.current = null;
     }
     return () => {
       if (waypointRefreshRef.current) clearInterval(waypointRefreshRef.current);
@@ -361,9 +394,15 @@ export default function TripsScreen({ onLogout }: Props) {
       let totalKm: number;
       if (method === 'OSRM') {
         const road = await osrmRouteKm(enriched);
+        if (road == null) {
+          Alert.alert('OSRM indisponible', 'Calcul de distance par GPS (haversine) à la place.');
+        }
         totalKm = road ?? calculateTotalKm(enriched);
       } else if (method === 'GOOGLE') {
         const road = await googleRouteKm(enriched);
+        if (road == null) {
+          Alert.alert('Google indisponible', 'Calcul de distance par GPS (haversine) à la place.');
+        }
         totalKm = road ?? calculateTotalKm(enriched);
       } else {
         totalKm = calculateTotalKm(enriched);

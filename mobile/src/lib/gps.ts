@@ -32,6 +32,52 @@ export function calculateTotalKm(waypoints: Waypoint[]): number {
   return Math.round(total * 10) / 10;
 }
 
+// ─── Idle / stop detection ────────────────────────────────────────────────────
+
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  return haversineKm(lat1, lng1, lat2, lng2) * 1000;
+}
+
+export interface IdleInfo {
+  startTime: number;   // ms timestamp — when the device first stopped
+  lat: number;
+  lng: number;
+  durationMs: number;  // how long idle so far
+}
+
+/**
+ * Returns info about an ACTIVE idle period (device currently stopped) or null.
+ * Walks backwards from the most recent waypoint: as long as each prior point
+ * is within radiusM of the latest point, it is part of the same stationary
+ * cluster. If the cluster spans >= minMs the device is considered idle.
+ */
+export function detectCurrentIdle(
+  waypoints: Waypoint[],
+  radiusM = 100,
+  minMs = 4 * 60_000,
+): IdleInfo | null {
+  if (waypoints.length < 2) return null;
+  const latest = waypoints[waypoints.length - 1];
+  let clusterStart = waypoints.length - 1;
+  for (let i = waypoints.length - 2; i >= 0; i--) {
+    if (haversineM(latest[0], latest[1], waypoints[i][0], waypoints[i][1]) <= radiusM) {
+      clusterStart = i;
+    } else {
+      break;
+    }
+  }
+  const durationMs = latest[2] - waypoints[clusterStart][2];
+  if (durationMs >= minMs) {
+    return {
+      startTime: waypoints[clusterStart][2],
+      lat: waypoints[clusterStart][0],
+      lng: waypoints[clusterStart][1],
+      durationMs,
+    };
+  }
+  return null;
+}
+
 // ─── Background task definition ──────────────────────────────────────────────
 // IMPORTANT: This must be defined at module scope, before registerRootComponent.
 // It is activated by importing this file in index.ts.
