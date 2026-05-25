@@ -255,6 +255,9 @@ export interface RepTrip {
   endLat?: number;
   endLng?: number;
   totalKm?: number;
+  durationMinutes?: number;
+  waypointsJson?: string;
+  endedAt?: string;
   createdAt: string;
   stops: RepTripStop[];
 }

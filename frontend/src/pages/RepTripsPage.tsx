@@ -10,13 +10,16 @@ import {
   deleteRepTripStop,
   reverseGeocode,
   osrmRouteKm,
+  googleRouteKm,
 } from '../lib/api';
 import type { RepTrip, RepTripStop, RepTripStopReason } from '../types/api';
 import PageHeader from '../components/PageHeader';
+import TripDetailModal from '../components/TripDetailModal';
+import { formatDuration } from '../lib/tripUtils';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatDuration(startIso: string): string {
+function formatActiveDuration(startIso: string): string {
   const diffMs = Date.now() - new Date(startIso).getTime();
   const totalSec = Math.floor(diffMs / 1000);
   const h = Math.floor(totalSec / 3600);
@@ -208,10 +211,10 @@ interface ActiveTripBannerProps {
 }
 
 const ActiveTripBanner: React.FC<ActiveTripBannerProps> = ({ trip, isDark, t, onAddStop, onEndTrip, endingTrip }) => {
-  const [elapsed, setElapsed] = useState(() => formatDuration(trip.createdAt));
+  const [elapsed, setElapsed] = useState(() => formatActiveDuration(trip.createdAt));
 
   useEffect(() => {
-    const id = setInterval(() => setElapsed(formatDuration(trip.createdAt)), 1000);
+    const id = setInterval(() => setElapsed(formatActiveDuration(trip.createdAt)), 1000);
     return () => clearInterval(id);
   }, [trip.createdAt]);
 
@@ -281,19 +284,31 @@ interface TripCardProps {
   t: Record<string, string>;
   onDelete: (id: number) => void;
   onDeleteStop: (tripId: number, stopId: number) => void;
+  onSelect: (trip: RepTrip) => void;
 }
 
-const TripCard: React.FC<TripCardProps> = ({ trip, isDark, t, onDelete, onDeleteStop }) => {
+const TripCard: React.FC<TripCardProps> = ({ trip, isDark, t, onDelete, onDeleteStop, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
   const card = isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-slate-200';
   const sub = isDark ? 'text-surface-400' : 'text-slate-500';
 
   return (
-    <div className={`rounded-xl border p-4 shadow-sm ${card}`}>
+    <div
+      className={`rounded-xl border p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow ${card}`}
+      onClick={() => onSelect(trip)}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-sm font-medium ${isDark ? 'text-surface-300' : 'text-slate-500'}`}>{fmtDate(trip.date)}</span>
+            <span className={`text-sm font-medium ${isDark ? 'text-surface-300' : 'text-slate-500'}`}>
+              {fmtDate(trip.date)}
+              {' · '}{fmtTime(trip.createdAt)}
+              {(() => {
+                const endIso = trip.endedAt
+                  ?? (trip.durationMinutes != null ? new Date(new Date(trip.createdAt).getTime() + trip.durationMinutes * 60000).toISOString() : null);
+                return endIso ? ` – ${fmtTime(endIso)}` : '';
+              })()}
+            </span>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
               trip.status === 'IN_PROGRESS'
                 ? 'bg-yellow-100 text-yellow-700'
@@ -311,9 +326,20 @@ const TripCard: React.FC<TripCardProps> = ({ trip, isDark, t, onDelete, onDelete
             {trip.totalKm != null && (
               <span className="font-semibold text-brand-500">{trip.totalKm} {t.repTripsKm}</span>
             )}
-            {trip.distanceMethod === 'ROAD' ? (
+            {trip.durationMinutes != null && (
+              <span className={`text-xs ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>🕐 {formatDuration(trip.durationMinutes)}</span>
+            )}
+            {trip.distanceMethod === 'ROAD' || trip.distanceMethod === 'OSRM' ? (
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${isDark ? 'bg-sky-900/50 text-sky-300' : 'bg-sky-100 text-sky-700'}`}>
                 🛣️ {t.repTripsMethodBadgeRoad}
+              </span>
+            ) : trip.distanceMethod === 'GOOGLE' ? (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${isDark ? 'bg-green-900/50 text-green-300' : 'bg-green-100 text-green-700'}`}>
+                🗺️ Google
+              </span>
+            ) : trip.distanceMethod === 'GPS' ? (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${isDark ? 'bg-violet-900/50 text-violet-300' : 'bg-violet-100 text-violet-700'}`}>
+                📍 GPS
               </span>
             ) : (
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${isDark ? 'bg-surface-700 text-surface-400' : 'bg-slate-100 text-slate-500'}`}>
@@ -322,7 +348,10 @@ const TripCard: React.FC<TripCardProps> = ({ trip, isDark, t, onDelete, onDelete
             )}
             {trip.stops.length > 0 && (
               <button
-                onClick={() => setExpanded((e) => !e)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpanded((v) => !v);
+                }}
                 className={`text-xs underline ${isDark ? 'text-brand-400' : 'text-brand-600'}`}
               >
                 {trip.stops.length} {t.repTripsStops} {expanded ? '▲' : '▼'}
@@ -331,7 +360,8 @@ const TripCard: React.FC<TripCardProps> = ({ trip, isDark, t, onDelete, onDelete
           </div>
         </div>
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             if (window.confirm(t.repTripsDeleteConfirm)) onDelete(trip.id);
           }}
           className={`shrink-0 p-1.5 rounded-lg transition-colors ${isDark ? 'text-surface-500 hover:text-red-400 hover:bg-surface-700' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
@@ -353,7 +383,10 @@ const TripCard: React.FC<TripCardProps> = ({ trip, isDark, t, onDelete, onDelete
                 {s.notes && <span className={`text-xs italic ${sub}`}>— {s.notes}</span>}
               </div>
               <button
-                onClick={() => onDeleteStop(trip.id, s.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteStop(trip.id, s.id);
+                }}
                 className={`shrink-0 p-1 rounded transition-colors ${isDark ? 'text-surface-600 hover:text-red-400' : 'text-slate-300 hover:text-red-400'}`}
                 title={t.repTripsDeleteStop}
               >
@@ -553,6 +586,7 @@ const RepTripsPage: React.FC = () => {
   const [showStartModal, setShowStartModal] = useState(false);
   const [showStopModal, setShowStopModal] = useState(false);
   const [endingTrip, setEndingTrip] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<RepTrip | null>(null);
 
   const activeTrip = trips.find((t) => t.status === 'IN_PROGRESS');
   const completedTrips = trips.filter((t) => t.status === 'COMPLETED');
@@ -610,15 +644,19 @@ const RepTripsPage: React.FC = () => {
         });
       }
 
-      // If road-distance method and we have both start & end coords, fetch km from OSRM
+      // Fetch road distance from OSRM (ROAD) or Google Routes (GOOGLE)
       let totalKm: number | undefined;
-      if (
-        activeTrip.distanceMethod === 'ROAD' &&
+      const hasCoords =
         activeTrip.startLat != null && activeTrip.startLng != null &&
-        endLat != null && endLng != null
-      ) {
-        const km = await osrmRouteKm(activeTrip.startLat, activeTrip.startLng, endLat, endLng);
-        if (km != null) totalKm = km;
+        endLat != null && endLng != null;
+      if (hasCoords) {
+        if (activeTrip.distanceMethod === 'ROAD') {
+          const km = await osrmRouteKm(activeTrip.startLat!, activeTrip.startLng!, endLat!, endLng!);
+          if (km != null) totalKm = km;
+        } else if (activeTrip.distanceMethod === 'GOOGLE') {
+          const km = await googleRouteKm(activeTrip.startLat!, activeTrip.startLng!, endLat!, endLng!);
+          if (km != null) totalKm = km;
+        }
       }
 
       const updated = await updateRepTrip(activeTrip.id, {
@@ -708,6 +746,7 @@ const RepTripsPage: React.FC = () => {
                 t={t as unknown as Record<string, string>}
                 onDelete={handleDeleteTrip}
                 onDeleteStop={handleDeleteStop}
+                onSelect={setSelectedTrip}
               />
             ))}
           </div>
@@ -730,6 +769,17 @@ const RepTripsPage: React.FC = () => {
           t={t as unknown as Record<string, string>}
           onClose={() => setShowStopModal(false)}
           onAdded={handleStopAdded}
+        />
+      )}
+      {selectedTrip && (
+        <TripDetailModal
+          trip={selectedTrip}
+          isDark={isDark}
+          onClose={() => setSelectedTrip(null)}
+          onUpdate={(updated) => {
+            setTrips((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+            setSelectedTrip(updated);
+          }}
         />
       )}
     </div>

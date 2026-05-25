@@ -6,6 +6,7 @@ if (typeof window !== 'undefined' && typeof (window as any).global === 'undefine
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import 'leaflet/dist/leaflet.css';
 
 import Root from './Root';
 

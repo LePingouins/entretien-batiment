@@ -825,6 +825,22 @@ export async function osrmRouteKm(
   }
   return null;
 }
+
+/** Returns road distance in km via the backend Google Routes proxy.
+ *  Falls back to null if the API key is not configured or the call fails. */
+export async function googleRouteKm(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number,
+): Promise<number | null> {
+  try {
+    const res = await api.post<{ km: number | '' }>('/api/rep-trips/route-distance', [[lat1, lng1], [lat2, lng2]]);
+    const km = res.data.km;
+    if (typeof km === 'number' && km > 0) return km;
+  } catch {
+    // ignore; caller falls back to Haversine
+  }
+  return null;
+}
 export async function deleteSubscription(id: number): Promise<void> {
   await api.delete(`/api/admin/subscriptions/${id}`);
 }

@@ -1,0 +1,1 @@
+ALTER TABLE rep_trip ADD COLUMN ended_at TIMESTAMP;

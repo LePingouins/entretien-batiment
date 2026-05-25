@@ -50,7 +50,16 @@ public class RepTrip {
     private Double totalKm;
 
     @Column(name = "distance_method", nullable = false)
-    private String distanceMethod = "HAVERSINE"; // HAVERSINE | ROAD
+    private String distanceMethod = "HAVERSINE"; // HAVERSINE | ROAD | GPS | OSRM | GOOGLE
+
+    @Column(name = "duration_minutes")
+    private Integer durationMinutes;
+
+    @Column(name = "waypoints_json", columnDefinition = "TEXT")
+    private String waypointsJson;
+
+    @Column(name = "ended_at")
+    private LocalDateTime endedAt;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -107,6 +116,15 @@ public class RepTrip {
 
     public String getDistanceMethod() { return distanceMethod; }
     public void setDistanceMethod(String distanceMethod) { this.distanceMethod = distanceMethod; }
+
+    public Integer getDurationMinutes() { return durationMinutes; }
+    public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
+
+    public String getWaypointsJson() { return waypointsJson; }
+    public void setWaypointsJson(String waypointsJson) { this.waypointsJson = waypointsJson; }
+
+    public LocalDateTime getEndedAt() { return endedAt; }
+    public void setEndedAt(LocalDateTime endedAt) { this.endedAt = endedAt; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

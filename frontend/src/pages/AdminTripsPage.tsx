@@ -4,6 +4,7 @@ import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { getAdminRepTrips, getAdminRepTripsExportUrl } from '../lib/api';
 import type { RepTrip, RepTripStop, RepTripStopReason } from '../types/api';
 import PageHeader from '../components/PageHeader';
+import TripDetailModal from '../components/TripDetailModal';
 import api from '../lib/api';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -33,9 +34,10 @@ interface AdminTripRowProps {
   trip: RepTrip;
   isDark: boolean;
   t: Record<string, string>;
+  onSelect: (trip: RepTrip) => void;
 }
 
-const AdminTripRow: React.FC<AdminTripRowProps> = ({ trip, isDark, t }) => {
+const AdminTripRow: React.FC<AdminTripRowProps> = ({ trip, isDark, t, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
   const sub = isDark ? 'text-surface-400' : 'text-slate-500';
   const border = isDark ? 'border-surface-700' : 'border-slate-100';
@@ -43,10 +45,20 @@ const AdminTripRow: React.FC<AdminTripRowProps> = ({ trip, isDark, t }) => {
   return (
     <>
       <tr
-        className={`cursor-pointer hover:${isDark ? 'bg-surface-750' : 'bg-slate-50'} transition-colors`}
-        onClick={() => setExpanded((e) => !e)}
+        className={`cursor-pointer transition-colors ${isDark ? 'hover:bg-surface-700' : 'hover:bg-slate-50'}`}
+        onClick={() => onSelect(trip)}
       >
-        <td className={`px-4 py-3 text-sm ${isDark ? 'text-surface-300' : 'text-slate-600'}`}>{fmtDate(trip.date)}</td>
+        <td className={`px-4 py-3 text-sm ${isDark ? 'text-surface-300' : 'text-slate-600'}`}>
+          <div>{fmtDate(trip.date)}</div>
+          <div className={`text-xs mt-0.5 ${isDark ? 'text-surface-500' : 'text-slate-400'}`}>
+            {fmtTime(trip.createdAt)}
+            {(() => {
+              const endIso = trip.endedAt
+                ?? (trip.durationMinutes != null ? new Date(new Date(trip.createdAt).getTime() + trip.durationMinutes * 60000).toISOString() : null);
+              return endIso ? ` – ${fmtTime(endIso)}` : '';
+            })()}
+          </div>
+        </td>
         <td className={`px-4 py-3 text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{trip.userEmail || `#${trip.userId}`}</td>
         <td className={`px-4 py-3 text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{trip.purpose || '—'}</td>
         <td className={`px-4 py-3 text-sm ${sub}`} title={trip.startAddress}>{truncate(trip.startAddress, 30)}</td>
@@ -63,7 +75,12 @@ const AdminTripRow: React.FC<AdminTripRowProps> = ({ trip, isDark, t }) => {
         </td>
         <td className={`px-4 py-3 text-sm text-center ${sub}`}>
           {trip.stops.length > 0 ? (
-            <span className="underline">{trip.stops.length} {expanded ? '▲' : '▼'}</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+              className="underline"
+            >
+              {trip.stops.length} {expanded ? '▲' : '▼'}
+            </button>
           ) : '—'}
         </td>
       </tr>
@@ -102,6 +119,7 @@ const AdminTripsPage: React.FC = () => {
   const [trips, setTrips] = useState<RepTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedTrip, setSelectedTrip] = useState<RepTrip | null>(null);
 
   // Filters
   const [startDate, setStartDate] = useState('');
@@ -275,6 +293,7 @@ const AdminTripsPage: React.FC = () => {
                       trip={trip}
                       isDark={isDark}
                       t={t as unknown as Record<string, string>}
+                      onSelect={setSelectedTrip}
                     />
                   ))}
                 </tbody>
@@ -283,6 +302,18 @@ const AdminTripsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {selectedTrip && (
+        <TripDetailModal
+          trip={selectedTrip}
+          isDark={isDark}
+          onClose={() => setSelectedTrip(null)}
+          onUpdate={(updated) => {
+            setTrips((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+            setSelectedTrip(updated);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -6,7 +6,12 @@ import com.entretienbatiment.backend.modules.reptrips.model.RepTrip;
 import com.entretienbatiment.backend.modules.reptrips.model.RepTripStop;
 import com.entretienbatiment.backend.modules.reptrips.repository.RepTripRepository;
 import com.entretienbatiment.backend.modules.reptrips.repository.RepTripStopRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,9 +19,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +44,9 @@ public class RepTripController {
 
     @Autowired
     private AppUserRepository userRepository;
+
+    @Value("${google.routes.api.key:}")
+    private String googleRoutesApiKey;
 
     // ─── Helper: resolve current user ────────────────────────────────────────
 
@@ -93,12 +106,20 @@ public class RepTripController {
             return ResponseEntity.status(403).build();
         }
 
-        if (body.containsKey("status"))       trip.setStatus((String) body.get("status"));
-        if (body.containsKey("purpose"))      trip.setPurpose((String) body.get("purpose"));
-        if (body.containsKey("notes"))        trip.setNotes((String) body.get("notes"));
-        if (body.containsKey("endAddress"))   trip.setEndAddress((String) body.get("endAddress"));
-        if (body.containsKey("endLat"))       trip.setEndLat(toDouble(body.get("endLat")));
-        if (body.containsKey("endLng"))       trip.setEndLng(toDouble(body.get("endLng")));
+        if (body.containsKey("status")) {
+            trip.setStatus((String) body.get("status"));
+            if ("COMPLETED".equals(trip.getStatus()) && trip.getEndedAt() == null) {
+                trip.setEndedAt(java.time.LocalDateTime.now());
+            }
+        }
+        if (body.containsKey("purpose"))          trip.setPurpose((String) body.get("purpose"));
+        if (body.containsKey("notes"))            trip.setNotes((String) body.get("notes"));
+        if (body.containsKey("startAddress"))     trip.setStartAddress((String) body.get("startAddress"));
+        if (body.containsKey("endAddress"))       trip.setEndAddress((String) body.get("endAddress"));
+        if (body.containsKey("endLat"))           trip.setEndLat(toDouble(body.get("endLat")));
+        if (body.containsKey("endLng"))           trip.setEndLng(toDouble(body.get("endLng")));
+        if (body.containsKey("durationMinutes"))  trip.setDurationMinutes(toInteger(body.get("durationMinutes")));
+        if (body.containsKey("waypointsJson"))    trip.setWaypointsJson((String) body.get("waypointsJson"));
 
         // Auto-compute totalKm when ending trip with coordinates
         if (body.containsKey("totalKm")) {
@@ -164,6 +185,9 @@ public class RepTripController {
         if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
             return ResponseEntity.status(403).build();
         }
+        // Verify the stop actually belongs to this trip (prevents cross-trip stop deletion)
+        boolean stopBelongsToTrip = trip.getStops().stream().anyMatch(s -> s.getId().equals(stopId));
+        if (!stopBelongsToTrip) return ResponseEntity.notFound().build();
         stopRepository.deleteById(stopId);
         return ResponseEntity.noContent().build();
     }
@@ -257,6 +281,75 @@ public class RepTripController {
                 .body(bytes);
     }
 
+    // ─── Google Routes proxy ──────────────────────────────────────────────────
+    // Receives GPS waypoints from the mobile app and calls Google Routes API
+    // server-side so the API key is never exposed in the app binary.
+
+    @PostMapping("/route-distance")
+    public ResponseEntity<Map<String, Object>> routeDistance(
+            @RequestBody List<List<Double>> waypoints,
+            Authentication auth) throws Exception {
+
+        if (googleRoutesApiKey == null || googleRoutesApiKey.isBlank() || waypoints.size() < 2) {
+            return ResponseEntity.badRequest().body(Map.of("error", "unavailable"));
+        }
+
+        // Sample to max 27 points (origin + 25 intermediates + destination)
+        int maxTotal = 27;
+        int step = Math.max(1, waypoints.size() / maxTotal);
+        List<List<Double>> sampled = new ArrayList<>();
+        for (int i = 0; i < waypoints.size(); i += step) {
+            sampled.add(waypoints.get(i));
+        }
+        List<Double> last = waypoints.get(waypoints.size() - 1);
+        if (!sampled.get(sampled.size() - 1).equals(last)) {
+            sampled.add(last);
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode body = mapper.createObjectNode();
+        body.set("origin", makeWaypoint(mapper, sampled.get(0)));
+        body.set("destination", makeWaypoint(mapper, sampled.get(sampled.size() - 1)));
+        ArrayNode intermediates = mapper.createArrayNode();
+        for (int i = 1; i < sampled.size() - 1; i++) {
+            intermediates.add(makeWaypoint(mapper, sampled.get(i)));
+        }
+        body.set("intermediates", intermediates);
+        body.put("travelMode", "DRIVE");
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://routes.googleapis.com/directions/v2:computeRoutes"))
+                .header("Content-Type", "application/json")
+                .header("X-Goog-Api-Key", googleRoutesApiKey)
+                .header("X-Goog-FieldMask", "routes.distanceMeters")
+                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode result = mapper.readTree(response.body());
+
+        JsonNode routes = result.get("routes");
+        if (routes != null && routes.isArray() && !routes.isEmpty()
+                && routes.get(0).has("distanceMeters")) {
+            double km = Math.round(routes.get(0).get("distanceMeters").asDouble() / 100.0) / 10.0;
+            return ResponseEntity.ok(Map.of("km", km));
+        }
+
+        return ResponseEntity.ok(Map.of("km", ""));
+    }
+
+    private static ObjectNode makeWaypoint(ObjectMapper mapper, List<Double> latLng) {
+        ObjectNode wp = mapper.createObjectNode();
+        ObjectNode location = mapper.createObjectNode();
+        ObjectNode ll = mapper.createObjectNode();
+        ll.put("latitude", latLng.get(0));
+        ll.put("longitude", latLng.get(1));
+        location.set("latLng", ll);
+        wp.set("location", location);
+        return wp;
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private static String csvVal(String v) {
@@ -271,6 +364,12 @@ public class RepTripController {
         if (val == null) return null;
         if (val instanceof Number) return ((Number) val).doubleValue();
         try { return Double.parseDouble(val.toString()); } catch (NumberFormatException e) { return null; }
+    }
+
+    private static Integer toInteger(Object val) {
+        if (val == null) return null;
+        if (val instanceof Number) return ((Number) val).intValue();
+        try { return Integer.parseInt(val.toString()); } catch (NumberFormatException e) { return null; }
     }
 
     private static LocalDate parseDate(String s) {

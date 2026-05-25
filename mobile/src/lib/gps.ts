@@ -1,0 +1,158 @@
+import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
+import { getActiveTripId, appendWaypoints, Waypoint } from './storage';
+
+export const WAYPOINT_TASK = 'ENTRETIEN_WAYPOINT_TASK';
+
+// ─── Haversine distance ───────────────────────────────────────────────────────
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export function calculateTotalKm(waypoints: Waypoint[]): number {
+  if (waypoints.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < waypoints.length; i++) {
+    total += haversineKm(
+      waypoints[i - 1][0],
+      waypoints[i - 1][1],
+      waypoints[i][0],
+      waypoints[i][1]
+    );
+  }
+  return Math.round(total * 10) / 10;
+}
+
+// ─── Background task definition ──────────────────────────────────────────────
+// IMPORTANT: This must be defined at module scope, before registerRootComponent.
+// It is activated by importing this file in index.ts.
+
+TaskManager.defineTask(WAYPOINT_TASK, async ({ data, error }) => {
+  if (error) {
+    console.warn('[GPS] Task error:', error);
+    return;
+  }
+  const { locations } = data as { locations: Location.LocationObject[] };
+  if (!locations?.length) return;
+
+  const tripId = await getActiveTripId();
+  if (!tripId) return;
+
+  const points: Waypoint[] = locations.map((loc) => [
+    loc.coords.latitude,
+    loc.coords.longitude,
+    loc.timestamp ?? Date.now(),
+  ]);
+  await appendWaypoints(tripId, points);
+});
+
+// ─── Start / stop tracking ────────────────────────────────────────────────────
+
+// ─── Foreground tracking (Expo Go fallback) ─────────────────────────────────
+// Uses watchPositionAsync: records a waypoint every 100 metres moved (or every
+// 30 seconds), which still yields ~70 points on a 7 km trip — plenty for
+// OSRM / Google sampling — while dramatically reducing GPS polling frequency.
+
+let _positionWatcher: Location.LocationSubscription | null = null;
+
+export async function startForegroundTracking(tripId: number): Promise<void> {
+  stopForegroundTracking();
+  // Capture first point immediately
+  try {
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    await appendWaypoints(tripId, [[loc.coords.latitude, loc.coords.longitude, loc.timestamp ?? Date.now()]]);
+  } catch {}
+  _positionWatcher = await Location.watchPositionAsync(
+    {
+      accuracy: Location.Accuracy.High,
+      distanceInterval: 100,  // new waypoint every 100 metres (~70 pts/7 km trip)
+      timeInterval: 30_000,   // or every 30 seconds as fallback
+    },
+    async (location) => {
+      await appendWaypoints(tripId, [
+        [location.coords.latitude, location.coords.longitude, location.timestamp ?? Date.now()],
+      ]);
+    }
+  );
+}
+
+export function stopForegroundTracking(): void {
+  if (_positionWatcher) {
+    _positionWatcher.remove();
+    _positionWatcher = null;
+  }
+}
+
+export function isForegroundTracking(): boolean {
+  return _positionWatcher !== null;
+}
+
+// ─── Location permissions ─────────────────────────────────────────────────────
+
+export async function requestLocationPermissions(): Promise<boolean> {
+  const { status: fg } = await Location.requestForegroundPermissionsAsync();
+  if (fg !== 'granted') return false;
+  const { status: bg } = await Location.requestBackgroundPermissionsAsync();
+  return bg === 'granted';
+}
+
+export async function startLocationTracking(): Promise<void> {
+  const already = await Location.hasStartedLocationUpdatesAsync(WAYPOINT_TASK);
+  if (already) return;
+  await Location.startLocationUpdatesAsync(WAYPOINT_TASK, {
+    accuracy: Location.Accuracy.High,
+    timeInterval: 30_000,
+    distanceInterval: 100,
+    showsBackgroundLocationIndicator: true,
+    foregroundService: {
+      notificationTitle: 'Trajet en cours',
+      notificationBody: 'Enregistrement de votre trajet…',
+      notificationColor: '#1D4ED8',
+    },
+  });
+}
+
+export async function stopLocationTracking(): Promise<void> {
+  const running = await Location.hasStartedLocationUpdatesAsync(WAYPOINT_TASK);
+  if (running) {
+    await Location.stopLocationUpdatesAsync(WAYPOINT_TASK);
+  }
+}
+
+export async function getCurrentLocation(): Promise<Location.LocationObject> {
+  return Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.High,
+  });
+}
+
+// Uses Nominatim for precise house-level reverse geocoding
+export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { 'User-Agent': 'EntretienBatiment/1.0', 'Accept-Language': 'fr,en' } }
+    );
+    const data: any = await res.json();
+    if (data?.address) {
+      const a = data.address;
+      const parts = [
+        a.house_number,
+        a.road,
+        a.city ?? a.town ?? a.village ?? a.municipality,
+      ].filter(Boolean);
+      if (parts.length > 0) return parts.join(', ');
+    }
+  } catch {
+    // fall through to coordinate fallback
+  }
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
