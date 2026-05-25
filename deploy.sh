@@ -34,6 +34,7 @@ echo ""
 # ─── 1. Pull latest code ──────────────────────────────────────────────────────
 step "Pulling latest code from GitHub..."
 cd "$REPO_DIR"
+git checkout -- frontend/package-lock.json 2>/dev/null || true
 git pull origin master
 
 # ─── 2. Build backend ─────────────────────────────────────────────────────────
