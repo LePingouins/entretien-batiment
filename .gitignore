@@ -34,6 +34,7 @@ backend/bin/
 *.ear
 *.log
 hs_err_pid*
+backend/.env.production
 
 # =========================
 # Frontend (Node/Vite/React)
@@ -46,6 +47,7 @@ frontend/*.local
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
+ frontend/.env.production
 
 # =========================
 # Environment & Secrets

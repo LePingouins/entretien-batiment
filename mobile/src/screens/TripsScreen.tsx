@@ -20,6 +20,8 @@ import {
   getActiveTripId,
   getActiveTripStart,
   clearActiveTripId,
+  saveActiveTripStartCoords,
+  getActiveTripStartCoords,
   getWaypoints,
   clearWaypoints,
   saveActiveTripMethod,
@@ -84,7 +86,7 @@ export default function TripsScreen({ onLogout }: Props) {
   const [endConfirmVisible, setEndConfirmVisible] = useState(false);
   const [endAddrInput, setEndAddrInput] = useState('');
   const [endConfirmLoading, setEndConfirmLoading] = useState(false);
-  type PendingEnd = { lat: number; lng: number; waypoints: import('../lib/storage').Waypoint[]; method: string };
+  type PendingEnd = { lat: number; lng: number; startLat: number | null; startLng: number | null; waypoints: import('../lib/storage').Waypoint[]; method: string };
   const [pendingEnd, setPendingEnd] = useState<PendingEnd | null>(null);
 
   // Add stop modal
@@ -203,6 +205,7 @@ export default function TripsScreen({ onLogout }: Props) {
       const trip = await startTrip({ startLat: lat, startLng: lng, startAddress: address, purpose, distanceMethod });
       await saveActiveTripId(trip.id);
       await saveActiveTripMethod(distanceMethod);
+      await saveActiveTripStartCoords(lat, lng);
       if (plannedDest) await savePlannedEndAddress(plannedDest);
       if (IS_EXPO_GO) {
         await startForegroundTracking(trip.id);
@@ -321,16 +324,17 @@ export default function TripsScreen({ onLogout }: Props) {
         await stopLocationTracking();
       }
 
-      const [loc, waypoints, method, plannedDest] = await Promise.all([
+      const [loc, waypoints, method, plannedDest, startCoords] = await Promise.all([
         getCurrentLocation(),
         getWaypoints(activeTripId),
         getActiveTripMethod(),
         getPlannedEndAddress(),
+        getActiveTripStartCoords(),
       ]);
       const { latitude: lat, longitude: lng } = loc.coords;
       const gpsAddr = await reverseGeocode(lat, lng);
 
-      setPendingEnd({ lat, lng, waypoints, method });
+      setPendingEnd({ lat, lng, startLat: startCoords?.[0] ?? null, startLng: startCoords?.[1] ?? null, waypoints, method });
       setEndAddrInput(plannedDest || gpsAddr);
       setEndConfirmVisible(true);
     } catch {
@@ -344,17 +348,25 @@ export default function TripsScreen({ onLogout }: Props) {
     if (!pendingEnd || !activeTripId) return;
     setEndConfirmLoading(true);
     try {
-      const { lat, lng, waypoints, method } = pendingEnd;
+      const { lat, lng, startLat, startLng, waypoints, method } = pendingEnd;
+
+      // Build enriched waypoints: prepend trip start + append trip end so the
+      // routing API covers the full route (not just first-waypoint to last-waypoint).
+      const enriched: typeof waypoints = [
+        ...(startLat != null && startLng != null ? [[startLat, startLng, waypoints[0]?.[2] ?? Date.now()] as [number, number, number]] : []),
+        ...waypoints,
+        [lat, lng, Date.now()] as [number, number, number],
+      ];
 
       let totalKm: number;
       if (method === 'OSRM') {
-        const road = await osrmRouteKm(waypoints);
-        totalKm = road ?? calculateTotalKm(waypoints);
+        const road = await osrmRouteKm(enriched);
+        totalKm = road ?? calculateTotalKm(enriched);
       } else if (method === 'GOOGLE') {
-        const road = await googleRouteKm(waypoints);
-        totalKm = road ?? calculateTotalKm(waypoints);
+        const road = await googleRouteKm(enriched);
+        totalKm = road ?? calculateTotalKm(enriched);
       } else {
-        totalKm = calculateTotalKm(waypoints);
+        totalKm = calculateTotalKm(enriched);
       }
 
       const durationMinutes = activeTripStart

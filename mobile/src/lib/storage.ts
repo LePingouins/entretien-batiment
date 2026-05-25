@@ -5,6 +5,7 @@ const TOKEN_KEY = 'auth_token';
 const ACTIVE_TRIP_ID_KEY = 'active_trip_id';
 const ACTIVE_TRIP_START_KEY = 'active_trip_start';
 const ACTIVE_TRIP_METHOD_KEY = 'active_trip_method';
+const ACTIVE_TRIP_START_COORDS_KEY = 'active_trip_start_coords';
 const WAYPOINTS_PREFIX = 'trip_waypoints_';
 const PLANNED_END_KEY = 'planned_end_address';
 
@@ -47,11 +48,21 @@ export async function getActiveTripMethod(): Promise<string> {
   return (await AsyncStorage.getItem(ACTIVE_TRIP_METHOD_KEY)) ?? 'GPS';
 }
 
+export async function saveActiveTripStartCoords(lat: number, lng: number): Promise<void> {
+  await AsyncStorage.setItem(ACTIVE_TRIP_START_COORDS_KEY, JSON.stringify([lat, lng]));
+}
+
+export async function getActiveTripStartCoords(): Promise<[number, number] | null> {
+  const val = await AsyncStorage.getItem(ACTIVE_TRIP_START_COORDS_KEY);
+  return val ? JSON.parse(val) : null;
+}
+
 export async function clearActiveTripId(): Promise<void> {
   await AsyncStorage.multiRemove([
     ACTIVE_TRIP_ID_KEY,
     ACTIVE_TRIP_START_KEY,
     ACTIVE_TRIP_METHOD_KEY,
+    ACTIVE_TRIP_START_COORDS_KEY,
     PLANNED_END_KEY,
   ]);
 }
