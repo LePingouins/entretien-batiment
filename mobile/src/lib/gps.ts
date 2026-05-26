@@ -61,7 +61,7 @@ export interface IdleInfo {
 export function detectCurrentIdle(
   waypoints: Waypoint[],
   radiusM = 100,
-  minMs = 4 * 60_000,
+  minMs = 90_000, // TODO: restore to 4 * 60_000 after testing
 ): IdleInfo | null {
   if (waypoints.length < 2) return null;
   const latest = waypoints[waypoints.length - 1];
@@ -112,12 +112,12 @@ TaskManager.defineTask(WAYPOINT_TASK, async ({ data, error }) => {
     const allWps = await getWaypoints(tripId);
     const idle = detectCurrentIdle(allWps);
     if (idle) {
-      // Save pending stop — JS thread will submit it when it next wakes up
+      // Save pending stop — JS thread will submit it when it next wakes up.
+      // Always overwrite so we keep the most recent idle period.
       await savePendingIdleStop({ tripId, ...idle });
-    } else {
-      // Moving again — clear any pending stop so it doesn't get submitted late
-      await clearPendingIdleStop();
     }
+    // Do NOT clear on movement — the JS thread clears after successful submission.
+    // Clearing here would delete the stop before the JS thread can submit it.
   } catch {}
 });
 
