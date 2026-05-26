@@ -47,14 +47,20 @@ JAR_FILE=$(ls "$BACKEND_DIR/build/libs/"*.jar | grep -v plain | head -n 1)
 step "Backend JAR: $JAR_FILE"
 
 # ─── 3. Build frontend ────────────────────────────────────────────────────────
-step "Building frontend..."
-cd "$FRONTEND_DIR"
-npm install --legacy-peer-deps --silent
-npm run build
-step "Deploying frontend to /var/www/entretien-batiment..."
-rm -rf /var/www/entretien-batiment
-cp -r "$FRONTEND_DIR/dist" /var/www/entretien-batiment
-step "Frontend deployed → /var/www/entretien-batiment"
+# Set SKIP_FRONTEND=1 to skip the build when deploying a pre-built dist
+# (useful when the server doesn't have enough RAM to run Vite).
+if [ "${SKIP_FRONTEND:-0}" = "1" ]; then
+    step "Skipping frontend build (SKIP_FRONTEND=1)."
+else
+    step "Building frontend..."
+    cd "$FRONTEND_DIR"
+    npm install --legacy-peer-deps --silent
+    npm run build
+    step "Deploying frontend to /var/www/entretien-batiment..."
+    rm -rf /var/www/entretien-batiment
+    cp -r "$FRONTEND_DIR/dist" /var/www/entretien-batiment
+    step "Frontend deployed → /var/www/entretien-batiment"
+fi
 
 # ─── 4. Restart backend ───────────────────────────────────────────────────────
 cd "$REPO_DIR"
