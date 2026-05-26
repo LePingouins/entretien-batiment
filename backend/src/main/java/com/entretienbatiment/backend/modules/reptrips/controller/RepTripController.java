@@ -327,6 +327,7 @@ public class RepTripController {
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println("[GoogleRoutes] HTTP " + response.statusCode() + " body: " + response.body());
         JsonNode result = mapper.readTree(response.body());
 
         JsonNode routes = result.get("routes");
@@ -336,7 +337,7 @@ public class RepTripController {
             return ResponseEntity.ok(Map.of("km", km));
         }
 
-        return ResponseEntity.ok(Map.of("km", ""));
+        return ResponseEntity.ok(Map.of("error", result.toString(), "km", ""));
     }
 
     private static ObjectNode makeWaypoint(ObjectMapper mapper, List<Double> latLng) {
