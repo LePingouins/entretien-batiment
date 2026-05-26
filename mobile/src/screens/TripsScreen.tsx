@@ -41,6 +41,7 @@ import {
   reverseGeocode,
   calculateTotalKm,
   detectCurrentIdle,
+  detectGapIdle,
 } from '../lib/gps';
 
 // Expo Go blocks background location on Android — use foreground polling instead
@@ -174,7 +175,8 @@ export default function TripsScreen({ onLogout }: Props) {
         // when screen is off). Fallback: inline detection for foreground use.
         const pending = await getPendingIdleStop();
         const idle = (pending?.tripId === activeTripId ? pending : null)
-          ?? detectCurrentIdle(wps);
+          ?? detectCurrentIdle(wps)
+          ?? detectGapIdle(wps);
 
         if (idle) {
           // Only send once per idle window (compare by startTime)

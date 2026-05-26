@@ -85,6 +85,33 @@ export function detectCurrentIdle(
   return null;
 }
 
+/**
+ * Fallback idle detection for when GPS does NOT fire while stationary.
+ * On many Android devices, the GPS task won't generate updates when the device
+ * hasn't moved, so the cluster above never grows. Instead, look for a large
+ * TIME GAP between consecutive waypoints — the absence of waypoints during that
+ * period means the device was stopped (no 100 m movement to trigger the task).
+ *
+ * Returns the most recent gap that meets the minMs threshold, or null.
+ */
+export function detectGapIdle(
+  waypoints: Waypoint[],
+  minMs = 90_000, // TODO: restore to 4 * 60_000 after testing
+): IdleInfo | null {
+  for (let i = waypoints.length - 1; i > 0; i--) {
+    const gap = waypoints[i][2] - waypoints[i - 1][2];
+    if (gap >= minMs) {
+      return {
+        startTime: waypoints[i - 1][2],
+        lat: waypoints[i - 1][0],
+        lng: waypoints[i - 1][1],
+        durationMs: gap,
+      };
+    }
+  }
+  return null;
+}
+
 // ─── Background task definition ──────────────────────────────────────────────
 // IMPORTANT: This must be defined at module scope, before registerRootComponent.
 // It is activated by importing this file in index.ts.
@@ -110,7 +137,7 @@ TaskManager.defineTask(WAYPOINT_TASK, async ({ data, error }) => {
   // ── Idle detection from background (runs even when JS thread is paused) ──
   try {
     const allWps = await getWaypoints(tripId);
-    const idle = detectCurrentIdle(allWps);
+    const idle = detectCurrentIdle(allWps) ?? detectGapIdle(allWps);
     if (idle) {
       // Save pending stop — JS thread will submit it when it next wakes up.
       // Always overwrite so we keep the most recent idle period.
