@@ -28,6 +28,8 @@ import {
   getActiveTripMethod,
   savePlannedEndAddress,
   getPlannedEndAddress,
+  getPendingIdleStop,
+  clearPendingIdleStop,
 } from '../lib/storage';
 import {
   requestLocationPermissions,
@@ -166,8 +168,13 @@ export default function TripsScreen({ onLogout }: Props) {
         const wps = await getWaypoints(activeTripId);
         setWaypointCount(wps.length);
 
-        // ── Auto-detect stops (idle >= 4 min within 100 m) ──────────────────
-        const idle = detectCurrentIdle(wps);
+        // ── Auto-detect stops ─────────────────────────────────────────────
+        // Primary: check storage written by the background GPS task (reliable
+        // when screen is off). Fallback: inline detection for foreground use.
+        const pending = await getPendingIdleStop();
+        const idle = (pending?.tripId === activeTripId ? pending : null)
+          ?? detectCurrentIdle(wps);
+
         if (idle) {
           // Only send once per idle window (compare by startTime)
           if (idleStopSentAtRef.current !== idle.startTime) {
@@ -181,6 +188,7 @@ export default function TripsScreen({ onLogout }: Props) {
                 lng: idle.lng,
                 stoppedAt: new Date(idle.startTime).toISOString(),
               });
+              await clearPendingIdleStop();
               // Refresh trip list so the new stop appears if the user looks
               const updated = await getMyTrips();
               setTrips(updated);
@@ -391,21 +399,21 @@ export default function TripsScreen({ onLogout }: Props) {
         [lat, lng, Date.now()] as [number, number, number],
       ];
 
+      const haversineKm = calculateTotalKm(enriched);
+
       let totalKm: number;
-      if (method === 'OSRM') {
+      // Skip routing API for very short trips (< 0.5 km straight-line) — same-location
+      // test trips, API errors on identical origin/destination, etc.
+      if (haversineKm < 0.5 || method === 'GPS') {
+        totalKm = haversineKm;
+      } else if (method === 'OSRM') {
         const road = await osrmRouteKm(enriched);
-        if (road == null) {
-          Alert.alert('OSRM indisponible', 'Calcul de distance par GPS (haversine) à la place.');
-        }
-        totalKm = road ?? calculateTotalKm(enriched);
+        totalKm = road ?? haversineKm;
       } else if (method === 'GOOGLE') {
         const road = await googleRouteKm(enriched);
-        if (road == null) {
-          Alert.alert('Google indisponible', 'Calcul de distance par GPS (haversine) à la place.');
-        }
-        totalKm = road ?? calculateTotalKm(enriched);
+        totalKm = road ?? haversineKm;
       } else {
-        totalKm = calculateTotalKm(enriched);
+        totalKm = haversineKm;
       }
 
       const durationMinutes = activeTripStart

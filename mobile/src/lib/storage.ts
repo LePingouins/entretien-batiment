@@ -64,7 +64,33 @@ export async function clearActiveTripId(): Promise<void> {
     ACTIVE_TRIP_METHOD_KEY,
     ACTIVE_TRIP_START_COORDS_KEY,
     PLANNED_END_KEY,
+    PENDING_IDLE_STOP_KEY,
   ]);
+}
+
+// ─── Pending idle stop (written by background task, read by JS thread) ────────
+
+const PENDING_IDLE_STOP_KEY = 'pending_idle_stop';
+
+export interface PendingIdleStop {
+  tripId: number;
+  startTime: number;
+  lat: number;
+  lng: number;
+  durationMs: number;
+}
+
+export async function savePendingIdleStop(stop: PendingIdleStop): Promise<void> {
+  await AsyncStorage.setItem(PENDING_IDLE_STOP_KEY, JSON.stringify(stop));
+}
+
+export async function getPendingIdleStop(): Promise<PendingIdleStop | null> {
+  const val = await AsyncStorage.getItem(PENDING_IDLE_STOP_KEY);
+  return val ? JSON.parse(val) : null;
+}
+
+export async function clearPendingIdleStop(): Promise<void> {
+  await AsyncStorage.removeItem(PENDING_IDLE_STOP_KEY);
 }
 
 // ─── Planned destination ──────────────────────────────────────────────────────

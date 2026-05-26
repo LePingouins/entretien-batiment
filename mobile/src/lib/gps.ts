@@ -1,6 +1,13 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import { getActiveTripId, appendWaypoints, Waypoint } from './storage';
+import {
+  getActiveTripId,
+  appendWaypoints,
+  getWaypoints,
+  savePendingIdleStop,
+  clearPendingIdleStop,
+  Waypoint,
+} from './storage';
 
 export const WAYPOINT_TASK = 'ENTRETIEN_WAYPOINT_TASK';
 
@@ -99,6 +106,19 @@ TaskManager.defineTask(WAYPOINT_TASK, async ({ data, error }) => {
     loc.timestamp ?? Date.now(),
   ]);
   await appendWaypoints(tripId, points);
+
+  // ── Idle detection from background (runs even when JS thread is paused) ──
+  try {
+    const allWps = await getWaypoints(tripId);
+    const idle = detectCurrentIdle(allWps);
+    if (idle) {
+      // Save pending stop — JS thread will submit it when it next wakes up
+      await savePendingIdleStop({ tripId, ...idle });
+    } else {
+      // Moving again — clear any pending stop so it doesn't get submitted late
+      await clearPendingIdleStop();
+    }
+  } catch {}
 });
 
 // ─── Start / stop tracking ────────────────────────────────────────────────────
