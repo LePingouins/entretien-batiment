@@ -417,7 +417,7 @@ const StartTripModal: React.FC<StartTripModalProps> = ({ isDark, t, onClose, onS
   const [lat, setLat] = useState<number | undefined>();
   const [lng, setLng] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
-  const [distanceMethod, setDistanceMethod] = useState<'HAVERSINE' | 'ROAD'>('HAVERSINE');
+  const [distanceMethod, setDistanceMethod] = useState<'HAVERSINE' | 'ROAD' | 'GOOGLE'>('HAVERSINE');
 
   const getLocation = useCallback(async () => {
     if (!navigator.geolocation) { setLocState('error'); return; }
@@ -521,8 +521,8 @@ const StartTripModal: React.FC<StartTripModalProps> = ({ isDark, t, onClose, onS
           {/* Distance method */}
           <div>
             <label className={`block text-sm font-medium mb-2 ${label}`}>{t.repTripsDistanceMethod}</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['HAVERSINE', 'ROAD'] as const).map((method) => {
+            <div className="grid grid-cols-3 gap-2">
+              {(['HAVERSINE', 'ROAD', 'GOOGLE'] as const).map((method) => {
                 const isSelected = distanceMethod === method;
                 return (
                   <button
@@ -537,12 +537,14 @@ const StartTripModal: React.FC<StartTripModalProps> = ({ isDark, t, onClose, onS
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
-                    <div className="text-base mb-0.5">{method === 'HAVERSINE' ? '📏' : '🛣️'}</div>
+                    <div className="text-base mb-0.5">
+                      {method === 'HAVERSINE' ? '📏' : method === 'ROAD' ? '🛣️' : '🗺️'}
+                    </div>
                     <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {method === 'HAVERSINE' ? t.repTripsDistanceStraight : t.repTripsDistanceRoad}
+                      {method === 'HAVERSINE' ? t.repTripsDistanceStraight : method === 'ROAD' ? t.repTripsDistanceRoad : t.repTripsDistanceGoogle}
                     </div>
                     <div className={`text-xs mt-0.5 leading-tight ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>
-                      {method === 'HAVERSINE' ? t.repTripsDistanceStraightDesc : t.repTripsDistanceRoadDesc}
+                      {method === 'HAVERSINE' ? t.repTripsDistanceStraightDesc : method === 'ROAD' ? t.repTripsDistanceRoadDesc : t.repTripsDistanceGoogleDesc}
                     </div>
                   </button>
                 );

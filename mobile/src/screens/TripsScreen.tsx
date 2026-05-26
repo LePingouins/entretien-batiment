@@ -89,6 +89,7 @@ export default function TripsScreen({ onLogout }: Props) {
   const [endConfirmVisible, setEndConfirmVisible] = useState(false);
   const [endAddrInput, setEndAddrInput] = useState('');
   const [endConfirmLoading, setEndConfirmLoading] = useState(false);
+  const [routeWarning, setRouteWarning] = useState<string | null>(null);
   type PendingEnd = { lat: number; lng: number; startLat: number | null; startLng: number | null; waypoints: import('../lib/storage').Waypoint[]; method: string };
   const [pendingEnd, setPendingEnd] = useState<PendingEnd | null>(null);
 
@@ -408,9 +409,11 @@ export default function TripsScreen({ onLogout }: Props) {
         totalKm = haversineKm;
       } else if (method === 'OSRM') {
         const road = await osrmRouteKm(enriched);
+        if (road == null) setRouteWarning('OSRM indisponible — distance GPS utilisée.');
         totalKm = road ?? haversineKm;
       } else if (method === 'GOOGLE') {
         const road = await googleRouteKm(enriched);
+        if (road == null) setRouteWarning('Google indisponible — distance GPS utilisée.');
         totalKm = road ?? haversineKm;
       } else {
         totalKm = haversineKm;
@@ -427,6 +430,7 @@ export default function TripsScreen({ onLogout }: Props) {
 
       setEndConfirmVisible(false);
       setPendingEnd(null);
+      setRouteWarning(null);
       setActiveTripId(null);
       setActiveTripStart(null);
       setElapsed(0);
@@ -648,6 +652,11 @@ export default function TripsScreen({ onLogout }: Props) {
             <Text style={[styles.modalLabel, { marginTop: 4, fontSize: 11, color: '#9CA3AF' }]}>
               Modifiez si la détection automatique est inexacte.
             </Text>
+            {routeWarning && (
+              <Text style={{ fontSize: 11, color: '#F59E0B', marginTop: 6 }}>
+                ⚠️ {routeWarning}
+              </Text>
+            )}
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancel}

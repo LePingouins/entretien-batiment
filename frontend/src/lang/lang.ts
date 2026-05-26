@@ -764,6 +764,8 @@ export const en = {
   repTripsDistanceStraightDesc: 'Fast · No internet needed',
   repTripsDistanceRoad: 'Road distance',
   repTripsDistanceRoadDesc: 'Real km via OpenStreetMap',
+  repTripsDistanceGoogle: 'Google Maps',
+  repTripsDistanceGoogleDesc: 'Accurate via Google Routes',
   repTripsCalcRoad: 'Calculating road distance…',
   repTripsMethodBadgeStraight: 'Straight-line',
   repTripsMethodBadgeRoad: 'Road',
@@ -1532,6 +1534,8 @@ export const fr = {
   repTripsTripEnded: 'Trajet terminé.',
   repTripsDeleteStop: 'Supprimer l\'arrêt',
   repTripsConfirmEndTrip: 'Terminer ce trajet et enregistrer votre position actuelle comme destination ?',
+  repTripsDistanceGoogle: 'Google Maps',
+  repTripsDistanceGoogleDesc: 'Distance précise via Google Routes',
   pageAccessRepTrips: 'Trajets représentants',
   pageExplanationRepTrips: 'Suivez et enregistrez les déplacements d\'affaires avec assistance GPS pour les fins fiscales.',
 };
