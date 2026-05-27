@@ -240,12 +240,6 @@ const ActiveTripBanner: React.FC<ActiveTripBannerProps> = ({ trip, isDark, t, on
         <div className="flex gap-2 flex-col items-end">
           <div className="flex gap-2">
             <button
-              onClick={onAddStop}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${isDark ? 'border-brand-600 text-brand-300 hover:bg-brand-900' : 'border-brand-400 text-brand-700 hover:bg-brand-100'}`}
-            >
-              + {t.repTripsAddStop}
-            </button>
-            <button
               onClick={onEndTrip}
               disabled={endingTrip}
               className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-60 transition-colors"

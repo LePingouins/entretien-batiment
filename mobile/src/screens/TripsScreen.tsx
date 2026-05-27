@@ -645,9 +645,6 @@ export default function TripsScreen({ onLogout }: Props) {
             )}
           </View>
           <View style={{ gap: 8 }}>
-            <TouchableOpacity style={styles.addStopButton} onPress={openStopModal}>
-              <Text style={styles.addStopButtonText}>+ Arrêt</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.endButton, endingTrip && styles.endButtonDisabled]}
               onPress={handleEndTrip}
