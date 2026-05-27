@@ -124,11 +124,14 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
     }
     // 5-point rolling average to smooth remaining GPS jitter
     const HALF = 2;
-    return raw.map((p, i) => {
+    const smoothed = raw.map((p, i) => {
       const slice = raw.slice(Math.max(0, i - HALF), Math.min(raw.length, i + HALF + 1));
       const avg = slice.reduce((s, x) => s + x.kmh, 0) / slice.length;
       return { t: p.t, kmh: avg };
     });
+    // Anchor start and end at 0 km/h (vehicle starts and stops from rest)
+    const lastT = (waypoints[waypoints.length - 1][2] - waypoints[0][2]) / 60000;
+    return [{ t: 0, kmh: 0 }, ...smoothed, { t: lastT, kmh: 0 }];
   }, [waypoints]);
 
   // ─── V38: Trip replay (#18) ─────────────────────────────────────────────
