@@ -837,6 +837,9 @@ export async function createMileageRate(r: Partial<UserMileageRate>): Promise<Us
   const res = await api.post<UserMileageRate>('/api/rep-trips/mileage-rates', r);
   return res.data;
 }
+export async function deleteMileageRate(id: number): Promise<void> {
+  await api.delete(`/api/rep-trips/mileage-rates/${id}`);
+}
 export async function getCurrentMileageRate(): Promise<UserMileageRate | null> {
   try {
     const res = await api.get<UserMileageRate>('/api/rep-trips/mileage-rates/current');

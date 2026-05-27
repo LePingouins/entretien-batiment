@@ -902,6 +902,14 @@ public class RepTripController {
         return ResponseEntity.ok(mileageRepository.save(body));
     }
 
+    @DeleteMapping("/mileage-rates/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<Void> deleteMileageRate(@PathVariable Long id) {
+        if (!mileageRepository.existsById(id)) return ResponseEntity.notFound().build();
+        mileageRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
     /** Convenience: returns the current applicable rate for the caller. */
     @GetMapping("/mileage-rates/current")
     public ResponseEntity<UserMileageRate> currentRate(Authentication auth) {

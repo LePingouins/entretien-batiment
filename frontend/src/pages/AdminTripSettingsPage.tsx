@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import {
   getVehicles, createVehicle, updateVehicle, deleteVehicle,
-  getMileageRates, createMileageRate,
+  getMileageRates, createMileageRate, deleteMileageRate,
   archiveOldWaypoints,
 } from '../lib/api';
 import type { Vehicle, UserMileageRate } from '../types/api';
@@ -233,6 +233,16 @@ const AdminTripSettingsPage: React.FC = () => {
     }
   }
 
+  async function handleDeleteRate(id: number) {
+    if (!window.confirm('Supprimer ce taux kilométrique ?')) return;
+    try {
+      await deleteMileageRate(id);
+      setRates(prev => prev.filter(r => r.id !== id));
+    } catch (e: any) {
+      alert('Erreur: ' + (e?.response?.data?.message ?? e?.message));
+    }
+  }
+
   // ── Maintenance ──────────────────────────────────────────────────────────────
 
   async function handleArchive() {
@@ -416,7 +426,15 @@ const AdminTripSettingsPage: React.FC = () => {
                       </td>
                       <td className={`px-4 py-3 ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>{fmtDate(r.effectiveFrom)}</td>
                       <td className={`px-4 py-3 text-xs ${sub}`}>{fmtDate(r.createdAt)}</td>
-                      <td className="px-4 py-3" />
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => handleDeleteRate(r.id)}
+                          className={`text-xs px-2 py-1 rounded hover:bg-red-100 hover:text-red-700 ${isDark ? 'text-surface-400 hover:bg-red-900/30 hover:text-red-400' : 'text-slate-400'} transition-colors`}
+                          title="Supprimer"
+                        >
+                          ✕
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
