@@ -875,34 +875,38 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
 
           {/* V38: Speed graph (#17) — inline SVG */}
           {speedSeries.length >= 5 && (() => {
-            const W = 600, H = 100, PAD_L = 28, PAD_B = 16;
+            const W = 600, H = 110, PAD_L = 42, PAD_B = 18, PAD_T = 8;
             const maxKmh = Math.max(...speedSeries.map(p => p.kmh), 60);
             const maxT = speedSeries[speedSeries.length - 1].t;
             if (maxT <= 0) return null;
-            const sx = (t: number) => PAD_L + (t / maxT) * (W - PAD_L - 4);
-            const sy = (k: number) => H - PAD_B - (k / maxKmh) * (H - PAD_B - 6);
+            const sx = (t: number) => PAD_L + (t / maxT) * (W - PAD_L - 6);
+            const sy = (k: number) => H - PAD_B - (k / maxKmh) * (H - PAD_B - PAD_T);
             const path = speedSeries.map((p, i) => `${i === 0 ? 'M' : 'L'} ${sx(p.t).toFixed(1)} ${sy(p.kmh).toFixed(1)}`).join(' ');
             const ticks = [0, Math.round(maxKmh / 2), Math.round(maxKmh)];
             return (
               <div className={`px-5 py-4 border-t ${divider}`}>
-                <h3 className="text-sm font-semibold mb-2">📈 Vitesse</h3>
-                <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 110 }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-sm font-semibold">📈 Vitesse</h3>
+                  <span className={`text-xs ${sub}`}>(km/h)</span>
+                </div>
+                <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 120 }}>
                   {/* Grid + Y labels */}
                   {ticks.map(k => (
                     <g key={k}>
-                      <line x1={PAD_L} y1={sy(k)} x2={W - 2} y2={sy(k)}
+                      <line x1={PAD_L} y1={sy(k)} x2={W - 4} y2={sy(k)}
                         stroke={isDark ? '#334155' : '#e2e8f0'} strokeWidth={1} strokeDasharray="2 3" />
-                      <text x={4} y={sy(k) + 3} fontSize={9} fill={isDark ? '#94a3b8' : '#64748b'}>{k}</text>
+                      <text x={PAD_L - 6} y={sy(k) + 4} fontSize={10} textAnchor="end" fill={isDark ? '#94a3b8' : '#64748b'}>{k}</text>
                     </g>
                   ))}
                   {/* X axis at bottom */}
-                  <line x1={PAD_L} y1={H - PAD_B} x2={W - 2} y2={H - PAD_B} stroke={isDark ? '#475569' : '#cbd5e1'} strokeWidth={1} />
+                  <line x1={PAD_L} y1={H - PAD_B} x2={W - 4} y2={H - PAD_B} stroke={isDark ? '#475569' : '#cbd5e1'} strokeWidth={1} />
+                  {/* Y axis */}
+                  <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={H - PAD_B} stroke={isDark ? '#475569' : '#cbd5e1'} strokeWidth={1} />
                   {/* Speed line */}
                   <path d={path} fill="none" stroke="#3b82f6" strokeWidth={1.5} strokeLinejoin="round" />
-                  {/* X labels: 0 / mid / end (minutes) */}
-                  <text x={PAD_L} y={H - 2} fontSize={9} fill={isDark ? '#94a3b8' : '#64748b'}>0 min</text>
-                  <text x={W - 40} y={H - 2} fontSize={9} fill={isDark ? '#94a3b8' : '#64748b'}>{Math.round(maxT)} min</text>
-                  <text x={2} y={10} fontSize={9} fill={isDark ? '#94a3b8' : '#64748b'}>km/h</text>
+                  {/* X labels: 0 / end (minutes) */}
+                  <text x={PAD_L} y={H - 3} fontSize={10} textAnchor="middle" fill={isDark ? '#94a3b8' : '#64748b'}>0</text>
+                  <text x={W - 6} y={H - 3} fontSize={10} textAnchor="end" fill={isDark ? '#94a3b8' : '#64748b'}>{Math.round(maxT)} min</text>
                 </svg>
               </div>
             );
