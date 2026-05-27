@@ -111,18 +111,24 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
   // ─── V38: Speed series (km/h vs elapsed minutes) for #17 graph ──────────
   const speedSeries = useMemo(() => {
     if (waypoints.length < 2) return [] as { t: number; kmh: number }[];
-    const out: { t: number; kmh: number }[] = [];
     const t0 = waypoints[0][2];
+    const raw: { t: number; kmh: number }[] = [];
     for (let i = 1; i < waypoints.length; i++) {
       const [la, ln, t] = waypoints[i];
       const [pla, pln, pt] = waypoints[i - 1];
-      const dM = haversineM(pla, pln, la, ln);
       const dtS = (t - pt) / 1000;
-      const kmh = dtS > 0 ? (dM / 1000) / (dtS / 3600) : 0;
-      // Cap displayed speed at 180 km/h to keep graph readable.
-      out.push({ t: (t - t0) / 60000, kmh: Math.min(180, kmh) });
+      if (dtS < 2) continue; // intervals < 2 s are too noisy to give reliable speed
+      const dM = haversineM(pla, pln, la, ln);
+      const kmh = (dM / 1000) / (dtS / 3600);
+      raw.push({ t: (t - t0) / 60000, kmh: Math.min(130, kmh) });
     }
-    return out;
+    // 5-point rolling average to smooth remaining GPS jitter
+    const HALF = 2;
+    return raw.map((p, i) => {
+      const slice = raw.slice(Math.max(0, i - HALF), Math.min(raw.length, i + HALF + 1));
+      const avg = slice.reduce((s, x) => s + x.kmh, 0) / slice.length;
+      return { t: p.t, kmh: avg };
+    });
   }, [waypoints]);
 
   // ─── V38: Trip replay (#18) ─────────────────────────────────────────────
