@@ -62,12 +62,28 @@ else
     step "Frontend deployed → /var/www/entretien-batiment"
 fi
 
+# ─── Helper: start backend as background process ─────────────────────────────
+start_backend() {
+    [ -f "$REPO_DIR/.env" ] && set -a && source "$REPO_DIR/.env" && set +a
+    nohup java -jar "$JAR_FILE" \
+        --spring.profiles.active=prod \
+        > "$REPO_DIR/backend-stdout.log" 2>&1 &
+    echo $! > "$REPO_DIR/backend.pid"
+    sleep 5
+    if kill -0 "$(cat "$REPO_DIR/backend.pid")" 2>/dev/null; then
+        step "✓ Backend started (PID $(cat "$REPO_DIR/backend.pid"))"
+    else
+        error "Backend failed to start. Check: $REPO_DIR/backend-stdout.log"
+    fi
+}
+
 # ─── 4. Restart backend ───────────────────────────────────────────────────────
 cd "$REPO_DIR"
 
-if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null || systemctl status "$SERVICE_NAME" &>/dev/null; then
+if systemctl list-units --type=service | grep -q "$SERVICE_NAME"; then
     # ── systemd service exists ───────────────────────────────────────────────
     step "Restarting via systemd ($SERVICE_NAME)..."
+    systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || true
     systemctl restart "$SERVICE_NAME"
     sleep 3
     if systemctl is-active --quiet "$SERVICE_NAME"; then
@@ -94,18 +110,3 @@ echo "============================================================"
 echo -e "  ${GREEN}Deploy complete!${NC}"
 echo "============================================================"
 echo ""
-
-# ─── Helper: start backend as background process ─────────────────────────────
-start_backend() {
-    [ -f "$REPO_DIR/.env" ] && set -a && source "$REPO_DIR/.env" && set +a
-    nohup java -jar "$JAR_FILE" \
-        --spring.profiles.active=prod \
-        > "$REPO_DIR/backend-stdout.log" 2>&1 &
-    echo $! > "$REPO_DIR/backend.pid"
-    sleep 5
-    if kill -0 "$(cat "$REPO_DIR/backend.pid")" 2>/dev/null; then
-        step "✓ Backend started (PID $(cat "$REPO_DIR/backend.pid"))"
-    else
-        error "Backend failed to start. Check: $REPO_DIR/backend-stdout.log"
-    fi
-}
