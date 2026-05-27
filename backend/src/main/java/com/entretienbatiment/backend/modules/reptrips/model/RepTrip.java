@@ -79,6 +79,78 @@ public class RepTrip {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // ─── V38: full-feature columns ─────────────────────────────────────────────
+
+    /** Google-returned encoded polyline of the actual route (snapped to roads). */
+    @Column(name = "actual_polyline", columnDefinition = "TEXT")
+    private String actualPolyline;
+
+    /** OSRM cross-check distance, when available. Used as third opinion vs Google. */
+    @Column(name = "osrm_km")
+    private Double osrmKm;
+
+    /** Trip category: CLIENT | PICKUP | TRAINING | PERSONAL | OTHER. */
+    @Column(name = "category", nullable = false, length = 32)
+    private String category = "CLIENT";
+
+    /** Approval workflow: PENDING | APPROVED | REJECTED | AUTO_APPROVED. */
+    @Column(name = "approval_status", nullable = false, length = 16)
+    private String approvalStatus = "PENDING";
+
+    @Column(name = "approved_by_user_id")
+    private Long approvedByUserId;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    @Column(name = "approval_note", length = 512)
+    private String approvalNote;
+
+    /** Free-text comment by the driver at submission ("road closure on 116"). */
+    @Column(name = "driver_note", columnDefinition = "TEXT")
+    private String driverNote;
+
+    /** Once locked, the trip cannot be edited by anyone (including admin) without
+     *  going through an explicit unlock + audit trail. */
+    @Column(name = "locked", nullable = false)
+    private boolean locked = false;
+
+    @Column(name = "locked_at")
+    private LocalDateTime lockedAt;
+
+    /** Client-generated UUID to guard against duplicate submissions on retry. */
+    @Column(name = "idempotency_key", length = 64, unique = true)
+    private String idempotencyKey;
+
+    /** Mileage rate (cents per km) snapshotted at submission so historical
+     *  rate changes don't retroactively alter old reimbursements. */
+    @Column(name = "mileage_rate_cents")
+    private Integer mileageRateCents;
+
+    /** Computed reimbursement amount in cents. = totalKm × mileageRateCents. */
+    @Column(name = "reimbursement_cents")
+    private Integer reimbursementCents;
+
+    /**
+     * Bitset of suspicion flags raised by the heuristics, e.g.
+     *   bit 0 = outside business hours
+     *   bit 1 = weekend / holiday
+     *   bit 2 = no GPS waypoints
+     *   bit 3 = round-number km (heuristic for manual entry)
+     *   bit 4 = unusually long (>4 std dev for this user)
+     *   bit 5 = ideal_fallback applied (drift detected)
+     */
+    @Column(name = "suspicion_flags", nullable = false)
+    private int suspicionFlags = 0;
+
+    /** Set when raw waypoints are purged for data-retention reasons. */
+    @Column(name = "waypoints_archived_at")
+    private LocalDateTime waypointsArchivedAt;
+
+    /** Optional FK to the vehicle used for this trip. */
+    @Column(name = "vehicle_id")
+    private Long vehicleId;
+
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @com.fasterxml.jackson.annotation.JsonManagedReference
     private List<RepTripStop> stops = new ArrayList<>();
@@ -158,6 +230,55 @@ public class RepTrip {
 
     public String getUserEmail() { return userEmail; }
     public void setUserEmail(String userEmail) { this.userEmail = userEmail; }
+
+    // ─── V38 getters/setters ─────────────────────────────────────────────────
+    public String getActualPolyline() { return actualPolyline; }
+    public void setActualPolyline(String actualPolyline) { this.actualPolyline = actualPolyline; }
+
+    public Double getOsrmKm() { return osrmKm; }
+    public void setOsrmKm(Double osrmKm) { this.osrmKm = osrmKm; }
+
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+
+    public String getApprovalStatus() { return approvalStatus; }
+    public void setApprovalStatus(String approvalStatus) { this.approvalStatus = approvalStatus; }
+
+    public Long getApprovedByUserId() { return approvedByUserId; }
+    public void setApprovedByUserId(Long approvedByUserId) { this.approvedByUserId = approvedByUserId; }
+
+    public LocalDateTime getApprovedAt() { return approvedAt; }
+    public void setApprovedAt(LocalDateTime approvedAt) { this.approvedAt = approvedAt; }
+
+    public String getApprovalNote() { return approvalNote; }
+    public void setApprovalNote(String approvalNote) { this.approvalNote = approvalNote; }
+
+    public String getDriverNote() { return driverNote; }
+    public void setDriverNote(String driverNote) { this.driverNote = driverNote; }
+
+    public boolean isLocked() { return locked; }
+    public void setLocked(boolean locked) { this.locked = locked; }
+
+    public LocalDateTime getLockedAt() { return lockedAt; }
+    public void setLockedAt(LocalDateTime lockedAt) { this.lockedAt = lockedAt; }
+
+    public String getIdempotencyKey() { return idempotencyKey; }
+    public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
+
+    public Integer getMileageRateCents() { return mileageRateCents; }
+    public void setMileageRateCents(Integer mileageRateCents) { this.mileageRateCents = mileageRateCents; }
+
+    public Integer getReimbursementCents() { return reimbursementCents; }
+    public void setReimbursementCents(Integer reimbursementCents) { this.reimbursementCents = reimbursementCents; }
+
+    public int getSuspicionFlags() { return suspicionFlags; }
+    public void setSuspicionFlags(int suspicionFlags) { this.suspicionFlags = suspicionFlags; }
+
+    public LocalDateTime getWaypointsArchivedAt() { return waypointsArchivedAt; }
+    public void setWaypointsArchivedAt(LocalDateTime waypointsArchivedAt) { this.waypointsArchivedAt = waypointsArchivedAt; }
+
+    public Long getVehicleId() { return vehicleId; }
+    public void setVehicleId(Long vehicleId) { this.vehicleId = vehicleId; }
 
     /** Haversine formula — distance in km between two lat/lng points */
     public static double haversineKm(double lat1, double lon1, double lat2, double lon2) {

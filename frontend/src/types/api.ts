@@ -227,6 +227,8 @@ export interface MileageEntry {
 // --- Rep Trips Types ---
 export type RepTripStatus = 'IN_PROGRESS' | 'COMPLETED';
 export type RepTripStopReason = 'CLIENT' | 'RESTAURANT' | 'GAS' | 'OFFICE' | 'OTHER';
+export type RepTripCategory = 'CLIENT' | 'PICKUP' | 'TRAINING' | 'PERSONAL' | 'OTHER';
+export type RepTripApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'AUTO_APPROVED';
 
 export interface RepTripStop {
   id: number;
@@ -237,6 +239,9 @@ export interface RepTripStop {
   reason: RepTripStopReason;
   notes?: string;
   stoppedAt: string;
+  legIndex?: number;
+  legKm?: number;
+  durationSeconds?: number;
 }
 
 export interface RepTrip {
@@ -266,6 +271,68 @@ export interface RepTrip {
   endedAt?: string;
   createdAt: string;
   stops: RepTripStop[];
+
+  // V38 full-feature columns
+  /** Google-encoded polyline of the road-snapped actual route. */
+  actualPolyline?: string;
+  /** OSRM cross-check distance (read-only third opinion). */
+  osrmKm?: number;
+  category?: RepTripCategory;
+  approvalStatus?: RepTripApprovalStatus;
+  approvedByUserId?: number;
+  approvedAt?: string;
+  approvalNote?: string;
+  driverNote?: string;
+  locked?: boolean;
+  lockedAt?: string;
+  idempotencyKey?: string;
+  mileageRateCents?: number;
+  reimbursementCents?: number;
+  /** Bitset: bit0=offHours, bit1=weekend, bit2=noGps, bit3=roundKm, bit4=long, bit5=idealFallback. */
+  suspicionFlags?: number;
+  waypointsArchivedAt?: string;
+  vehicleId?: number;
+}
+
+export interface RepTripAuditLog {
+  id: number;
+  tripId: number;
+  userId?: number;
+  action: string;
+  summary?: string;
+  beforeJson?: string;
+  afterJson?: string;
+  createdAt: string;
+}
+
+export interface RepTripPhoto {
+  id: number;
+  tripId: number;
+  stopId?: number;
+  kind: 'START' | 'END' | 'STOP' | 'RECEIPT';
+  filePath: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  uploadedAt: string;
+}
+
+export interface Vehicle {
+  id: number;
+  label: string;
+  licensePlate?: string;
+  userId?: number;
+  active: boolean;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface UserMileageRate {
+  id: number;
+  userId?: number;
+  centsPerKm: number;
+  effectiveFrom: string;
+  createdAt: string;
+  createdBy?: number;
 }
 
 // --- Dashboard Types ---

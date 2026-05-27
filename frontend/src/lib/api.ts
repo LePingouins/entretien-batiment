@@ -732,10 +732,122 @@ export async function updateSubscription(id: number, data: SubscriptionRequest):
 }
 
 // --- Rep Trips API ---
-import type { RepTrip, RepTripStop } from '../types/api';
+import type {
+  RepTrip,
+  RepTripStop,
+  RepTripAuditLog,
+  RepTripPhoto,
+  Vehicle,
+  UserMileageRate,
+} from '../types/api';
 
 export async function getRepTrips(): Promise<RepTrip[]> {
   const res = await api.get<RepTrip[]>('/api/rep-trips');
+  return res.data;
+}
+
+// ─── V38 Rep-trips helpers ────────────────────────────────────────────────
+
+export async function getPendingApprovalTrips(): Promise<RepTrip[]> {
+  const res = await api.get<RepTrip[]>('/api/rep-trips/pending');
+  return res.data;
+}
+
+export async function approveTrip(id: number, note?: string): Promise<RepTrip> {
+  const res = await api.post<RepTrip>(`/api/rep-trips/${id}/approve`, { note });
+  return res.data;
+}
+
+export async function rejectTrip(id: number, note: string): Promise<RepTrip> {
+  const res = await api.post<RepTrip>(`/api/rep-trips/${id}/reject`, { note });
+  return res.data;
+}
+
+export async function unlockTrip(id: number): Promise<RepTrip> {
+  const res = await api.post<RepTrip>(`/api/rep-trips/${id}/unlock`);
+  return res.data;
+}
+
+export async function getTripAuditLog(id: number): Promise<RepTripAuditLog[]> {
+  const res = await api.get<RepTripAuditLog[]>(`/api/rep-trips/${id}/audit`);
+  return res.data;
+}
+
+export async function getTripPhotos(id: number): Promise<RepTripPhoto[]> {
+  const res = await api.get<RepTripPhoto[]>(`/api/rep-trips/${id}/photos`);
+  return res.data;
+}
+
+/** Returns a blob URL for an auth-protected photo. Caller must
+ *  URL.revokeObjectURL it when done. */
+export async function fetchTripPhotoBlobUrl(photoId: number): Promise<string> {
+  const res = await api.get(`/api/rep-trips/photos/${photoId}/file`, {
+    responseType: 'blob',
+  });
+  return URL.createObjectURL(res.data as Blob);
+}
+
+export async function getYtdTotals(userId?: number): Promise<{
+  userId: number; fromDate: string; toDate: string;
+  totalKm: number; reimbursementCents: number;
+}> {
+  const res = await api.get('/api/rep-trips/totals/ytd', {
+    params: userId ? { userId } : {},
+  });
+  return res.data;
+}
+
+export function getCraExportUrl(params?: {
+  startDate?: string; endDate?: string; userId?: number;
+}): string {
+  const base = (import.meta.env.VITE_API_URL || '') + '/api/rep-trips/admin/export-cra';
+  const qs = new URLSearchParams();
+  if (params?.startDate) qs.set('startDate', params.startDate);
+  if (params?.endDate)   qs.set('endDate', params.endDate);
+  if (params?.userId)    qs.set('userId', String(params.userId));
+  const q = qs.toString();
+  return q ? `${base}?${q}` : base;
+}
+
+// Vehicles
+export async function getVehicles(): Promise<Vehicle[]> {
+  const res = await api.get<Vehicle[]>('/api/rep-trips/vehicles');
+  return res.data;
+}
+export async function createVehicle(v: Partial<Vehicle>): Promise<Vehicle> {
+  const res = await api.post<Vehicle>('/api/rep-trips/vehicles', v);
+  return res.data;
+}
+export async function updateVehicle(id: number, v: Partial<Vehicle>): Promise<Vehicle> {
+  const res = await api.patch<Vehicle>(`/api/rep-trips/vehicles/${id}`, v);
+  return res.data;
+}
+export async function deleteVehicle(id: number): Promise<void> {
+  await api.delete(`/api/rep-trips/vehicles/${id}`);
+}
+
+// Mileage rates
+export async function getMileageRates(userId?: number): Promise<UserMileageRate[]> {
+  const res = await api.get<UserMileageRate[]>('/api/rep-trips/mileage-rates', {
+    params: userId ? { userId } : {},
+  });
+  return res.data;
+}
+export async function createMileageRate(r: Partial<UserMileageRate>): Promise<UserMileageRate> {
+  const res = await api.post<UserMileageRate>('/api/rep-trips/mileage-rates', r);
+  return res.data;
+}
+export async function getCurrentMileageRate(): Promise<UserMileageRate | null> {
+  try {
+    const res = await api.get<UserMileageRate>('/api/rep-trips/mileage-rates/current');
+    return res.data;
+  } catch { return null; }
+}
+
+export async function archiveOldWaypoints(keepDays = 395): Promise<{ archived: number; cutoff: string }> {
+  const res = await api.post('/api/rep-trips/admin/archive-waypoints', null, {
+    params: { keepDays },
+  });
   return res.data;
 }
 

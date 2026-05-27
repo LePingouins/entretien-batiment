@@ -45,6 +45,9 @@ export interface RepTripStop {
   stoppedAt: string;
 }
 
+export type RepTripCategory = 'CLIENT' | 'PICKUP' | 'TRAINING' | 'PERSONAL' | 'OTHER';
+export type RepTripApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'AUTO_APPROVED';
+
 export interface RepTrip {
   id: number;
   date: string;
@@ -64,6 +67,27 @@ export interface RepTrip {
   distanceMethod: string;
   createdAt: string;
   stops: RepTripStop[];
+  // V38 fields
+  actualPolyline?: string | null;
+  osrmKm?: number | null;
+  category?: RepTripCategory | null;
+  approvalStatus?: RepTripApprovalStatus | null;
+  reimbursementCents?: number | null;
+  mileageRateCents?: number | null;
+  suspicionFlags?: number | null;
+  driverNote?: string | null;
+  vehicleId?: number | null;
+  locked?: boolean;
+}
+
+export interface Vehicle {
+  id: number;
+  label: string;
+  licensePlate?: string | null;
+  userId?: number | null;
+  active: boolean;
+  notes?: string | null;
+  createdAt: string;
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -90,6 +114,10 @@ export async function startTrip(payload: {
   startAddress: string;
   purpose?: string;
   distanceMethod?: string;
+  // V38
+  idempotencyKey?: string;
+  category?: RepTripCategory;
+  vehicleId?: number | null;
 }): Promise<RepTrip> {
   const res = await api.post<RepTrip>('/api/rep-trips', {
     ...payload,
@@ -106,7 +134,15 @@ export async function endTrip(
   totalKm: number,
   durationMinutes: number,
   waypoints: Waypoint[],
-  extra?: { idealKm?: number; actualKm?: number; distanceSource?: string }
+  extra?: {
+    idealKm?: number; actualKm?: number; distanceSource?: string;
+    // V38
+    actualPolyline?: string;
+    osrmKm?: number;
+    driverNote?: string;
+    category?: RepTripCategory;
+    vehicleId?: number | null;
+  }
 ): Promise<RepTrip> {
   const res = await api.patch<RepTrip>(`/api/rep-trips/${id}`, {
     status: 'COMPLETED',
@@ -161,6 +197,8 @@ export interface RouteDistanceResult {
   source: string;          // "actual" | "ideal_fallback" | "ideal_only" | etc.
   idealKm?: number;        // optimal Google route via stops (deterministic)
   actualKm?: number;       // route through filtered GPS (real path driven)
+  polyline?: string;       // V38: Google-snapped encoded polyline
+  osrmKm?: number;         // V38: OSRM cross-check distance
 }
 
 export async function googleRouteKm(waypoints: Waypoint[]): Promise<RouteDistanceResult | null> {
@@ -171,7 +209,7 @@ export async function googleRouteKm(waypoints: Waypoint[]): Promise<RouteDistanc
   // Format: [lat, lng, timestampMs]
   const pairs = waypoints.map(([lat, lng, t]) => [lat, lng, t]);
   try {
-    const res = await api.post<{ km: number | ''; source?: string; idealKm?: number; actualKm?: number }>(
+    const res = await api.post<{ km: number | ''; source?: string; idealKm?: number; actualKm?: number; polyline?: string; osrmKm?: number }>(
       '/api/rep-trips/route-distance', pairs
     );
     const km = res.data.km;
@@ -181,6 +219,8 @@ export async function googleRouteKm(waypoints: Waypoint[]): Promise<RouteDistanc
       source: res.data.source ?? 'unknown',
       idealKm: res.data.idealKm,
       actualKm: res.data.actualKm,
+      polyline: res.data.polyline,
+      osrmKm: res.data.osrmKm,
     };
   } catch {
     return null;
@@ -199,4 +239,43 @@ export async function addStop(
 
 export async function deleteStop(tripId: number, stopId: number): Promise<void> {
   await api.delete(`/api/rep-trips/${tripId}/stops/${stopId}`);
+}
+
+// ─── V38: Vehicles ────────────────────────────────────────────────────────────
+
+export async function getVehicles(): Promise<Vehicle[]> {
+  const res = await api.get<Vehicle[]>('/api/rep-trips/vehicles');
+  return res.data;
+}
+
+// ─── V38: Photos ──────────────────────────────────────────────────────────────
+// Uploads a photo (start/end/stop/other) for a trip via multipart form.
+// `uri` is the local file URI from expo-image-picker / Camera.
+
+export async function uploadTripPhoto(
+  tripId: number,
+  uri: string,
+  kind: 'START' | 'END' | 'STOP' | 'OTHER' = 'OTHER',
+  stopId?: number,
+): Promise<{ id: number }> {
+  const form = new FormData();
+  // RN-style FormData file part
+  const filename = uri.split('/').pop() || `photo-${Date.now()}.jpg`;
+  const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
+  const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+  form.append('file', { uri, name: filename, type: mime } as any);
+  form.append('kind', kind);
+  if (stopId != null) form.append('stopId', String(stopId));
+  const res = await api.post(`/api/rep-trips/${tripId}/photos`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data as { id: number };
+}
+
+// ─── V38: Idempotency-key generator (no extra dep) ───────────────────────────
+// RFC4122 v4-ish using Math.random — collision-safe enough for client-side dedup.
+
+export function generateIdempotencyKey(): string {
+  const rand = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
+  return `${rand()}${rand()}-${rand()}-4${rand().slice(1)}-${(8 + Math.floor(Math.random() * 4)).toString(16)}${rand().slice(1)}-${rand()}${rand()}${rand()}`;
 }

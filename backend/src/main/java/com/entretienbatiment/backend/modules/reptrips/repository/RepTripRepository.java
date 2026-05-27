@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface RepTripRepository extends JpaRepository<RepTrip, Long> {
 
@@ -25,4 +26,18 @@ public interface RepTripRepository extends JpaRepository<RepTrip, Long> {
     List<RepTrip> findByUserIdAndDateBetween(@Param("userId") Long userId,
                                               @Param("start") LocalDate start,
                                               @Param("end") LocalDate end);
+
+    Optional<RepTrip> findByIdempotencyKey(String idempotencyKey);
+
+    @Query("SELECT t FROM RepTrip t WHERE t.approvalStatus = 'PENDING' ORDER BY t.date DESC, t.createdAt DESC")
+    List<RepTrip> findPendingApproval();
+
+    @Query("SELECT COALESCE(SUM(t.totalKm), 0) FROM RepTrip t WHERE t.userId = :userId AND t.date BETWEEN :start AND :end")
+    Double sumKmForUserBetween(@Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    @Query("SELECT COALESCE(SUM(t.reimbursementCents), 0) FROM RepTrip t WHERE t.userId = :userId AND t.date BETWEEN :start AND :end")
+    Long sumReimbursementForUserBetween(@Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    @Query("SELECT t FROM RepTrip t WHERE t.endedAt IS NOT NULL AND t.endedAt < :cutoff AND t.waypointsArchivedAt IS NULL")
+    List<RepTrip> findRetentionCandidates(@Param("cutoff") java.time.LocalDateTime cutoff);
 }

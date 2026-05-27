@@ -165,6 +165,7 @@ const AdminLayout: React.FC = () => {
     if (canAccess('ANALYTICS')) items.push({ label: t.analyticsTitle || 'Analytics', path: pagePath('ANALYTICS'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('REP_TRIPS')) items.push({ label: t.repTripsNav || 'Rep Trips', path: pagePath('REP_TRIPS'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('REP_TRIPS')) items.push({ label: t.repTripsAdminTitle || 'Rep Trips Admin', path: '/admin/admin-trips', group: lang === 'fr' ? 'Opérations' : 'Operations' });
+    if (canAccess('REP_TRIPS')) items.push({ label: lang === 'fr' ? 'Paramètres trajets' : 'Trip Settings', path: '/admin/trip-settings', group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('USERS')) items.push({ label: t.adminUsersNav || 'Users', path: pagePath('USERS'), group: lang === 'fr' ? 'Administration' : 'Administration' });
     items.push({ label: t.documentsPage || 'Documents', path: '/admin/documents', group: lang === 'fr' ? 'Ressources' : 'Resources' });
     items.push({ label: t.shoppingList || 'Shopping List', path: '/admin/shopping-list', group: lang === 'fr' ? 'Ressources' : 'Resources' });
@@ -221,6 +222,7 @@ const AdminLayout: React.FC = () => {
                   ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('ANALYTICS'), isActive: window.location.pathname.includes(pagePath('ANALYTICS')) }] : []),
                   ...(canAccess('REP_TRIPS') ? [{ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('REP_TRIPS'), isActive: window.location.pathname.endsWith('/rep-trips') }] : []),
                   ...(canAccess('REP_TRIPS') ? [{ label: (t.repTripsAdminTitle || 'Admin Trajets'), path: '/admin/admin-trips', isActive: window.location.pathname.includes('/admin/admin-trips') }] : []),
+                  ...(canAccess('REP_TRIPS') ? [{ label: lang === 'fr' ? 'Paramètres trajets' : 'Trip Settings', path: '/admin/trip-settings', isActive: window.location.pathname.includes('/admin/trip-settings') }] : []),
                 ]}
               />
             )}
@@ -322,6 +324,7 @@ const AdminLayout: React.FC = () => {
                   ...(canAccess('ANALYTICS') ? [{ label: t.analyticsTitle || 'Analytics', path: pagePath('ANALYTICS'), isActive: window.location.pathname.includes(pagePath('ANALYTICS')) }] : []),
                   ...(canAccess('REP_TRIPS') ? [{ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('REP_TRIPS'), isActive: window.location.pathname.endsWith('/rep-trips') }] : []),
                   ...(canAccess('REP_TRIPS') ? [{ label: (t.repTripsAdminTitle || 'Admin Trajets'), path: '/admin/admin-trips', isActive: window.location.pathname.includes('/admin/admin-trips') }] : []),
+                  ...(canAccess('REP_TRIPS') ? [{ label: lang === 'fr' ? 'Paramètres trajets' : 'Trip Settings', path: '/admin/trip-settings', isActive: window.location.pathname.includes('/admin/trip-settings') }] : []),
                 ]}
               />
             )}

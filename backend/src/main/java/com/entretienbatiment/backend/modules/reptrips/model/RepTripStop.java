@@ -31,6 +31,18 @@ public class RepTripStop {
     @Column(name = "stopped_at", nullable = false)
     private LocalDateTime stoppedAt = LocalDateTime.now();
 
+    /** 0-based leg index (0 = trip start → first stop, 1 = first → second, …). */
+    @Column(name = "leg_index")
+    private Integer legIndex;
+
+    /** Per-leg distance in km (from previous anchor to this stop). */
+    @Column(name = "leg_km")
+    private Double legKm;
+
+    /** Computed duration spent at this stop, in seconds. */
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
     // Expose trip id in JSON without circular reference
     @com.fasterxml.jackson.annotation.JsonProperty("tripId")
     public Long getTripId() {
@@ -63,4 +75,13 @@ public class RepTripStop {
 
     public LocalDateTime getStoppedAt() { return stoppedAt; }
     public void setStoppedAt(LocalDateTime stoppedAt) { this.stoppedAt = stoppedAt; }
+
+    public Integer getLegIndex() { return legIndex; }
+    public void setLegIndex(Integer legIndex) { this.legIndex = legIndex; }
+
+    public Double getLegKm() { return legKm; }
+    public void setLegKm(Double legKm) { this.legKm = legKm; }
+
+    public Integer getDurationSeconds() { return durationSeconds; }
+    public void setDurationSeconds(Integer durationSeconds) { this.durationSeconds = durationSeconds; }
 }

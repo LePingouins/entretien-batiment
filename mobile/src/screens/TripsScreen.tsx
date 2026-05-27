@@ -12,9 +12,14 @@ import {
   TextInput,
   Platform,
   AppState,
+  ScrollView,
 } from 'react-native';
 import Constants from 'expo-constants';
-import { RepTrip, RepTripStop, RepTripStopReason, getMyTrips, startTrip, endTrip, osrmRouteKm, googleRouteKm, addStop } from '../lib/api';
+import {
+  RepTrip, RepTripStop, RepTripStopReason, RepTripCategory, Vehicle,
+  getMyTrips, startTrip, endTrip, osrmRouteKm, googleRouteKm, addStop,
+  getVehicles, uploadTripPhoto, generateIdempotencyKey,
+} from '../lib/api';
 import {
   saveActiveTripId,
   getActiveTripId,
@@ -85,6 +90,11 @@ export default function TripsScreen({ onLogout }: Props) {
   const [startLat, setStartLat] = useState<number | null>(null);
   const [startLng, setStartLng] = useState<number | null>(null);
   const [destInput, setDestInput] = useState('');
+  // V38: category + vehicle
+  const [categoryInput, setCategoryInput] = useState<RepTripCategory>('CLIENT');
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicleIdInput, setVehicleIdInput] = useState<number | null>(null);
+  const [startPhotoUri, setStartPhotoUri] = useState<string | null>(null);
 
   // End trip confirmation modal
   const [endConfirmVisible, setEndConfirmVisible] = useState(false);
@@ -93,6 +103,26 @@ export default function TripsScreen({ onLogout }: Props) {
   const [routeWarning, setRouteWarning] = useState<string | null>(null);
   type PendingEnd = { lat: number; lng: number; startLat: number | null; startLng: number | null; waypoints: import('../lib/storage').Waypoint[]; method: string };
   const [pendingEnd, setPendingEnd] = useState<PendingEnd | null>(null);
+
+  // V38: Pre-submit confirmation screen (#19)
+  type PreSubmitData = {
+    totalKm: number;
+    idealKm?: number;
+    actualKm?: number;
+    osrmKm?: number;
+    distanceSource: string;
+    polyline?: string;
+    reimbursementEstimate?: number; // dollars
+    durationMinutes: number;
+    endAddress: string;
+    endLat: number;
+    endLng: number;
+    waypoints: import('../lib/storage').Waypoint[];
+  };
+  const [preSubmitVisible, setPreSubmitVisible] = useState(false);
+  const [preSubmitData, setPreSubmitData] = useState<PreSubmitData | null>(null);
+  const [driverNote, setDriverNote] = useState('');
+  const [endPhotoUri, setEndPhotoUri] = useState<string | null>(null);
 
   // Add stop modal
   const [stopModalVisible, setStopModalVisible] = useState(false);
@@ -140,12 +170,39 @@ export default function TripsScreen({ onLogout }: Props) {
   useEffect(() => {
     loadData();
 
+    // V38: load vehicles (best-effort; ignore if endpoint not yet deployed)
+    getVehicles().then(setVehicles).catch(() => {});
+
     // Refresh data when app comes back to foreground
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') loadData();
     });
     return () => sub.remove();
   }, [loadData]);
+
+  // V38: photo picker (uses expo-image-picker if installed; otherwise inline alert)
+  async function pickPhoto(): Promise<string | null> {
+    try {
+      // Dynamic require so the app still loads if expo-image-picker is not installed
+      const ImagePicker = require('expo-image-picker');
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Permission requise', 'Autorisez l’appareil photo pour ajouter une preuve.');
+        return null;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'Images',
+        quality: 0.7,
+        allowsEditing: false,
+      });
+      if (result?.canceled) return null;
+      const uri = result?.assets?.[0]?.uri ?? null;
+      return uri;
+    } catch (e: any) {
+      Alert.alert('Module manquant', 'expo-image-picker n’est pas installé dans ce build. Lancez `npx expo install expo-image-picker` puis reconstruisez l’APK.');
+      return null;
+    }
+  }
 
   // ─── Elapsed timer ────────────────────────────────────────────────────────
 
@@ -252,11 +309,24 @@ export default function TripsScreen({ onLogout }: Props) {
       }
       const address = overrideAddress || await reverseGeocode(lat, lng);
 
-      const trip = await startTrip({ startLat: lat, startLng: lng, startAddress: address, purpose, distanceMethod });
+      const idempotencyKey = generateIdempotencyKey();
+      const trip = await startTrip({
+        startLat: lat, startLng: lng, startAddress: address,
+        purpose, distanceMethod,
+        // V38
+        idempotencyKey,
+        category: categoryInput,
+        vehicleId: vehicleIdInput,
+      });
       await saveActiveTripId(trip.id);
       await saveActiveTripMethod(distanceMethod);
       await saveActiveTripStartCoords(lat, lng);
       if (plannedDest) await savePlannedEndAddress(plannedDest);
+      // Upload start photo if user captured one
+      if (startPhotoUri) {
+        uploadTripPhoto(trip.id, startPhotoUri, 'START').catch(() => {});
+        setStartPhotoUri(null);
+      }
       if (IS_EXPO_GO) {
         await startForegroundTracking(trip.id);
       } else {
@@ -287,6 +357,9 @@ export default function TripsScreen({ onLogout }: Props) {
     setStartAddrInput('');
     setStartLat(null);
     setStartLng(null);
+    setCategoryInput('CLIENT');
+    setVehicleIdInput(vehicles.find(v => v.active)?.id ?? null);
+    setStartPhotoUri(null);
     setStartAddrLoading(true);
     setPurposeModalVisible(true);
     // Fetch GPS in background while modal is open
@@ -411,7 +484,10 @@ export default function TripsScreen({ onLogout }: Props) {
       const haversineKm = calculateTotalKm(enriched);
 
       let totalKm: number;
-      let routeExtra: { idealKm?: number; actualKm?: number; distanceSource?: string } | undefined;
+      let routeExtra: {
+        idealKm?: number; actualKm?: number; distanceSource?: string;
+        actualPolyline?: string; osrmKm?: number;
+      } = {};
       // Skip routing API for very short trips (< 0.5 km straight-line) — same-location
       // test trips, API errors on identical origin/destination, etc.
       if (haversineKm < 0.5 || method === 'GPS') {
@@ -427,7 +503,13 @@ export default function TripsScreen({ onLogout }: Props) {
         if (result == null) setRouteWarning('Google indisponible — distance GPS utilisée.');
         totalKm = result?.km ?? haversineKm;
         routeExtra = result
-          ? { idealKm: result.idealKm, actualKm: result.actualKm, distanceSource: result.source }
+          ? {
+              idealKm: result.idealKm,
+              actualKm: result.actualKm,
+              distanceSource: result.source,
+              actualPolyline: result.polyline,
+              osrmKm: result.osrmKm,
+            }
           : { distanceSource: 'haversine' };
       } else {
         totalKm = haversineKm;
@@ -438,12 +520,71 @@ export default function TripsScreen({ onLogout }: Props) {
         ? Math.round((Date.now() - activeTripStart) / 60_000)
         : 0;
 
-      const updated = await endTrip(activeTripId, lat, lng, endAddrInput.trim(), totalKm, durationMinutes, waypoints, routeExtra);
+      // V38: assume 70¢/km if rate unknown — backend will recompute authoritatively
+      const ASSUMED_RATE_CENTS = 70;
+      const reimbursementEstimate = Math.round(totalKm * ASSUMED_RATE_CENTS) / 100;
+
+      // Stash + open pre-submit modal (#19)
+      setPreSubmitData({
+        totalKm: Math.round(totalKm * 10) / 10,
+        idealKm: routeExtra.idealKm,
+        actualKm: routeExtra.actualKm,
+        osrmKm: routeExtra.osrmKm,
+        distanceSource: routeExtra.distanceSource ?? 'haversine',
+        polyline: routeExtra.actualPolyline,
+        reimbursementEstimate,
+        durationMinutes,
+        endAddress: endAddrInput.trim(),
+        endLat: lat,
+        endLng: lng,
+        waypoints,
+      });
+      setDriverNote('');
+      setEndPhotoUri(null);
+      setEndConfirmVisible(false);
+      setPreSubmitVisible(true);
+    } catch {
+      Alert.alert('Erreur', 'Impossible de calculer la distance. Réessayez.');
+    } finally {
+      setEndConfirmLoading(false);
+    }
+  }
+
+  // V38: final submit (called from pre-submit screen)
+  async function submitTrip() {
+    if (!preSubmitData || !activeTripId) return;
+    setEndConfirmLoading(true);
+    try {
+      const p = preSubmitData;
+      const updated = await endTrip(
+        activeTripId,
+        p.endLat, p.endLng, p.endAddress,
+        p.totalKm, p.durationMinutes,
+        p.waypoints,
+        {
+          idealKm: p.idealKm,
+          actualKm: p.actualKm,
+          distanceSource: p.distanceSource,
+          actualPolyline: p.polyline,
+          osrmKm: p.osrmKm,
+          driverNote: driverNote.trim() || undefined,
+          category: categoryInput,
+          vehicleId: vehicleIdInput,
+        }
+      );
+
+      // Upload end photo if captured
+      if (endPhotoUri) {
+        uploadTripPhoto(activeTripId, endPhotoUri, 'END').catch(() => {});
+      }
 
       await clearActiveTripId();
       await clearWaypoints(activeTripId);
 
-      setEndConfirmVisible(false);
+      setPreSubmitVisible(false);
+      setPreSubmitData(null);
+      setDriverNote('');
+      setEndPhotoUri(null);
       setPendingEnd(null);
       setRouteWarning(null);
       setActiveTripId(null);
@@ -591,6 +732,66 @@ export default function TripsScreen({ onLogout }: Props) {
               onSubmitEditing={confirmStartTrip}
             />
 
+            {/* V38: Category */}
+            <Text style={[styles.modalLabel, { marginTop: 12 }]}>Catégorie</Text>
+            <View style={styles.reasonRow}>
+              {([
+                { v: 'CLIENT' as RepTripCategory, l: '🤝 Client' },
+                { v: 'PICKUP' as RepTripCategory, l: '📦 Cueillette' },
+                { v: 'TRAINING' as RepTripCategory, l: '🎓 Formation' },
+                { v: 'PERSONAL' as RepTripCategory, l: '👤 Personnel' },
+                { v: 'OTHER' as RepTripCategory, l: '📍 Autre' },
+              ]).map((c) => (
+                <TouchableOpacity
+                  key={c.v}
+                  style={[styles.reasonChip, categoryInput === c.v && styles.reasonChipActive]}
+                  onPress={() => setCategoryInput(c.v)}
+                >
+                  <Text style={[styles.reasonChipText, categoryInput === c.v && styles.reasonChipTextActive]}>
+                    {c.l}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* V38: Vehicle */}
+            {vehicles.length > 0 && (
+              <>
+                <Text style={[styles.modalLabel, { marginTop: 12 }]}>Véhicule</Text>
+                <View style={styles.reasonRow}>
+                  <TouchableOpacity
+                    style={[styles.reasonChip, vehicleIdInput == null && styles.reasonChipActive]}
+                    onPress={() => setVehicleIdInput(null)}
+                  >
+                    <Text style={[styles.reasonChipText, vehicleIdInput == null && styles.reasonChipTextActive]}>
+                      — Aucun
+                    </Text>
+                  </TouchableOpacity>
+                  {vehicles.filter(v => v.active).map((v) => (
+                    <TouchableOpacity
+                      key={v.id}
+                      style={[styles.reasonChip, vehicleIdInput === v.id && styles.reasonChipActive]}
+                      onPress={() => setVehicleIdInput(v.id)}
+                    >
+                      <Text style={[styles.reasonChipText, vehicleIdInput === v.id && styles.reasonChipTextActive]}>
+                        🚗 {v.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {/* V38: Start photo */}
+            <TouchableOpacity
+              style={[styles.modalInput, { marginTop: 12, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 8 }]}
+              onPress={async () => { const uri = await pickPhoto(); if (uri) setStartPhotoUri(uri); }}
+            >
+              <Text style={{ color: startPhotoUri ? '#16A34A' : '#1D4ED8', fontWeight: '600' }}>
+                {startPhotoUri ? '✓ Photo départ ajoutée — Reprendre' : '📷 Ajouter photo départ (optionnel)'}
+              </Text>
+            </TouchableOpacity>
+
             <Text style={[styles.modalLabel, { marginTop: 16 }]}>Méthode de calcul</Text>
             <View style={styles.methodRow}>
               <TouchableOpacity
@@ -691,6 +892,116 @@ export default function TripsScreen({ onLogout }: Props) {
                 }
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* V38: Pre-submit confirmation screen (#19) */}
+      <Modal
+        visible={preSubmitVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => !endConfirmLoading && setPreSubmitVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxHeight: '90%' }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>Vérifier et soumettre</Text>
+
+              {preSubmitData && (
+                <>
+                  <View style={{ backgroundColor: '#F0FDF4', borderRadius: 10, padding: 12, marginTop: 4 }}>
+                    <Text style={{ fontSize: 11, color: '#15803D', fontWeight: '600' }}>DISTANCE RETENUE</Text>
+                    <Text style={{ fontSize: 28, fontWeight: '700', color: '#15803D', marginTop: 2 }}>
+                      {preSubmitData.totalKm.toFixed(1)} km
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+                      Source: {preSubmitData.distanceSource}
+                    </Text>
+                  </View>
+
+                  {(preSubmitData.idealKm != null || preSubmitData.osrmKm != null) && (
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                      {preSubmitData.idealKm != null && (
+                        <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 8, padding: 10 }}>
+                          <Text style={{ fontSize: 10, color: '#1D4ED8', fontWeight: '600' }}>IDÉAL</Text>
+                          <Text style={{ fontSize: 16, fontWeight: '700', color: '#1D4ED8' }}>{preSubmitData.idealKm.toFixed(1)} km</Text>
+                        </View>
+                      )}
+                      {preSubmitData.actualKm != null && (
+                        <View style={{ flex: 1, backgroundColor: '#FEF3C7', borderRadius: 8, padding: 10 }}>
+                          <Text style={{ fontSize: 10, color: '#92400E', fontWeight: '600' }}>RÉEL GPS</Text>
+                          <Text style={{ fontSize: 16, fontWeight: '700', color: '#92400E' }}>{preSubmitData.actualKm.toFixed(1)} km</Text>
+                        </View>
+                      )}
+                      {preSubmitData.osrmKm != null && preSubmitData.idealKm == null && (
+                        <View style={{ flex: 1, backgroundColor: '#F3E8FF', borderRadius: 8, padding: 10 }}>
+                          <Text style={{ fontSize: 10, color: '#7E22CE', fontWeight: '600' }}>OSRM</Text>
+                          <Text style={{ fontSize: 16, fontWeight: '700', color: '#7E22CE' }}>{preSubmitData.osrmKm.toFixed(1)} km</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {preSubmitData.reimbursementEstimate != null && (
+                    <View style={{ marginTop: 10, padding: 10, backgroundColor: '#FFFBEB', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#F59E0B' }}>
+                      <Text style={{ fontSize: 11, color: '#92400E', fontWeight: '600' }}>REMBOURSEMENT ESTIMÉ</Text>
+                      <Text style={{ fontSize: 20, fontWeight: '700', color: '#B45309' }}>
+                        {preSubmitData.reimbursementEstimate.toFixed(2)} $
+                      </Text>
+                      <Text style={{ fontSize: 10, color: '#9CA3AF', marginTop: 2 }}>
+                        Calcul officiel par l'admin (taux courant)
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={styles.modalLabel}>Arrivée: <Text style={{ fontWeight: '400' }}>{preSubmitData.endAddress}</Text></Text>
+                    <Text style={[styles.modalLabel, { marginTop: 4 }]}>Durée: <Text style={{ fontWeight: '400' }}>{preSubmitData.durationMinutes} min</Text></Text>
+                    <Text style={[styles.modalLabel, { marginTop: 4 }]}>Catégorie: <Text style={{ fontWeight: '400' }}>{categoryInput}</Text></Text>
+                  </View>
+                </>
+              )}
+
+              <Text style={[styles.modalLabel, { marginTop: 14 }]}>Commentaire / contexte (optionnel)</Text>
+              <TextInput
+                style={[styles.modalInput, { minHeight: 80, textAlignVertical: 'top' }]}
+                placeholder="Ex: Détour cause travaux rue Principale, dépose colis chez client…"
+                placeholderTextColor="#9CA3AF"
+                value={driverNote}
+                onChangeText={setDriverNote}
+                multiline
+              />
+
+              <TouchableOpacity
+                style={[styles.modalInput, { marginTop: 10, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 8 }]}
+                onPress={async () => { const uri = await pickPhoto(); if (uri) setEndPhotoUri(uri); }}
+              >
+                <Text style={{ color: endPhotoUri ? '#16A34A' : '#1D4ED8', fontWeight: '600' }}>
+                  {endPhotoUri ? '✓ Photo arrivée ajoutée — Reprendre' : '📷 Ajouter photo arrivée (optionnel)'}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalCancel}
+                  onPress={() => { setPreSubmitVisible(false); setEndConfirmVisible(true); }}
+                  disabled={endConfirmLoading}
+                >
+                  <Text style={styles.modalCancelText}>Retour</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalConfirm, endConfirmLoading && { opacity: 0.6 }]}
+                  onPress={submitTrip}
+                  disabled={endConfirmLoading}
+                >
+                  {endConfirmLoading
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={styles.modalConfirmText}>Confirmer et soumettre</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>

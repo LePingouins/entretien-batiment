@@ -39,6 +39,7 @@ const InventoryCountLivePage      = lazy(() => import('../pages/InventoryCountLi
 const SubscriptionsPage           = lazy(() => import('../pages/SubscriptionsPage'));
 const RepTripsPage                = lazy(() => import('../pages/RepTripsPage'));
 const AdminTripsPage              = lazy(() => import('../pages/AdminTripsPage'));
+const AdminTripSettingsPage       = lazy(() => import('../pages/AdminTripSettingsPage'));
 
 /** Shown while a lazy page chunk is being downloaded */
 const PageLoader = () => (
@@ -211,6 +212,14 @@ const router = createBrowserRouter([
                 element: (
                   <RequirePageAccess pageKey="REP_TRIPS">
                     <AdminTripsPage />
+                  </RequirePageAccess>
+                ),
+              },
+              {
+                path: 'trip-settings',
+                element: (
+                  <RequirePageAccess pageKey="REP_TRIPS">
+                    <AdminTripSettingsPage />
                   </RequirePageAccess>
                 ),
               },

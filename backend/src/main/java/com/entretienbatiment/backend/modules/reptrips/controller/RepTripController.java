@@ -6,6 +6,14 @@ import com.entretienbatiment.backend.modules.reptrips.model.RepTrip;
 import com.entretienbatiment.backend.modules.reptrips.model.RepTripStop;
 import com.entretienbatiment.backend.modules.reptrips.repository.RepTripRepository;
 import com.entretienbatiment.backend.modules.reptrips.repository.RepTripStopRepository;
+import com.entretienbatiment.backend.modules.reptrips.repository.RepTripAuditLogRepository;
+import com.entretienbatiment.backend.modules.reptrips.repository.RepTripPhotoRepository;
+import com.entretienbatiment.backend.modules.reptrips.repository.UserMileageRateRepository;
+import com.entretienbatiment.backend.modules.reptrips.repository.VehicleRepository;
+import com.entretienbatiment.backend.modules.reptrips.model.RepTripAuditLog;
+import com.entretienbatiment.backend.modules.reptrips.model.RepTripPhoto;
+import com.entretienbatiment.backend.modules.reptrips.model.UserMileageRate;
+import com.entretienbatiment.backend.modules.reptrips.model.Vehicle;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -44,6 +52,18 @@ public class RepTripController {
 
     @Autowired
     private AppUserRepository userRepository;
+
+    @Autowired
+    private RepTripAuditLogRepository auditRepository;
+
+    @Autowired
+    private RepTripPhotoRepository photoRepository;
+
+    @Autowired
+    private UserMileageRateRepository mileageRepository;
+
+    @Autowired
+    private VehicleRepository vehicleRepository;
 
     @Value("${google.routes.api.key:}")
     private String googleRoutesApiKey;
@@ -90,6 +110,14 @@ public class RepTripController {
     @PostMapping
     public ResponseEntity<RepTrip> startTrip(@RequestBody RepTrip body, Authentication auth) {
         AppUser user = requireUser(auth);
+
+        // #4 Idempotency: if the client retries a network-failed start with the
+        //    same UUID, return the existing trip instead of creating a duplicate.
+        if (body.getIdempotencyKey() != null && !body.getIdempotencyKey().isBlank()) {
+            Optional<RepTrip> existing = tripRepository.findByIdempotencyKey(body.getIdempotencyKey());
+            if (existing.isPresent()) return ResponseEntity.ok(existing.get());
+        }
+
         RepTrip trip = new RepTrip();
         trip.setUserId(user.getId());
         trip.setDate(body.getDate() != null ? body.getDate() : LocalDate.now());
@@ -100,7 +128,13 @@ public class RepTripController {
         trip.setStartLat(body.getStartLat());
         trip.setStartLng(body.getStartLng());
         trip.setDistanceMethod(body.getDistanceMethod() != null ? body.getDistanceMethod() : "HAVERSINE");
-        return ResponseEntity.ok(tripRepository.save(trip));
+        trip.setIdempotencyKey(body.getIdempotencyKey());
+        if (body.getCategory() != null) trip.setCategory(body.getCategory());   // #13
+        trip.setVehicleId(body.getVehicleId());                                 // #19
+        RepTrip saved = tripRepository.save(trip);
+        auditRepository.save(new RepTripAuditLog(saved.getId(), user.getId(), "CREATED",
+                "Trip started by " + user.getEmail()));                          // #3
+        return ResponseEntity.ok(saved);
     }
 
     // ─── User: update / end trip ──────────────────────────────────────────────
@@ -116,6 +150,25 @@ public class RepTripController {
         if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
             return ResponseEntity.status(403).build();
         }
+
+        // #2 Tamper protection: once locked or approved, mutating any of the
+        //    financial fields requires explicit unlock by an admin.
+        boolean isFinancialField = body.containsKey("totalKm")
+                || body.containsKey("idealKm")
+                || body.containsKey("actualKm")
+                || body.containsKey("reimbursementCents")
+                || body.containsKey("mileageRateCents");
+        if ((trip.isLocked() || "APPROVED".equals(trip.getApprovalStatus()))
+                && isFinancialField
+                && !user.getRole().isAdminLike()) {
+            return ResponseEntity.status(409)
+                    .body(null);  // 409 Conflict — trip is locked
+        }
+
+        // Snapshot before-state for audit log (#3).
+        String beforeJson = "totalKm=" + trip.getTotalKm()
+                + ", status=" + trip.getStatus()
+                + ", category=" + trip.getCategory();
 
         if (body.containsKey("status")) {
             trip.setStatus((String) body.get("status"));
@@ -148,8 +201,83 @@ public class RepTripController {
         if (body.containsKey("idealKm"))        trip.setIdealKm(toDouble(body.get("idealKm")));
         if (body.containsKey("actualKm"))       trip.setActualKm(toDouble(body.get("actualKm")));
         if (body.containsKey("distanceSource")) trip.setDistanceSource((String) body.get("distanceSource"));
+        if (body.containsKey("osrmKm"))         trip.setOsrmKm(toDouble(body.get("osrmKm")));
+        if (body.containsKey("actualPolyline")) trip.setActualPolyline((String) body.get("actualPolyline"));
+        if (body.containsKey("category"))       trip.setCategory((String) body.get("category"));      // #13
+        if (body.containsKey("vehicleId"))      trip.setVehicleId(toLong(body.get("vehicleId")));     // #19
+        if (body.containsKey("driverNote"))     trip.setDriverNote((String) body.get("driverNote")); // #11
 
-        return ResponseEntity.ok(tripRepository.save(trip));
+        // #8 Snapshot mileage rate at the moment the trip is finalised, and
+        // compute reimbursement = totalKm * rate. Snapshotting protects past
+        // trips from future rate changes (CRA-style audit).
+        if ("COMPLETED".equals(trip.getStatus()) && trip.getTotalKm() != null
+                && trip.getReimbursementCents() == null) {
+            Optional<UserMileageRate> rate = mileageRepository.findRateFor(
+                    trip.getUserId(),
+                    trip.getDate() != null ? trip.getDate() : LocalDate.now());
+            if (rate.isPresent()) {
+                int cents = rate.get().getCentsPerKm();
+                trip.setMileageRateCents(cents);
+                trip.setReimbursementCents((int) Math.round(trip.getTotalKm() * cents));
+            }
+        }
+
+        // #9 Suspicious-pattern detection (bitset). Runs on every save so
+        // flags stay fresh as data evolves.
+        trip.setSuspicionFlags(computeSuspicionFlags(trip));
+
+        RepTrip saved = tripRepository.save(trip);
+
+        // #3 Audit log entry for any change.
+        String afterJson = "totalKm=" + saved.getTotalKm()
+                + ", status=" + saved.getStatus()
+                + ", category=" + saved.getCategory();
+        if (!beforeJson.equals(afterJson)) {
+            RepTripAuditLog log = new RepTripAuditLog(saved.getId(), user.getId(), "UPDATED",
+                    "Updated by " + user.getEmail());
+            log.setBeforeJson(beforeJson);
+            log.setAfterJson(afterJson);
+            auditRepository.save(log);
+        }
+        return ResponseEntity.ok(saved);
+    }
+
+    /**
+     * Compute the suspicion-flags bitset for the given trip. Used by admins
+     * to spot trips that need a second look. Pure function — does not save.
+     * <ul>
+     *   <li>bit 0 = outside business hours (started before 6 a.m. / after 9 p.m.)</li>
+     *   <li>bit 1 = weekend trip</li>
+     *   <li>bit 2 = no GPS waypoints recorded</li>
+     *   <li>bit 3 = round-number km (likely manual entry)</li>
+     *   <li>bit 4 = unusually long (>4× the user's median for the past 90 days)</li>
+     *   <li>bit 5 = ideal_fallback applied (drift was rejected by the cap)</li>
+     * </ul>
+     */
+    private int computeSuspicionFlags(RepTrip t) {
+        int f = 0;
+        if (t.getEndedAt() != null) {
+            int h = t.getEndedAt().getHour();
+            if (h < 6 || h >= 21) f |= 1;
+        }
+        if (t.getDate() != null) {
+            int dow = t.getDate().getDayOfWeek().getValue();
+            if (dow >= 6) f |= 2;
+        }
+        if (t.getWaypointsJson() == null || t.getWaypointsJson().length() < 10) f |= 4;
+        if (t.getTotalKm() != null && t.getTotalKm() > 0
+                && Math.abs(t.getTotalKm() - Math.round(t.getTotalKm())) < 0.01) f |= 8;
+        if (t.getTotalKm() != null && t.getUserId() != null) {
+            try {
+                LocalDate from = (t.getDate() != null ? t.getDate() : LocalDate.now()).minusDays(90);
+                Double sum = tripRepository.sumKmForUserBetween(t.getUserId(), from,
+                        t.getDate() != null ? t.getDate() : LocalDate.now());
+                // Rough proxy: more than 1/5 of last 90 days in a single trip.
+                if (sum != null && sum > 0 && t.getTotalKm() > sum / 5.0) f |= 16;
+            } catch (Exception ignored) {}
+        }
+        if ("ideal_fallback".equals(t.getDistanceSource())) f |= 32;
+        return f;
     }
 
     // ─── User: delete trip ────────────────────────────────────────────────────
@@ -359,7 +487,10 @@ public class RepTripController {
             idealKm = callGoogleRoutes(idealPath);
             if (idealKm != null) idealRouteCache.put(idealKey, idealKm);
         }
-        Double actualKm = callGoogleRoutes(actualPath);
+        // Use the FULL variant for actual so we capture the polyline.
+        GoogleRouteResult actualResult = callGoogleRoutesFull(actualPath);
+        Double actualKm = actualResult == null ? null : actualResult.km;
+        String actualPolyline = actualResult == null ? null : actualResult.polyline;
 
         if (idealKm == null && actualKm == null) {
             return ResponseEntity.ok(Map.of("error", "google_failed", "km", ""));
@@ -405,6 +536,15 @@ public class RepTripController {
         resp.put("source", source);
         if (idealKm != null) resp.put("idealKm", Math.round(idealKm * 10.0) / 10.0);
         if (actualKm != null) resp.put("actualKm", Math.round(actualKm * 10.0) / 10.0);
+        // #1: Pass back the road-snapped polyline. Frontend stores it on the
+        // trip and renders it on the map as the "clean" actual route.
+        if (actualPolyline != null) resp.put("polyline", actualPolyline);
+        // #6: Cross-check with OSRM (free third opinion). Fire-and-forget;
+        // failure does NOT block the response.
+        try {
+            Double osrm = callOsrm(actualPath);
+            if (osrm != null) resp.put("osrmKm", Math.round(osrm * 10.0) / 10.0);
+        } catch (Exception ignored) { /* best-effort */ }
         return ResponseEntity.ok(resp);
     }
 
@@ -468,10 +608,24 @@ public class RepTripController {
         return out;
     }
 
+    /** Result bundle returned by {@link #callGoogleRoutes}: distance + the
+     *  Google-encoded polyline of the road-snapped route (feature #1). */
+    private static final class GoogleRouteResult {
+        final double km;
+        final String polyline;
+        GoogleRouteResult(double km, String polyline) { this.km = km; this.polyline = polyline; }
+    }
+
     /** Calls Google Routes computeRoutes for the given path (first = origin,
      *  last = destination, rest = intermediates). Returns distance in km, or
      *  null on any error. */
     private Double callGoogleRoutes(List<List<Double>> path) throws Exception {
+        GoogleRouteResult r = callGoogleRoutesFull(path);
+        return r == null ? null : r.km;
+    }
+
+    /** Full variant — returns both distance and polyline. */
+    private GoogleRouteResult callGoogleRoutesFull(List<List<Double>> path) throws Exception {
         if (path.size() < 2) return null;
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode body = mapper.createObjectNode();
@@ -489,7 +643,10 @@ public class RepTripController {
                 .uri(URI.create("https://routes.googleapis.com/directions/v2:computeRoutes"))
                 .header("Content-Type", "application/json")
                 .header("X-Goog-Api-Key", googleRoutesApiKey)
-                .header("X-Goog-FieldMask", "routes.distanceMeters")
+                // Field mask now also requests the encoded polyline so we can
+                // render the actual road-snapped route on the map (#1).
+                .header("X-Goog-FieldMask",
+                        "routes.distanceMeters,routes.polyline.encodedPolyline")
                 .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
                 .build();
 
@@ -504,7 +661,13 @@ public class RepTripController {
                 || !routes.get(0).has("distanceMeters")) {
             return null;
         }
-        return routes.get(0).get("distanceMeters").asDouble() / 1000.0;
+        JsonNode first = routes.get(0);
+        double km = first.get("distanceMeters").asDouble() / 1000.0;
+        String poly = null;
+        if (first.has("polyline") && first.get("polyline").has("encodedPolyline")) {
+            poly = first.get("polyline").get("encodedPolyline").asText();
+        }
+        return new GoogleRouteResult(km, poly);
     }
 
     /**
@@ -589,8 +752,377 @@ public class RepTripController {
         try { return Integer.parseInt(val.toString()); } catch (NumberFormatException e) { return null; }
     }
 
+    private static Long toLong(Object val) {
+        if (val == null) return null;
+        if (val instanceof Number) return ((Number) val).longValue();
+        try { return Long.parseLong(val.toString()); } catch (NumberFormatException e) { return null; }
+    }
+
     private static LocalDate parseDate(String s) {
         if (s == null || s.isBlank()) return null;
         try { return LocalDate.parse(s); } catch (Exception e) { return null; }
+    }
+
+    // ─── #6 OSRM cross-check (public demo server) ─────────────────────────────
+    // Best-effort; failures are silent. NOT used for billable distance — just
+    // an independent third opinion to flag wildly divergent Google answers.
+
+    private Double callOsrm(List<List<Double>> path) {
+        if (path.size() < 2) return null;
+        try {
+            StringBuilder sb = new StringBuilder("https://router.project-osrm.org/route/v1/driving/");
+            for (int i = 0; i < path.size(); i++) {
+                if (i > 0) sb.append(';');
+                sb.append(path.get(i).get(1)).append(',').append(path.get(i).get(0));
+            }
+            sb.append("?overview=false");
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> resp = client.send(
+                    HttpRequest.newBuilder().uri(URI.create(sb.toString())).GET().build(),
+                    HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() != 200) return null;
+            JsonNode tree = new ObjectMapper().readTree(resp.body());
+            JsonNode routes = tree.get("routes");
+            if (routes == null || !routes.isArray() || routes.isEmpty()) return null;
+            return routes.get(0).get("distance").asDouble() / 1000.0;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // ─── #7 Approval workflow ─────────────────────────────────────────────────
+
+    @GetMapping("/pending")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public List<RepTrip> getPendingApproval() {
+        List<RepTrip> pending = tripRepository.findPendingApproval();
+        pending.forEach(t -> userRepository.findById(t.getUserId())
+                .ifPresent(u -> t.setUserEmail(u.getEmail())));
+        return pending;
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<RepTrip> approveTrip(@PathVariable Long id,
+                                                @RequestBody(required = false) Map<String, Object> body,
+                                                Authentication auth) {
+        AppUser user = requireUser(auth);
+        Optional<RepTrip> opt = tripRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RepTrip trip = opt.get();
+        trip.setApprovalStatus("APPROVED");
+        trip.setApprovedByUserId(user.getId());
+        trip.setApprovedAt(java.time.LocalDateTime.now());
+        if (body != null && body.get("note") != null) {
+            trip.setApprovalNote((String) body.get("note"));
+        }
+        // #2 Lock on approval to prevent retroactive edits.
+        trip.setLocked(true);
+        trip.setLockedAt(java.time.LocalDateTime.now());
+        RepTrip saved = tripRepository.save(trip);
+        auditRepository.save(new RepTripAuditLog(saved.getId(), user.getId(), "APPROVED",
+                "Approved by " + user.getEmail()));
+        return ResponseEntity.ok(saved);
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<RepTrip> rejectTrip(@PathVariable Long id,
+                                               @RequestBody Map<String, Object> body,
+                                               Authentication auth) {
+        AppUser user = requireUser(auth);
+        Optional<RepTrip> opt = tripRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RepTrip trip = opt.get();
+        trip.setApprovalStatus("REJECTED");
+        trip.setApprovedByUserId(user.getId());
+        trip.setApprovedAt(java.time.LocalDateTime.now());
+        trip.setApprovalNote(body != null ? (String) body.get("note") : null);
+        RepTrip saved = tripRepository.save(trip);
+        auditRepository.save(new RepTripAuditLog(saved.getId(), user.getId(), "REJECTED",
+                "Rejected: " + saved.getApprovalNote()));
+        return ResponseEntity.ok(saved);
+    }
+
+    @PostMapping("/{id}/unlock")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<RepTrip> unlockTrip(@PathVariable Long id, Authentication auth) {
+        AppUser user = requireUser(auth);
+        Optional<RepTrip> opt = tripRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RepTrip trip = opt.get();
+        trip.setLocked(false);
+        trip.setLockedAt(null);
+        trip.setApprovalStatus("PENDING");
+        RepTrip saved = tripRepository.save(trip);
+        auditRepository.save(new RepTripAuditLog(saved.getId(), user.getId(), "UNLOCKED",
+                "Unlocked for edit by " + user.getEmail()));
+        return ResponseEntity.ok(saved);
+    }
+
+    // ─── #3 Audit log access ──────────────────────────────────────────────────
+
+    @GetMapping("/{id}/audit")
+    public ResponseEntity<List<RepTripAuditLog>> getAuditLog(@PathVariable Long id, Authentication auth) {
+        AppUser user = requireUser(auth);
+        Optional<RepTrip> opt = tripRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        if (!opt.get().getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(auditRepository.findByTripIdOrderByCreatedAtDesc(id));
+    }
+
+    // ─── #8 Mileage rate config (admin) ───────────────────────────────────────
+
+    @GetMapping("/mileage-rates")
+    public List<UserMileageRate> listMileageRates(@RequestParam(required = false) Long userId,
+                                                   Authentication auth) {
+        AppUser user = requireUser(auth);
+        Long target = userId != null ? userId : user.getId();
+        if (!target.equals(user.getId()) && !user.getRole().isAdminLike()) {
+            return List.of();
+        }
+        return mileageRepository.findByUserIdOrderByEffectiveFromDesc(target);
+    }
+
+    @PostMapping("/mileage-rates")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<UserMileageRate> createMileageRate(@RequestBody UserMileageRate body,
+                                                              Authentication auth) {
+        AppUser user = requireUser(auth);
+        body.setId(null);
+        body.setCreatedBy(user.getId());
+        body.setCreatedAt(java.time.LocalDateTime.now());
+        if (body.getEffectiveFrom() == null) body.setEffectiveFrom(LocalDate.now());
+        return ResponseEntity.ok(mileageRepository.save(body));
+    }
+
+    /** Convenience: returns the current applicable rate for the caller. */
+    @GetMapping("/mileage-rates/current")
+    public ResponseEntity<UserMileageRate> currentRate(Authentication auth) {
+        AppUser user = requireUser(auth);
+        return mileageRepository.findRateFor(user.getId(), LocalDate.now())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // ─── #19 Vehicles ─────────────────────────────────────────────────────────
+
+    @GetMapping("/vehicles")
+    public List<Vehicle> listVehicles(Authentication auth) {
+        AppUser user = requireUser(auth);
+        if (user.getRole().isAdminLike()) return vehicleRepository.findByActiveTrueOrderByLabelAsc();
+        // Drivers see only vehicles assigned to them OR shared (userId IS NULL).
+        List<Vehicle> mine = vehicleRepository.findByUserIdAndActiveTrueOrderByLabelAsc(user.getId());
+        List<Vehicle> shared = vehicleRepository.findByActiveTrueOrderByLabelAsc().stream()
+                .filter(v -> v.getUserId() == null)
+                .toList();
+        List<Vehicle> all = new ArrayList<>(mine);
+        all.addAll(shared);
+        return all;
+    }
+
+    @PostMapping("/vehicles")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<Vehicle> createVehicle(@RequestBody Vehicle body) {
+        body.setId(null);
+        body.setCreatedAt(java.time.LocalDateTime.now());
+        return ResponseEntity.ok(vehicleRepository.save(body));
+    }
+
+    @PatchMapping("/vehicles/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<Vehicle> updateVehicle(@PathVariable Long id, @RequestBody Vehicle body) {
+        Optional<Vehicle> opt = vehicleRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        Vehicle v = opt.get();
+        if (body.getLabel() != null) v.setLabel(body.getLabel());
+        if (body.getLicensePlate() != null) v.setLicensePlate(body.getLicensePlate());
+        v.setUserId(body.getUserId());
+        v.setActive(body.isActive());
+        if (body.getNotes() != null) v.setNotes(body.getNotes());
+        return ResponseEntity.ok(vehicleRepository.save(v));
+    }
+
+    @DeleteMapping("/vehicles/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<Void> deleteVehicle(@PathVariable Long id) {
+        if (!vehicleRepository.existsById(id)) return ResponseEntity.notFound().build();
+        // Soft-delete via active=false to preserve historical FK references.
+        vehicleRepository.findById(id).ifPresent(v -> { v.setActive(false); vehicleRepository.save(v); });
+        return ResponseEntity.noContent().build();
+    }
+
+    // ─── #12 Photos at start / end / stops ───────────────────────────────────
+
+    @PostMapping("/{tripId}/photos")
+    public ResponseEntity<RepTripPhoto> uploadPhoto(
+            @PathVariable Long tripId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam("kind") String kind,
+            @RequestParam(value = "stopId", required = false) Long stopId,
+            Authentication auth) {
+        AppUser user = requireUser(auth);
+        Optional<RepTrip> opt = tripRepository.findById(tripId);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RepTrip trip = opt.get();
+        if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
+            return ResponseEntity.status(403).build();
+        }
+        try {
+            java.nio.file.Path dir = java.nio.file.Paths.get("uploads", "rep-trips", String.valueOf(tripId));
+            java.nio.file.Files.createDirectories(dir);
+            String safeName = System.currentTimeMillis() + "_" + kind + "_" +
+                    file.getOriginalFilename().replaceAll("[^A-Za-z0-9._-]", "_");
+            java.nio.file.Path target = dir.resolve(safeName);
+            file.transferTo(target.toFile());
+
+            RepTripPhoto photo = new RepTripPhoto();
+            photo.setTripId(tripId);
+            photo.setStopId(stopId);
+            photo.setKind(kind);
+            photo.setFilePath(target.toString());
+            photo.setMimeType(file.getContentType());
+            photo.setSizeBytes((int) Math.min(file.getSize(), Integer.MAX_VALUE));
+            return ResponseEntity.ok(photoRepository.save(photo));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @GetMapping("/{tripId}/photos")
+    public ResponseEntity<List<RepTripPhoto>> listPhotos(@PathVariable Long tripId, Authentication auth) {
+        AppUser user = requireUser(auth);
+        Optional<RepTrip> opt = tripRepository.findById(tripId);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        if (!opt.get().getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(photoRepository.findByTripIdOrderByUploadedAtAsc(tripId));
+    }
+
+    @GetMapping("/photos/{photoId}/file")
+    public ResponseEntity<byte[]> downloadPhoto(@PathVariable Long photoId, Authentication auth) {
+        AppUser user = requireUser(auth);
+        Optional<RepTripPhoto> opt = photoRepository.findById(photoId);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RepTripPhoto p = opt.get();
+        Optional<RepTrip> tripOpt = tripRepository.findById(p.getTripId());
+        if (tripOpt.isEmpty()) return ResponseEntity.notFound().build();
+        if (!tripOpt.get().getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
+            return ResponseEntity.status(403).build();
+        }
+        try {
+            byte[] bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(p.getFilePath()));
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(p.getMimeType() != null ? p.getMimeType() : "image/jpeg"))
+                    .body(bytes);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    // ─── #10 YTD totals (per user) ───────────────────────────────────────────
+
+    @GetMapping("/totals/ytd")
+    public ResponseEntity<Map<String, Object>> ytdTotals(@RequestParam(required = false) Long userId,
+                                                          Authentication auth) {
+        AppUser user = requireUser(auth);
+        Long target = userId != null ? userId : user.getId();
+        if (!target.equals(user.getId()) && !user.getRole().isAdminLike()) {
+            return ResponseEntity.status(403).build();
+        }
+        LocalDate start = LocalDate.now().withDayOfYear(1);
+        LocalDate end = LocalDate.now();
+        Double km = tripRepository.sumKmForUserBetween(target, start, end);
+        Long cents = tripRepository.sumReimbursementForUserBetween(target, start, end);
+        Map<String, Object> out = new java.util.HashMap<>();
+        out.put("userId", target);
+        out.put("fromDate", start.toString());
+        out.put("toDate", end.toString());
+        out.put("totalKm", km != null ? Math.round(km * 10.0) / 10.0 : 0.0);
+        out.put("reimbursementCents", cents != null ? cents : 0L);
+        return ResponseEntity.ok(out);
+    }
+
+    // ─── #14 CRA-compliant export (T2200 / T777 columns) ─────────────────────
+    // Columns required by the CRA for vehicle-expense audits:
+    //   Date | Origin | Destination | Purpose | Vehicle | Total KM | Rate | $
+
+    @GetMapping("/admin/export-cra")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<byte[]> exportCraCsv(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) Long userId) {
+
+        LocalDate start = parseDate(startDate);
+        LocalDate end   = parseDate(endDate);
+        List<RepTrip> trips;
+        if (start != null && end != null && userId != null) {
+            trips = tripRepository.findByUserIdAndDateBetween(userId, start, end);
+        } else if (start != null && end != null) {
+            trips = tripRepository.findByDateBetween(start, end);
+        } else if (userId != null) {
+            trips = tripRepository.findByUserIdOrderByDateDescCreatedAtDesc(userId);
+        } else {
+            trips = tripRepository.findAllOrderByDateDesc();
+        }
+
+        trips.forEach(t -> userRepository.findById(t.getUserId())
+                .ifPresent(u -> t.setUserEmail(u.getEmail())));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Date,Conducteur,Origine,Destination,Objet,Catégorie,Véhicule,KM,Taux ¢/km,Remboursement $,Statut approbation\n");
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        for (RepTrip t : trips) {
+            String vehicleLabel = "";
+            if (t.getVehicleId() != null) {
+                vehicleLabel = vehicleRepository.findById(t.getVehicleId())
+                        .map(Vehicle::getLabel).orElse("");
+            }
+            sb.append(csvVal(t.getDate() != null ? t.getDate().format(fmt) : "")).append(',');
+            sb.append(csvVal(t.getUserEmail())).append(',');
+            sb.append(csvVal(t.getStartAddress())).append(',');
+            sb.append(csvVal(t.getEndAddress())).append(',');
+            sb.append(csvVal(t.getPurpose())).append(',');
+            sb.append(csvVal(t.getCategory())).append(',');
+            sb.append(csvVal(vehicleLabel)).append(',');
+            sb.append(csvVal(t.getTotalKm() != null ? String.valueOf(t.getTotalKm()) : "")).append(',');
+            sb.append(csvVal(t.getMileageRateCents() != null ? String.valueOf(t.getMileageRateCents()) : "")).append(',');
+            sb.append(csvVal(t.getReimbursementCents() != null
+                    ? String.format(java.util.Locale.ROOT, "%.2f", t.getReimbursementCents() / 100.0) : "")).append(',');
+            sb.append(csvVal(t.getApprovalStatus())).append('\n');
+        }
+        byte[] bytes = sb.toString().getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"export-cra-t2200.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(bytes);
+    }
+
+    // ─── #15 Data retention (admin trigger) ──────────────────────────────────
+    // Strips raw GPS waypoints from trips older than {keepDays} (default 13
+    // months ≈ PIPEDA "reasonable purpose" floor). Polyline + totals are
+    // preserved so the trip remains auditable. Designed to be called by a
+    // cron job, but exposed as an admin endpoint for now.
+
+    @PostMapping("/admin/archive-waypoints")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<Map<String, Object>> archiveOldWaypoints(
+            @RequestParam(defaultValue = "395") int keepDays) {
+        java.time.LocalDateTime cutoff = java.time.LocalDateTime.now().minusDays(keepDays);
+        List<RepTrip> candidates = tripRepository.findRetentionCandidates(cutoff);
+        int archived = 0;
+        for (RepTrip t : candidates) {
+            t.setWaypointsJson(null);
+            t.setWaypointsArchivedAt(java.time.LocalDateTime.now());
+            tripRepository.save(t);
+            archived++;
+        }
+        return ResponseEntity.ok(Map.of(
+                "archived", archived,
+                "cutoff", cutoff.toString()));
     }
 }
