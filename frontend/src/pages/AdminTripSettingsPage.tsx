@@ -253,7 +253,7 @@ const AdminTripSettingsPage: React.FC = () => {
     }
   }
 
-  // ── Maintenance
+  async function handleDeleteRate(id: number) {
     if (!window.confirm('Supprimer ce taux kilométrique ?')) return;
     try {
       await deleteMileageRate(id);
