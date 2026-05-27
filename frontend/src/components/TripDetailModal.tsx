@@ -289,6 +289,8 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
       const updated = await updateRepTrip(trip.id, {
         startAddress: editStart.trim(),
         endAddress: editEnd.trim(),
+        // Pass totalKm through so the backend does not fall back to haversine
+        ...(trip.totalKm != null ? { totalKm: trip.totalKm } : {}),
       });
       onUpdate?.(updated);
       setEditing(false);

@@ -188,9 +188,13 @@ public class RepTripController {
         // Auto-compute totalKm when ending trip with coordinates
         if (body.containsKey("totalKm")) {
             trip.setTotalKm(toDouble(body.get("totalKm")));
-        } else if ("COMPLETED".equals(trip.getStatus())
+        } else if (trip.getTotalKm() == null
+                && "COMPLETED".equals(trip.getStatus())
                 && trip.getStartLat() != null && trip.getStartLng() != null
                 && trip.getEndLat() != null && trip.getEndLng() != null) {
+            // Only fall back to haversine when totalKm has never been set.
+            // Do NOT overwrite an existing value — it would clobber a
+            // previously computed Google/OSRM distance with a straight-line estimate.
             trip.setTotalKm(RepTrip.haversineKm(
                     trip.getStartLat(), trip.getStartLng(),
                     trip.getEndLat(), trip.getEndLng()));
