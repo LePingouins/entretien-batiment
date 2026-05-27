@@ -881,7 +881,7 @@ public class RepTripController {
         AppUser user = requireUser(auth);
         // Admin with no userId filter → return company-wide (userId IS NULL) rates
         if (userId == null && user.getRole().isAdminLike()) {
-            return mileageRepository.findByUserIdIsNullOrderByEffectiveFromDesc();
+            return mileageRepository.findByUserIdIsNullOrderByEffectiveFromDescIdDesc();
         }
         Long target = userId != null ? userId : user.getId();
         if (!target.equals(user.getId()) && !user.getRole().isAdminLike()) {

@@ -11,8 +11,15 @@ import PageHeader from '../components/PageHeader';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string) {
-  try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
-  catch { return iso; }
+  try {
+    // Date-only strings (YYYY-MM-DD) must be parsed as local midnight,
+    // not UTC midnight, to avoid off-by-one day in non-UTC timezones.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch { return iso; }
 }
 
 // ─── VehicleRow ───────────────────────────────────────────────────────────────

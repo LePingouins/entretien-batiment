@@ -18,7 +18,7 @@ public interface UserMileageRateRepository extends JpaRepository<UserMileageRate
     @Query("SELECT r FROM UserMileageRate r " +
            "WHERE (r.userId = :userId OR r.userId IS NULL) " +
            "  AND r.effectiveFrom <= :on " +
-           "ORDER BY (CASE WHEN r.userId IS NULL THEN 1 ELSE 0 END) ASC, r.effectiveFrom DESC")
+           "ORDER BY (CASE WHEN r.userId IS NULL THEN 1 ELSE 0 END) ASC, r.effectiveFrom DESC, r.id DESC")
     List<UserMileageRate> findApplicableRates(@Param("userId") Long userId, @Param("on") LocalDate on);
 
     default Optional<UserMileageRate> findRateFor(Long userId, LocalDate on) {
@@ -26,7 +26,8 @@ public interface UserMileageRateRepository extends JpaRepository<UserMileageRate
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
 
-    List<UserMileageRate> findByUserIdIsNullOrderByEffectiveFromDesc();
+    @Query("SELECT r FROM UserMileageRate r WHERE r.userId IS NULL ORDER BY r.effectiveFrom DESC, r.id DESC")
+    List<UserMileageRate> findByUserIdIsNullOrderByEffectiveFromDescIdDesc();
 
     List<UserMileageRate> findByUserIdOrderByEffectiveFromDesc(Long userId);
 }
