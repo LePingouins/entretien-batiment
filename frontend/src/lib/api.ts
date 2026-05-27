@@ -739,6 +739,7 @@ import type {
   RepTripPhoto,
   Vehicle,
   UserMileageRate,
+  TripGpsSummary,
 } from '../types/api';
 
 export async function getRepTrips(): Promise<RepTrip[]> {
@@ -839,6 +840,13 @@ export async function createMileageRate(r: Partial<UserMileageRate>): Promise<Us
 }
 export async function deleteMileageRate(id: number): Promise<void> {
   await api.delete(`/api/rep-trips/mileage-rates/${id}`);
+}
+export async function getTripGpsSummary(): Promise<TripGpsSummary[]> {
+  const res = await api.get<TripGpsSummary[]>('/api/rep-trips/admin/gps-summary');
+  return res.data;
+}
+export async function deleteRepTripWaypoints(tripId: number): Promise<void> {
+  await api.delete(`/api/rep-trips/${tripId}/waypoints`);
 }
 export async function getCurrentMileageRate(): Promise<UserMileageRate | null> {
   try {

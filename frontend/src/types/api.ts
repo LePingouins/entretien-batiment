@@ -335,6 +335,14 @@ export interface UserMileageRate {
   createdBy?: number;
 }
 
+export interface TripGpsSummary {
+  id: number;
+  date: string;
+  userEmail?: string;
+  totalKm?: number;
+  archivedAt?: string;
+}
+
 // --- Dashboard Types ---
 export interface DashboardStats {
   totalWorkOrders: number;

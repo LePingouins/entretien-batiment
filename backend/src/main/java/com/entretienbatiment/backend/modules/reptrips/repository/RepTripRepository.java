@@ -1,6 +1,7 @@
 package com.entretienbatiment.backend.modules.reptrips.repository;
 
 import com.entretienbatiment.backend.modules.reptrips.model.RepTrip;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,6 +11,21 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RepTripRepository extends JpaRepository<RepTrip, Long> {
+
+    /** Lightweight projection for GPS management — does NOT select waypoints_json. */
+    interface GpsSummary {
+        Long getId();
+        java.time.LocalDate getDate();
+        Long getUserId();
+        Double getTotalKm();
+        java.time.LocalDateTime getWaypointsArchivedAt();
+    }
+
+    @Query("SELECT t.id as id, t.date as date, t.userId as userId, t.totalKm as totalKm, " +
+           "t.waypointsArchivedAt as waypointsArchivedAt " +
+           "FROM RepTrip t WHERE t.status = 'COMPLETED' AND t.waypointsJson IS NOT NULL " +
+           "ORDER BY t.date DESC, t.id DESC")
+    List<GpsSummary> findGpsSummaries(Pageable pageable);
 
     List<RepTrip> findByUserIdOrderByDateDescCreatedAtDesc(Long userId);
 

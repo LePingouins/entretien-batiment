@@ -1115,6 +1115,37 @@ public class RepTripController {
     }
 
     // ─── #15 Data retention (admin trigger) ──────────────────────────────────
+    /** Lightweight GPS management list — no waypoints_json blob in response. */
+    @GetMapping("/admin/gps-summary")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public List<Map<String, Object>> getGpsSummary() {
+        return tripRepository.findGpsSummaries(org.springframework.data.domain.PageRequest.of(0, 200))
+                .stream()
+                .map(s -> {
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", s.getId());
+                    m.put("date", s.getDate());
+                    m.put("totalKm", s.getTotalKm());
+                    m.put("archivedAt", s.getWaypointsArchivedAt());
+                    userRepository.findById(s.getUserId())
+                            .ifPresent(u -> m.put("userEmail", u.getEmail()));
+                    return m;
+                })
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /** Delete GPS waypoints for a single trip (admin). */
+    @DeleteMapping("/{id}/waypoints")
+    @PreAuthorize("hasAnyRole('ADMIN','DEVELOPPER')")
+    public ResponseEntity<Void> deleteWaypoints(@PathVariable Long id) {
+        return tripRepository.findById(id).map(t -> {
+            t.setWaypointsJson(null);
+            t.setWaypointsArchivedAt(java.time.LocalDateTime.now());
+            tripRepository.save(t);
+            return ResponseEntity.noContent().<Void>build();
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     // Strips raw GPS waypoints from trips older than {keepDays} (default 13
     // months ≈ PIPEDA "reasonable purpose" floor). Polyline + totals are
     // preserved so the trip remains auditable. Designed to be called by a

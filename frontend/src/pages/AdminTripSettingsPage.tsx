@@ -3,9 +3,10 @@ import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import {
   getVehicles, createVehicle, updateVehicle, deleteVehicle,
   getMileageRates, createMileageRate, deleteMileageRate,
+  getTripGpsSummary, deleteRepTripWaypoints,
   archiveOldWaypoints,
 } from '../lib/api';
-import type { Vehicle, UserMileageRate } from '../types/api';
+import type { Vehicle, UserMileageRate, TripGpsSummary } from '../types/api';
 import PageHeader from '../components/PageHeader';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -163,6 +164,10 @@ const AdminTripSettingsPage: React.FC = () => {
   const [newFrom, setNewFrom] = useState(() => new Date().toISOString().slice(0, 10));
   const [creatingR, setCreatingR] = useState(false);
 
+  // GPS management state
+  const [gpsSummary, setGpsSummary] = useState<TripGpsSummary[]>([]);
+  const [gpsLoading, setGpsLoading] = useState(true);
+
   // Maintenance
   const [archiving, setArchiving] = useState(false);
   const [archiveResult, setArchiveResult] = useState<string | null>(null);
@@ -187,6 +192,11 @@ const AdminTripSettingsPage: React.FC = () => {
       .then(r => setRates(r.sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))))
       .catch(() => {})
       .finally(() => setRLoading(false));
+
+    getTripGpsSummary()
+      .then(setGpsSummary)
+      .catch(() => {})
+      .finally(() => setGpsLoading(false));
   }, []);
 
   // ── Vehicle actions ──────────────────────────────────────────────────────────
@@ -233,7 +243,17 @@ const AdminTripSettingsPage: React.FC = () => {
     }
   }
 
-  async function handleDeleteRate(id: number) {
+  async function handleDeleteWaypoints(id: number) {
+    if (!window.confirm(`Supprimer les données GPS du trajet #${id} ?`)) return;
+    try {
+      await deleteRepTripWaypoints(id);
+      setGpsSummary(prev => prev.filter(t => t.id !== id));
+    } catch (e: any) {
+      alert('Erreur: ' + (e?.response?.data?.message ?? e?.message));
+    }
+  }
+
+  // ── Maintenance
     if (!window.confirm('Supprimer ce taux kilométrique ?')) return;
     try {
       await deleteMileageRate(id);
@@ -473,6 +493,52 @@ const AdminTripSettingsPage: React.FC = () => {
               <p className={`mt-3 text-sm ${archiveResult.startsWith('✅') ? (isDark ? 'text-green-300' : 'text-green-700') : (isDark ? 'text-red-300' : 'text-red-700')}`}>
                 {archiveResult}
               </p>
+            )}
+          </div>
+
+          {/* Per-trip GPS deletion */}
+          <div className={`rounded-xl border overflow-hidden mt-4 ${card}`}>
+            <div className={`px-4 py-3 border-b ${isDark ? 'border-surface-700' : 'border-slate-100'}`}>
+              <p className={`text-sm font-medium ${heading}`}>Supprimer les données GPS par trajet</p>
+              <p className={`text-xs mt-0.5 ${sub}`}>
+                {gpsLoading ? '…' : `${gpsSummary.length} trajet(s) avec données GPS`}
+              </p>
+            </div>
+            {gpsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : gpsSummary.length === 0 ? (
+              <p className={`text-center py-6 text-sm ${sub}`}>Aucun trajet avec données GPS.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    {['#', 'Date', 'Représentant', 'Distance', ''].map(h => (
+                      <th key={h} className={`px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide ${theadTh}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {gpsSummary.map(t => (
+                    <tr key={t.id} className={`border-b ${isDark ? 'border-surface-700' : 'border-slate-100'}`}>
+                      <td className={`px-4 py-2.5 ${sub}`}>#{t.id}</td>
+                      <td className={`px-4 py-2.5 ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>{fmtDate(t.date)}</td>
+                      <td className={`px-4 py-2.5 ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>{t.userEmail ?? '—'}</td>
+                      <td className={`px-4 py-2.5 ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>{t.totalKm != null ? `${t.totalKm.toFixed(1)} km` : '—'}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <button
+                          onClick={() => handleDeleteWaypoints(t.id)}
+                          className={`text-xs px-2 py-1 rounded hover:bg-red-100 hover:text-red-700 ${isDark ? 'text-surface-400 hover:bg-red-900/30 hover:text-red-400' : 'text-slate-400'} transition-colors`}
+                          title="Supprimer données GPS"
+                        >
+                          🗑 GPS
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         </section>
