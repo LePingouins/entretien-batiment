@@ -18,9 +18,16 @@ interface TripDetailModalProps {
   onUpdate?: (updated: RepTrip) => void;
 }
 
+/** Java LocalDateTime serializes without 'Z'; tell the browser to treat it as UTC. */
+function ensureUtc(iso: string | null | undefined): string {
+  if (!iso) return '';
+  if (!iso.endsWith('Z') && !/[+\-]\d{2}:\d{2}$/.test(iso)) return iso + 'Z';
+  return iso;
+}
+
 function fmtDateTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleString(undefined, {
+    return new Date(ensureUtc(iso)).toLocaleString(undefined, {
       year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
@@ -31,7 +38,7 @@ function fmtDateTime(iso: string): string {
 
 function fmtTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    return new Date(ensureUtc(iso)).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   } catch {
     return iso;
   }
@@ -207,6 +214,19 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
 
   const idlePeriods = useMemo(() => findIdlePeriods(waypoints), [waypoints]);
 
+  // Deduplicate: hide auto-detected idle periods that overlap (±5 min) with a manual stop.
+  const filteredIdlePeriods = useMemo(() => {
+    if (trip.stops.length === 0) return idlePeriods;
+    const FIVE_MIN = 5 * 60_000;
+    const stopTimesMs = trip.stops
+      .map(s => new Date(ensureUtc(s.stoppedAt ?? '')).getTime())
+      .filter(t => !isNaN(t) && t > 0);
+    return idlePeriods.filter(
+      idle => !stopTimesMs.some(stopMs => Math.abs(idle.startTime - stopMs) < FIVE_MIN)
+    );
+  }, [idlePeriods, trip.stops]);
+
+
   // Map center: midpoint of route, or start coords, or end coords
   const hasStartCoords = trip.startLat != null && trip.startLng != null;
   const hasEndCoords = trip.endLat != null && trip.endLng != null;
@@ -231,15 +251,15 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
   // Reverse-geocoded addresses for auto-detected idle periods
   const [idleAddresses, setIdleAddresses] = useState<Record<number, string>>({});
   useEffect(() => {
-    if (idlePeriods.length === 0) return;
+    if (filteredIdlePeriods.length === 0) return;
     let cancelled = false;
-    idlePeriods.forEach((idle, idx) => {
+    filteredIdlePeriods.forEach((idle, idx) => {
       reverseGeocode(idle.lat, idle.lng)
         .then(addr => { if (!cancelled) setIdleAddresses(prev => ({ ...prev, [idx]: addr })); })
         .catch(() => {});
     });
     return () => { cancelled = true; };
-  }, [idlePeriods]);
+  }, [filteredIdlePeriods]);
 
   function flyTo(coord: [number, number] | null) {
     if (!coord) return;
@@ -292,9 +312,9 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
               {fmtDateTime(trip.createdAt)}
               {(() => {
                 const endIso = trip.endedAt
-                  ?? (trip.durationMinutes != null ? new Date(new Date(trip.createdAt).getTime() + trip.durationMinutes * 60000).toISOString() : null);
+                  ?? (trip.durationMinutes != null ? new Date(new Date(ensureUtc(trip.createdAt)).getTime() + trip.durationMinutes * 60000).toISOString() : null);
                 return endIso ? (
-                  <span> – {new Date(endIso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span> – {new Date(ensureUtc(endIso)).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                 ) : null;
               })()}
             </p>
@@ -658,8 +678,8 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                     </Tooltip>
                   </CircleMarker>
                 )}
-                {/* Idle period markers */}
-                {idlePeriods.map((idle, idx) => (
+                {/* Idle period markers (deduplicated against manual stops) */}
+                {filteredIdlePeriods.map((idle, idx) => (
                   <CircleMarker
                     key={idx}
                     center={[idle.lat, idle.lng]}
@@ -702,7 +722,7 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
           {/* Parcours timeline — manual stops + auto-detected idle periods merged */}
           {(trip.startAddress || trip.stops.length > 0 || trip.endAddress || idlePeriods.length > 0) && (() => {
             const endIso = trip.endedAt
-              ?? (trip.durationMinutes != null ? new Date(new Date(trip.createdAt).getTime() + trip.durationMinutes * 60000).toISOString() : null);
+              ?? (trip.durationMinutes != null ? new Date(new Date(ensureUtc(trip.createdAt)).getTime() + trip.durationMinutes * 60000).toISOString() : null);
             const reasonLabels: Record<string, string> = {
               CLIENT: 'Client', RESTAURANT: 'Restaurant',
               GAS: 'Carburant', OFFICE: 'Bureau', OTHER: 'Autre',
@@ -720,12 +740,12 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
             };
             const events: TimelineEvent[] = [
               {
-                type: 'start', time: trip.createdAt, label: 'Départ',
+                type: 'start', time: ensureUtc(trip.createdAt), label: 'Départ',
                 sublabel: trip.startAddress,
                 coord: polyline.length >= 1 ? polyline[0] : hasStartCoords ? [trip.startLat!, trip.startLng!] : null,
               },
               ...trip.stops.map(s => ({
-                type: 'stop' as const, time: s.stoppedAt,
+                type: 'stop' as const, time: ensureUtc(s.stoppedAt),
                 label: reasonLabels[s.reason] ?? s.reason,
                 sublabel: s.address, notes: s.notes,
                 coord: (s.lat != null && s.lng != null ? [s.lat, s.lng] : null) as [number, number] | null,
@@ -733,7 +753,7 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                   ? computeStopDuration(waypoints, s.lat, s.lng) ?? undefined
                   : undefined,
               })),
-              ...idlePeriods.map((idle, idx) => ({
+              ...filteredIdlePeriods.map((idle, idx) => ({
                 type: 'idle' as const,
                 time: new Date(idle.startTime).toISOString(),
                 resumeTime: new Date(idle.resumeTime ?? idle.endTime).toISOString(),
@@ -743,7 +763,7 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                 coord: [idle.lat, idle.lng] as [number, number],
               })),
               ...(endIso || trip.endAddress ? [{
-                type: 'end' as const, time: endIso, label: 'Arrivée',
+                type: 'end' as const, time: ensureUtc(endIso), label: 'Arrivée',
                 sublabel: trip.endAddress,
                 coord: (polyline.length >= 2 ? polyline[polyline.length - 1] : hasEndCoords ? [trip.endLat!, trip.endLng!] : null) as [number, number] | null,
               }] : []),
