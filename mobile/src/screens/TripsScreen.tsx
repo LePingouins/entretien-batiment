@@ -195,9 +195,15 @@ export default function TripsScreen({ onLogout }: Props) {
               // Refresh trip list so the new stop appears if the user looks
               const updated = await getMyTrips();
               setTrips(updated);
-            } catch {
+              // DEBUG: visual confirmation that stop was detected & submitted
+              Alert.alert(
+                'Arrêt détecté ✅',
+                `Durée: ${Math.round(idle.durationMs / 1000)}s\n${addr}`,
+              );
+            } catch (e) {
               // Non-fatal — will retry on next 15 s tick if still idle
               idleStopSentAtRef.current = null;
+              Alert.alert('Erreur arrêt', String(e));
             }
           }
         } else {
