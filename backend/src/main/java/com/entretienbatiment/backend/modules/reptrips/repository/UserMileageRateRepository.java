@@ -26,5 +26,7 @@ public interface UserMileageRateRepository extends JpaRepository<UserMileageRate
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
 
+    List<UserMileageRate> findByUserIdIsNullOrderByEffectiveFromDesc();
+
     List<UserMileageRate> findByUserIdOrderByEffectiveFromDesc(Long userId);
 }

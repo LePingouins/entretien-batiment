@@ -879,6 +879,10 @@ public class RepTripController {
     public List<UserMileageRate> listMileageRates(@RequestParam(required = false) Long userId,
                                                    Authentication auth) {
         AppUser user = requireUser(auth);
+        // Admin with no userId filter → return company-wide (userId IS NULL) rates
+        if (userId == null && user.getRole().isAdminLike()) {
+            return mileageRepository.findByUserIdIsNullOrderByEffectiveFromDesc();
+        }
         Long target = userId != null ? userId : user.getId();
         if (!target.equals(user.getId()) && !user.getRole().isAdminLike()) {
             return List.of();
