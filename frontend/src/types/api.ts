@@ -255,6 +255,12 @@ export interface RepTrip {
   endLat?: number;
   endLng?: number;
   totalKm?: number;
+  /** Optimal Google route via origin + recorded stops + destination. */
+  idealKm?: number;
+  /** Google route through filtered GPS intermediates (real path driven). */
+  actualKm?: number;
+  /** Which value populated totalKm: "actual" | "ideal_fallback" | "haversine" | ... */
+  distanceSource?: string;
   durationMinutes?: number;
   waypointsJson?: string;
   endedAt?: string;

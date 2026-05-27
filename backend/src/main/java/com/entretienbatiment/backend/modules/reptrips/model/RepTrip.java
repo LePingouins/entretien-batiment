@@ -49,6 +49,21 @@ public class RepTrip {
     @Column(name = "total_km")
     private Double totalKm;
 
+    /** Optimal route via origin + recorded stops + destination (deterministic). */
+    @Column(name = "ideal_km")
+    private Double idealKm;
+
+    /** Route through filtered GPS intermediates — what was actually driven. */
+    @Column(name = "actual_km")
+    private Double actualKm;
+
+    /**
+     * Which computation populated total_km: "actual", "ideal_fallback",
+     * "haversine", "manual", etc. Audit trail for reimbursement disputes.
+     */
+    @Column(name = "distance_source", length = 32)
+    private String distanceSource;
+
     @Column(name = "distance_method", nullable = false)
     private String distanceMethod = "HAVERSINE"; // HAVERSINE | ROAD | GPS | OSRM | GOOGLE
 
@@ -113,6 +128,15 @@ public class RepTrip {
 
     public Double getTotalKm() { return totalKm; }
     public void setTotalKm(Double totalKm) { this.totalKm = totalKm; }
+
+    public Double getIdealKm() { return idealKm; }
+    public void setIdealKm(Double idealKm) { this.idealKm = idealKm; }
+
+    public Double getActualKm() { return actualKm; }
+    public void setActualKm(Double actualKm) { this.actualKm = actualKm; }
+
+    public String getDistanceSource() { return distanceSource; }
+    public void setDistanceSource(String distanceSource) { this.distanceSource = distanceSource; }
 
     public String getDistanceMethod() { return distanceMethod; }
     public void setDistanceMethod(String distanceMethod) { this.distanceMethod = distanceMethod; }

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import type { RepTrip } from '../types/api';
-import { findIdlePeriods, formatDuration, formatDurationMs } from '../lib/tripUtils';
+import { findIdlePeriods, formatDuration, formatDurationMs, computeStopDuration } from '../lib/tripUtils';
 import type { Waypoint } from '../lib/tripUtils';
 import { updateRepTrip, reverseGeocode } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -194,6 +194,66 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
             </div>
           </div>
 
+          {/* Dual-distance audit panel — shows both Google numbers when present */}
+          {(trip.idealKm != null || trip.actualKm != null) && (() => {
+            const ideal = trip.idealKm;
+            const actual = trip.actualKm;
+            const diff = ideal != null && actual != null ? actual - ideal : null;
+            const diffPct = ideal != null && actual != null && ideal > 0
+              ? Math.round(((actual - ideal) / ideal) * 100) : null;
+            const sourceLabel: Record<string, string> = {
+              actual: 'Trajet réel',
+              ideal_fallback: 'Route optimale (GPS rejeté)',
+              ideal_only: 'Route optimale',
+              actual_no_ideal: 'Trajet réel',
+              haversine: 'Distance à vol d\'oiseau',
+              osrm: 'OSRM',
+            };
+            const isFallback = trip.distanceSource === 'ideal_fallback';
+            return (
+              <div className={`px-5 py-3 border-b ${divider} ${isFallback ? (isDark ? 'bg-amber-900/10' : 'bg-amber-50') : ''}`}>
+                <div className="flex items-baseline justify-between gap-4 flex-wrap">
+                  <div className="flex gap-5 flex-wrap">
+                    {ideal != null && (
+                      <div>
+                        <p className={`text-xs ${sub}`}>Route optimale</p>
+                        <p className="text-sm font-semibold">{ideal} km</p>
+                      </div>
+                    )}
+                    {actual != null && (
+                      <div>
+                        <p className={`text-xs ${sub}`}>Trajet GPS</p>
+                        <p className="text-sm font-semibold">{actual} km</p>
+                      </div>
+                    )}
+                    {diff != null && (
+                      <div>
+                        <p className={`text-xs ${sub}`}>Écart</p>
+                        <p className={`text-sm font-semibold ${diff > 0 ? (isDark ? 'text-amber-400' : 'text-amber-700') : ''}`}>
+                          {diff >= 0 ? '+' : ''}{Math.round(diff * 10) / 10} km
+                          {diffPct != null && ` (${diffPct >= 0 ? '+' : ''}${diffPct}%)`}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {trip.distanceSource && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isFallback
+                      ? (isDark ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-800')
+                      : (isDark ? 'bg-surface-700 text-surface-300' : 'bg-slate-100 text-slate-600')
+                    }`}>
+                      {sourceLabel[trip.distanceSource] ?? trip.distanceSource}
+                    </span>
+                  )}
+                </div>
+                {isFallback && (
+                  <p className={`text-xs mt-2 ${isDark ? 'text-amber-300/80' : 'text-amber-700'}`}>
+                    Le trajet GPS reconstitué dépassait 2,5× la route optimale — probablement de la dérive GPS. La route optimale a été conservée pour le remboursement.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Addresses */}
           <div className={`px-5 py-4 border-b ${divider} space-y-2`}>
             {isAdmin && (
@@ -322,6 +382,23 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                     </Tooltip>
                   </CircleMarker>
                 ))}
+                {/* Saved stops (manual + auto-submitted from background detection) */}
+                {trip.stops.filter(s => s.lat != null && s.lng != null).map((s, idx) => {
+                  const dur = computeStopDuration(waypoints, s.lat!, s.lng!);
+                  return (
+                    <CircleMarker
+                      key={`stop-${idx}`}
+                      center={[s.lat!, s.lng!]}
+                      radius={8}
+                      pathOptions={{ color: '#b45309', fillColor: '#fbbf24', fillOpacity: 0.9, weight: 2 }}
+                    >
+                      <Tooltip direction="top" offset={[0, -10]}>
+                        <div style={{ fontWeight: 600 }}>Arrêt{dur ? ` ~${formatDurationMs(dur)}` : ''}</div>
+                        {s.address && <div style={{ color: '#6b7280', fontSize: '0.68rem', maxWidth: 160, lineHeight: 1.3, marginTop: 2 }}>{s.address}</div>}
+                      </Tooltip>
+                    </CircleMarker>
+                  );
+                })}
                 <MapFlyTo coord={flyCoord} />
               </MapContainer>
               {polyline.length < 2 && (
@@ -364,6 +441,9 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                 label: reasonLabels[s.reason] ?? s.reason,
                 sublabel: s.address, notes: s.notes,
                 coord: (s.lat != null && s.lng != null ? [s.lat, s.lng] : null) as [number, number] | null,
+                durationMs: (s.lat != null && s.lng != null)
+                  ? computeStopDuration(waypoints, s.lat, s.lng) ?? undefined
+                  : undefined,
               })),
               ...idlePeriods.map((idle, idx) => ({
                 type: 'idle' as const,
@@ -429,6 +509,11 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                               {event.time && <span className={`text-xs font-semibold ${timeClass}`}>{fmtTime(event.time)}</span>}
                               <span className="text-xs font-medium">{event.label}</span>
                               {event.type === 'idle' && event.durationMs != null && (
+                                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${isDark ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'}`}>
+                                  {formatDurationMs(event.durationMs)}
+                                </span>
+                              )}
+                              {event.type === 'stop' && event.durationMs != null && (
                                 <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${isDark ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'}`}>
                                   {formatDurationMs(event.durationMs)}
                                 </span>

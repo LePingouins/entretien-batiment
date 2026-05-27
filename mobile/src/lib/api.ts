@@ -58,6 +58,9 @@ export interface RepTrip {
   endLat: number | null;
   endLng: number | null;
   totalKm: number | null;
+  idealKm: number | null;
+  actualKm: number | null;
+  distanceSource: string | null;
   distanceMethod: string;
   createdAt: string;
   stops: RepTripStop[];
@@ -102,7 +105,8 @@ export async function endTrip(
   endAddress: string,
   totalKm: number,
   durationMinutes: number,
-  waypoints: Waypoint[]
+  waypoints: Waypoint[],
+  extra?: { idealKm?: number; actualKm?: number; distanceSource?: string }
 ): Promise<RepTrip> {
   const res = await api.patch<RepTrip>(`/api/rep-trips/${id}`, {
     status: 'COMPLETED',
@@ -112,6 +116,7 @@ export async function endTrip(
     totalKm,
     durationMinutes,
     waypointsJson: JSON.stringify(waypoints),
+    ...(extra ?? {}),
   });
   return res.data;
 }
@@ -151,25 +156,32 @@ export async function osrmRouteKm(waypoints: Waypoint[]): Promise<number | null>
 // The mobile app sends waypoints to our Spring Boot backend, which calls
 // Google Routes API server-side. The API key never leaves the server.
 
-export async function googleRouteKm(waypoints: Waypoint[]): Promise<number | null> {
+export interface RouteDistanceResult {
+  km: number;
+  source: string;          // "actual" | "ideal_fallback" | "ideal_only" | etc.
+  idealKm?: number;        // optimal Google route via stops (deterministic)
+  actualKm?: number;       // route through filtered GPS (real path driven)
+}
+
+export async function googleRouteKm(waypoints: Waypoint[]): Promise<RouteDistanceResult | null> {
   if (waypoints.length < 2) return null;
 
-  // Sample to at most 27 points (origin + 25 intermediates + destination)
-  const MAX_TOTAL = 27;
-  const step = Math.max(1, Math.floor(waypoints.length / MAX_TOTAL));
-  const sampled: Waypoint[] = [];
-  for (let i = 0; i < waypoints.length; i += step) {
-    sampled.push(waypoints[i]);
-  }
-  const last = waypoints[waypoints.length - 1];
-  if (sampled[sampled.length - 1] !== last) sampled.push(last);
-
-  // Send only [lat, lng] pairs to the backend (strip timestamps)
-  const pairs = sampled.map(([lat, lng]) => [lat, lng]);
+  // Send full waypoints WITH timestamps so the backend can detect stationary
+  // clusters and pick stable anchors (drift-free, deterministic routing).
+  // Format: [lat, lng, timestampMs]
+  const pairs = waypoints.map(([lat, lng, t]) => [lat, lng, t]);
   try {
-    const res = await api.post<{ km: number | '' }>('/api/rep-trips/route-distance', pairs);
+    const res = await api.post<{ km: number | ''; source?: string; idealKm?: number; actualKm?: number }>(
+      '/api/rep-trips/route-distance', pairs
+    );
     const km = res.data.km;
-    return typeof km === 'number' ? km : null;
+    if (typeof km !== 'number') return null;
+    return {
+      km,
+      source: res.data.source ?? 'unknown',
+      idealKm: res.data.idealKm,
+      actualKm: res.data.actualKm,
+    };
   } catch {
     return null;
   }

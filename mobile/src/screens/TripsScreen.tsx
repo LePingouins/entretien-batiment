@@ -411,27 +411,34 @@ export default function TripsScreen({ onLogout }: Props) {
       const haversineKm = calculateTotalKm(enriched);
 
       let totalKm: number;
+      let routeExtra: { idealKm?: number; actualKm?: number; distanceSource?: string } | undefined;
       // Skip routing API for very short trips (< 0.5 km straight-line) — same-location
       // test trips, API errors on identical origin/destination, etc.
       if (haversineKm < 0.5 || method === 'GPS') {
         totalKm = haversineKm;
+        routeExtra = { distanceSource: 'haversine' };
       } else if (method === 'OSRM') {
         const road = await osrmRouteKm(enriched);
         if (road == null) setRouteWarning('OSRM indisponible — distance GPS utilisée.');
         totalKm = road ?? haversineKm;
+        routeExtra = { distanceSource: road != null ? 'osrm' : 'haversine' };
       } else if (method === 'GOOGLE') {
-        const road = await googleRouteKm(enriched);
-        if (road == null) setRouteWarning('Google indisponible — distance GPS utilisée.');
-        totalKm = road ?? haversineKm;
+        const result = await googleRouteKm(enriched);
+        if (result == null) setRouteWarning('Google indisponible — distance GPS utilisée.');
+        totalKm = result?.km ?? haversineKm;
+        routeExtra = result
+          ? { idealKm: result.idealKm, actualKm: result.actualKm, distanceSource: result.source }
+          : { distanceSource: 'haversine' };
       } else {
         totalKm = haversineKm;
+        routeExtra = { distanceSource: 'haversine' };
       }
 
       const durationMinutes = activeTripStart
         ? Math.round((Date.now() - activeTripStart) / 60_000)
         : 0;
 
-      const updated = await endTrip(activeTripId, lat, lng, endAddrInput.trim(), totalKm, durationMinutes, waypoints);
+      const updated = await endTrip(activeTripId, lat, lng, endAddrInput.trim(), totalKm, durationMinutes, waypoints, routeExtra);
 
       await clearActiveTripId();
       await clearWaypoints(activeTripId);

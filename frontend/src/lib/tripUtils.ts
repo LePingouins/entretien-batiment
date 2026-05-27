@@ -11,7 +11,7 @@ export interface IdlePeriod {
 }
 
 /** Haversine distance in metres between two lat/lng points */
-function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+export function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6_371_000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
@@ -92,4 +92,27 @@ export function formatDurationMs(ms: number): string {
   if (h > 0) return `${h}h ${m}m`;
   if (m > 0) return s > 0 ? `${m}m ${s}s` : `${m}m`;
   return `${s}s`;
+}
+
+/**
+ * Estimate the duration of a saved stop by looking at waypoints clustered
+ * within `radiusM` metres of the stop's coordinates. Returns the time span
+ * from the first to the last clustered waypoint, or null if not enough data.
+ */
+export function computeStopDuration(
+  waypoints: Waypoint[],
+  stopLat: number,
+  stopLng: number,
+  radiusM = 100,
+): number | null {
+  let first: number | null = null;
+  let last: number | null = null;
+  for (const [lat, lng, t] of waypoints) {
+    if (haversineM(stopLat, stopLng, lat, lng) <= radiusM) {
+      if (first === null) first = t;
+      last = t;
+    }
+  }
+  if (first === null || last === null || last - first < 1000) return null;
+  return last - first;
 }
