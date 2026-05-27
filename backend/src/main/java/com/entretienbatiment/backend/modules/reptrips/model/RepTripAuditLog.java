@@ -25,12 +25,10 @@ public class RepTripAuditLog {
     @Column(length = 255)
     private String summary;
 
-    @Lob
-    @Column(name = "before_json", columnDefinition = "MEDIUMTEXT")
+    @Column(name = "before_json", columnDefinition = "text")
     private String beforeJson;
 
-    @Lob
-    @Column(name = "after_json", columnDefinition = "MEDIUMTEXT")
+    @Column(name = "after_json", columnDefinition = "text")
     private String afterJson;
 
     @Column(name = "created_at", nullable = false)
