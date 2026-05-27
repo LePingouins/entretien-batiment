@@ -11,8 +11,9 @@ import {
   reverseGeocode,
   osrmRouteKm,
   googleRouteKm,
+  getVehicles,
 } from '../lib/api';
-import type { RepTrip, RepTripStop, RepTripStopReason } from '../types/api';
+import type { RepTrip, RepTripStop, RepTripStopReason, RepTripCategory, Vehicle } from '../types/api';
 import PageHeader from '../components/PageHeader';
 import TripDetailModal from '../components/TripDetailModal';
 import { formatDuration } from '../lib/tripUtils';
@@ -414,6 +415,14 @@ interface StartTripModalProps {
   onStarted: (trip: RepTrip) => void;
 }
 
+const TRIP_CATEGORIES: { v: RepTripCategory; l: string }[] = [
+  { v: 'CLIENT',   l: '🤝 Client' },
+  { v: 'PICKUP',   l: '📦 Cueillette' },
+  { v: 'TRAINING', l: '🎓 Formation' },
+  { v: 'PERSONAL', l: '👤 Personnel' },
+  { v: 'OTHER',    l: '📍 Autre' },
+];
+
 const StartTripModal: React.FC<StartTripModalProps> = ({ isDark, t, onClose, onStarted }) => {
   const [purpose, setPurpose] = useState('');
   const [notes, setNotes] = useState('');
@@ -422,7 +431,14 @@ const StartTripModal: React.FC<StartTripModalProps> = ({ isDark, t, onClose, onS
   const [lat, setLat] = useState<number | undefined>();
   const [lng, setLng] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
-  const [distanceMethod, setDistanceMethod] = useState<'HAVERSINE' | 'ROAD' | 'GOOGLE'>('HAVERSINE');
+  const [distanceMethod, setDistanceMethod] = useState<'HAVERSINE' | 'ROAD' | 'GOOGLE'>('ROAD');
+  const [category, setCategory] = useState<RepTripCategory>('CLIENT');
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicleId, setVehicleId] = useState<number | null>(null);
+
+  useEffect(() => {
+    getVehicles().then((vs) => setVehicles(vs.filter((v) => v.active))).catch(() => {});
+  }, []);
 
   const getLocation = useCallback(async () => {
     if (!navigator.geolocation) { setLocState('error'); return; }
@@ -458,6 +474,8 @@ const StartTripModal: React.FC<StartTripModalProps> = ({ isDark, t, onClose, onS
         startLat: lat,
         startLng: lng,
         distanceMethod,
+        category,
+        vehicleId: vehicleId ?? undefined,
       });
       onStarted(trip);
     } finally {
@@ -522,6 +540,67 @@ const StartTripModal: React.FC<StartTripModalProps> = ({ isDark, t, onClose, onS
               className={`w-full px-3 py-2 rounded-lg border text-sm ${inp} focus:outline-none focus:ring-2 focus:ring-brand-400`}
             />
           </div>
+
+          {/* Category */}
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${label}`}>Catégorie</label>
+            <div className="flex flex-wrap gap-2">
+              {TRIP_CATEGORIES.map((c) => (
+                <button
+                  key={c.v}
+                  type="button"
+                  onClick={() => setCategory(c.v)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    category === c.v
+                      ? 'bg-brand-500 text-white border-brand-500'
+                      : isDark
+                      ? 'bg-surface-700 text-surface-300 border-surface-600 hover:border-brand-500'
+                      : 'bg-slate-50 text-slate-600 border-slate-300 hover:border-brand-400'
+                  }`}
+                >
+                  {c.l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Vehicle (only shown when vehicles exist) */}
+          {vehicles.length > 0 && (
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${label}`}>Véhicule</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVehicleId(null)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    vehicleId == null
+                      ? 'bg-brand-500 text-white border-brand-500'
+                      : isDark
+                      ? 'bg-surface-700 text-surface-300 border-surface-600 hover:border-brand-500'
+                      : 'bg-slate-50 text-slate-600 border-slate-300 hover:border-brand-400'
+                  }`}
+                >
+                  — Aucun
+                </button>
+                {vehicles.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setVehicleId(v.id)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                      vehicleId === v.id
+                        ? 'bg-brand-500 text-white border-brand-500'
+                        : isDark
+                        ? 'bg-surface-700 text-surface-300 border-surface-600 hover:border-brand-500'
+                        : 'bg-slate-50 text-slate-600 border-slate-300 hover:border-brand-400'
+                    }`}
+                  >
+                    🚗 {v.label}{v.licensePlate ? ` · ${v.licensePlate}` : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Distance method */}
           <div>
