@@ -84,7 +84,7 @@ export default function TripsScreen({ onLogout }: Props) {
   // Purpose modal
   const [purposeModalVisible, setPurposeModalVisible] = useState(false);
   const [purposeInput, setPurposeInput] = useState('');
-  const [distanceMethod, setDistanceMethod] = useState<'GPS' | 'OSRM' | 'GOOGLE'>('OSRM');
+  const [distanceMethod, setDistanceMethod] = useState<'GPS' | 'OSRM' | 'GOOGLE'>('GOOGLE');
   const [startAddrInput, setStartAddrInput] = useState('');
   const [startAddrLoading, setStartAddrLoading] = useState(false);
   const [startLat, setStartLat] = useState<number | null>(null);
@@ -249,18 +249,12 @@ export default function TripsScreen({ onLogout }: Props) {
                 stoppedAt: new Date(idle.startTime).toISOString(),
               });
               await clearPendingIdleStop();
-              // Refresh trip list so the new stop appears if the user looks
+              // Refresh trip list so the new stop appears in the active trip banner
               const updated = await getMyTrips();
               setTrips(updated);
-              // DEBUG: visual confirmation that stop was detected & submitted
-              Alert.alert(
-                'Arrêt détecté ✅',
-                `Durée: ${Math.round(idle.durationMs / 1000)}s\n${addr}`,
-              );
-            } catch (e) {
+            } catch {
               // Non-fatal — will retry on next 15 s tick if still idle
               idleStopSentAtRef.current = null;
-              Alert.alert('Erreur arrêt', String(e));
             }
           }
         } else {
@@ -352,7 +346,7 @@ export default function TripsScreen({ onLogout }: Props) {
 
   function openStartModal() {
     setPurposeInput('');
-    setDistanceMethod('OSRM');
+    setDistanceMethod('GOOGLE');
     setDestInput('');
     setStartAddrInput('');
     setStartLat(null);
@@ -495,22 +489,33 @@ export default function TripsScreen({ onLogout }: Props) {
         routeExtra = { distanceSource: 'haversine' };
       } else if (method === 'OSRM') {
         const road = await osrmRouteKm(enriched);
-        if (road == null) setRouteWarning('OSRM indisponible — distance GPS utilisée.');
         totalKm = road ?? haversineKm;
         routeExtra = { distanceSource: road != null ? 'osrm' : 'haversine' };
       } else if (method === 'GOOGLE') {
         const result = await googleRouteKm(enriched);
-        if (result == null) setRouteWarning('Google indisponible — distance GPS utilisée.');
-        totalKm = result?.km ?? haversineKm;
-        routeExtra = result
-          ? {
-              idealKm: result.idealKm,
-              actualKm: result.actualKm,
-              distanceSource: result.source,
-              actualPolyline: result.polyline,
-              osrmKm: result.osrmKm,
-            }
-          : { distanceSource: 'haversine' };
+        if (result != null) {
+          totalKm = result.km;
+          routeExtra = {
+            idealKm: result.idealKm,
+            actualKm: result.actualKm,
+            distanceSource: result.source,
+            actualPolyline: result.polyline,
+            osrmKm: result.osrmKm,
+          };
+        } else {
+          // Fallback 1: OSRM
+          const road = await osrmRouteKm(enriched);
+          if (road != null) {
+            totalKm = road;
+            routeExtra = { distanceSource: 'osrm', osrmKm: road };
+            setRouteWarning('Google indisponible — distance OSRM utilisée.');
+          } else {
+            // Fallback 2: haversine
+            totalKm = haversineKm;
+            routeExtra = { distanceSource: 'haversine' };
+            setRouteWarning('Google et OSRM indisponibles — distance GPS utilisée.');
+          }
+        }
       } else {
         totalKm = haversineKm;
         routeExtra = { distanceSource: 'haversine' };
@@ -792,44 +797,6 @@ export default function TripsScreen({ onLogout }: Props) {
               </Text>
             </TouchableOpacity>
 
-            <Text style={[styles.modalLabel, { marginTop: 16 }]}>Méthode de calcul</Text>
-            <View style={styles.methodRow}>
-              <TouchableOpacity
-                style={[styles.methodCard, distanceMethod === 'GPS' && styles.methodCardActive]}
-                onPress={() => setDistanceMethod('GPS')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.methodIcon}>📍</Text>
-                <Text style={[styles.methodName, distanceMethod === 'GPS' && styles.methodNameActive]}>GPS</Text>
-                <Text style={styles.methodDesc}>Distance réelle{"\n"}(sommation)</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.methodCard, distanceMethod === 'OSRM' && styles.methodCardActive]}
-                onPress={() => setDistanceMethod('OSRM')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.methodIcon}>🛣️</Text>
-                <Text style={[styles.methodName, distanceMethod === 'OSRM' && styles.methodNameActive]}>OSRM</Text>
-                <Text style={styles.methodDesc}>Routes réelles{"\n"}(carte routière)</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.methodCard,
-                  distanceMethod === 'GOOGLE' && styles.methodCardActive,
-                ]}
-                onPress={() => setDistanceMethod('GOOGLE')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.methodIcon}>🗺️</Text>
-                <Text style={[
-                  styles.methodName,
-                  distanceMethod === 'GOOGLE' && styles.methodNameActive,
-                ]}>Google</Text>
-                <Text style={styles.methodDesc}>Routes Google{"\n"}(précision max)</Text>
-              </TouchableOpacity>
-            </View>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancel}

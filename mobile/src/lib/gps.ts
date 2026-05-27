@@ -61,7 +61,7 @@ export interface IdleInfo {
 export function detectCurrentIdle(
   waypoints: Waypoint[],
   radiusM = 100,
-  minMs = 90_000, // TODO: restore to 4 * 60_000 after testing
+  minMs = 4 * 60_000,
 ): IdleInfo | null {
   if (waypoints.length < 2) return null;
   const latest = waypoints[waypoints.length - 1];
@@ -96,7 +96,7 @@ export function detectCurrentIdle(
  */
 export function detectGapIdle(
   waypoints: Waypoint[],
-  minMs = 90_000, // TODO: restore to 4 * 60_000 after testing
+  minMs = 4 * 60_000,
 ): IdleInfo | null {
   for (let i = waypoints.length - 1; i > 0; i--) {
     const gap = waypoints[i][2] - waypoints[i - 1][2];

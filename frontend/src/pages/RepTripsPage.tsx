@@ -431,7 +431,7 @@ const StartTripModal: React.FC<StartTripModalProps> = ({ isDark, t, onClose, onS
   const [lat, setLat] = useState<number | undefined>();
   const [lng, setLng] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
-  const [distanceMethod, setDistanceMethod] = useState<'HAVERSINE' | 'ROAD' | 'GOOGLE'>('ROAD');
+  const [distanceMethod] = useState<'HAVERSINE' | 'ROAD' | 'GOOGLE'>('GOOGLE');
   const [category, setCategory] = useState<RepTripCategory>('CLIENT');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleId, setVehicleId] = useState<number | null>(null);
@@ -602,39 +602,7 @@ const StartTripModal: React.FC<StartTripModalProps> = ({ isDark, t, onClose, onS
             </div>
           )}
 
-          {/* Distance method */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${label}`}>{t.repTripsDistanceMethod}</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['HAVERSINE', 'ROAD', 'GOOGLE'] as const).map((method) => {
-                const isSelected = distanceMethod === method;
-                return (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => setDistanceMethod(method)}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${
-                      isSelected
-                        ? 'border-brand-500 ' + (isDark ? 'bg-brand-950/40' : 'bg-brand-50')
-                        : isDark
-                        ? 'border-surface-600 hover:border-surface-500'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="text-base mb-0.5">
-                      {method === 'HAVERSINE' ? '📏' : method === 'ROAD' ? '🛣️' : '🗺️'}
-                    </div>
-                    <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {method === 'HAVERSINE' ? t.repTripsDistanceStraight : method === 'ROAD' ? t.repTripsDistanceRoad : t.repTripsDistanceGoogle}
-                    </div>
-                    <div className={`text-xs mt-0.5 leading-tight ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>
-                      {method === 'HAVERSINE' ? t.repTripsDistanceStraightDesc : method === 'ROAD' ? t.repTripsDistanceRoadDesc : t.repTripsDistanceGoogleDesc}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* Distance method is always Google (with silent OSRM/haversine fallback) */}
 
           <div className="flex gap-2 pt-1">
             <button
@@ -730,18 +698,20 @@ const RepTripsPage: React.FC = () => {
         });
       }
 
-      // Fetch road distance from OSRM (ROAD) or Google Routes (GOOGLE)
+      // Fetch road distance: Google first, OSRM fallback, then let backend use haversine
       let totalKm: number | undefined;
       const hasCoords =
         activeTrip.startLat != null && activeTrip.startLng != null &&
         endLat != null && endLng != null;
       if (hasCoords) {
-        if (activeTrip.distanceMethod === 'ROAD') {
-          const km = await osrmRouteKm(activeTrip.startLat!, activeTrip.startLng!, endLat!, endLng!);
-          if (km != null) totalKm = km;
-        } else if (activeTrip.distanceMethod === 'GOOGLE') {
-          const km = await googleRouteKm(activeTrip.startLat!, activeTrip.startLng!, endLat!, endLng!);
-          if (km != null) totalKm = km;
+        const gKm = await googleRouteKm(activeTrip.startLat!, activeTrip.startLng!, endLat!, endLng!);
+        if (gKm != null) {
+          totalKm = gKm;
+        } else {
+          // Silent fallback to OSRM
+          const oKm = await osrmRouteKm(activeTrip.startLat!, activeTrip.startLng!, endLat!, endLng!);
+          if (oKm != null) totalKm = oKm;
+          // If both fail, totalKm stays undefined — backend haversine kicks in
         }
       }
 
