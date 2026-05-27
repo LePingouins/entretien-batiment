@@ -982,6 +982,10 @@ export default function TripsScreen({ onLogout }: Props) {
                 </Text>
               </TouchableOpacity>
 
+              <Text style={{ fontSize: 10, color: '#9CA3AF', textAlign: 'center', marginTop: 14, marginBottom: 4, lineHeight: 14 }}>
+                🔒 Cette application enregistre votre position GPS uniquement pendant les trajets actifs afin de calculer la distance remboursable.
+              </Text>
+
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={styles.modalCancel}
