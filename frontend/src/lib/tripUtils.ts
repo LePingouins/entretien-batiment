@@ -37,7 +37,7 @@ export function haversineM(lat1: number, lng1: number, lat2: number, lng2: numbe
 export function findIdlePeriods(
   waypoints: Waypoint[],
   radiusM = 100,
-  minMs = 90_000 // TODO: restore to 4 * 60_000 after testing
+  minMs = 4 * 60_000
 ): IdlePeriod[] {
   const periods: IdlePeriod[] = [];
   if (waypoints.length < 2) return periods;
