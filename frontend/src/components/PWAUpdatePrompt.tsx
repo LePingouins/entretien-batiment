@@ -8,7 +8,7 @@ export function PWAUpdatePrompt() {
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
-console.log('[PWA] PWAUpdatePrompt mounted v4');
+console.log('[PWA] PWAUpdatePrompt mounted v5');
 
     const cleanups: (() => void)[] = [];
 
