@@ -85,6 +85,9 @@ public class AdminRepresentantsController {
             trips = tripRepository.findByUserIdOrderByDateDescCreatedAtDesc(userId);
             expenses = expenseRepository.findByUserIdOrderByDateDescIdDesc(userId);
         }
+        // Hide archived items — they live in the Archive page only.
+        trips = trips.stream().filter(t -> !Boolean.TRUE.equals(t.getArchived())).toList();
+        expenses = expenses.stream().filter(e -> !Boolean.TRUE.equals(e.getArchived())).toList();
 
         double totalKm = trips.stream()
                 .mapToDouble(t -> t.getTotalKm() == null ? 0.0 : t.getTotalKm())

@@ -10,7 +10,6 @@ import {
   createExpense,
   updateExpense,
   deleteExpense,
-  archiveExpense,
   uploadExpenseReceipt,
   deleteExpenseReceipt,
   expenseReceiptUrl,
@@ -793,23 +792,6 @@ const RepExpensesPage: React.FC = () => {
     }
   };
 
-  const handleArchive = async (e: Expense) => {
-    const ok = await confirm({
-      title: lang === 'fr' ? 'Archiver cette dépense ?' : 'Archive this expense?',
-      message: e.supplier || e.description || (lang === 'fr' ? 'Dépense' : 'Expense'),
-      confirmLabel: lang === 'fr' ? 'Archiver' : 'Archive',
-    });
-    if (!ok) return;
-    try {
-      await archiveExpense(e.id);
-      setExpenses(prev => prev.filter(x => x.id !== e.id));
-      addToast(lang === 'fr' ? 'Archivée' : 'Archived', 'success');
-    } catch (err: any) {
-      console.error(err);
-      addToast(err?.response?.data?.error || (lang === 'fr' ? 'Erreur' : 'Error'), 'error');
-    }
-  };
-
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -870,9 +852,6 @@ const RepExpensesPage: React.FC = () => {
                         {lang === 'fr' ? 'Supprimer' : 'Delete'}
                       </button>
                     )}
-                    <button onClick={() => handleArchive(e)} className="text-sm text-surface-600 hover:text-surface-900 dark:text-surface-300 dark:hover:text-white font-medium">
-                      {lang === 'fr' ? 'Archiver' : 'Archive'}
-                    </button>
                   </div>
                 </div>
               </div>
@@ -910,13 +889,10 @@ const RepExpensesPage: React.FC = () => {
                         {lang === 'fr' ? 'Modifier' : 'Edit'}
                       </button>
                       {e.status === 'PENDING' && (
-                        <button onClick={() => handleDelete(e)} className="text-red-600 hover:text-red-800 mr-3">
+                        <button onClick={() => handleDelete(e)} className="text-red-600 hover:text-red-800">
                           {lang === 'fr' ? 'Supprimer' : 'Delete'}
                         </button>
                       )}
-                      <button onClick={() => handleArchive(e)} className="text-surface-600 hover:text-surface-900 dark:text-surface-300 dark:hover:text-white">
-                        {lang === 'fr' ? 'Archiver' : 'Archive'}
-                      </button>
                     </td>
                   </tr>
                 ))}

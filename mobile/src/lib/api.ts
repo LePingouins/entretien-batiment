@@ -283,3 +283,93 @@ export function generateIdempotencyKey(): string {
   const rand = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
   return `${rand()}${rand()}-${rand()}-4${rand().slice(1)}-${(8 + Math.floor(Math.random() * 4)).toString(16)}${rand().slice(1)}-${rand()}${rand()}${rand()}`;
 }
+
+// ─── Expenses (Dépenses) ─────────────────────────────────────────────────────
+
+export type ExpenseStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface ExpenseReceipt {
+  id: number;
+  filename: string;
+  contentType?: string | null;
+  originalName?: string | null;
+  fileSize?: number | null;
+  uploadedAt: string;
+}
+
+export interface Expense {
+  id: number;
+  userId: number;
+  date: string;
+  supplier?: string | null;
+  description?: string | null;
+  province?: string | null;
+  imputationCode?: string | null;
+  subtotalCents?: number | null;
+  tpsCents?: number | null;
+  tvqCents?: number | null;
+  tvhCents?: number | null;
+  tipCents?: number | null;
+  totalCents?: number | null;
+  status: ExpenseStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  archived?: boolean;
+  archivedAt?: string | null;
+  receipts: ExpenseReceipt[];
+}
+
+export interface ExpenseRequest {
+  date: string;
+  supplier?: string;
+  description?: string;
+  province?: string;
+  imputationCode?: string;
+  subtotalCents?: number;
+  tpsCents?: number;
+  tvqCents?: number;
+  tvhCents?: number;
+  tipCents?: number;
+  totalCents?: number;
+  notes?: string;
+}
+
+export async function getMyExpenses(): Promise<Expense[]> {
+  const res = await api.get<Expense[]>('/api/expenses');
+  return res.data;
+}
+
+export async function createExpense(req: ExpenseRequest): Promise<Expense> {
+  const res = await api.post<Expense>('/api/expenses', req);
+  return res.data;
+}
+
+export async function updateExpense(id: number, req: ExpenseRequest): Promise<Expense> {
+  const res = await api.put<Expense>(`/api/expenses/${id}`, req);
+  return res.data;
+}
+
+export async function deleteExpense(id: number): Promise<void> {
+  await api.delete(`/api/expenses/${id}`);
+}
+
+export async function archiveExpense(id: number): Promise<void> {
+  await api.patch(`/api/expenses/${id}/archive`);
+}
+
+export async function uploadExpenseReceipt(id: number, uri: string): Promise<Expense> {
+  const form = new FormData();
+  const filename = uri.split('/').pop() || `receipt-${Date.now()}.jpg`;
+  const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
+  const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+  form.append('file', { uri, name: filename, type: mime } as any);
+  const res = await api.post<Expense>(`/api/expenses/${id}/receipts`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+}
+
+export function expenseReceiptUrl(expenseId: number, receiptId: number): string {
+  return `${BASE_URL}/api/expenses/${expenseId}/receipts/${receiptId}`;
+}

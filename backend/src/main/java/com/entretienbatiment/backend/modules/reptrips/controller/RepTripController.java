@@ -336,12 +336,12 @@ public class RepTripController {
     @PatchMapping("/{id}/archive")
     public ResponseEntity<Void> archiveTrip(@PathVariable Long id, Authentication auth) {
         AppUser user = requireUser(auth);
+        if (!user.getRole().isAdminLike()) {
+            return ResponseEntity.status(403).build();
+        }
         Optional<RepTrip> opt = tripRepository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         RepTrip trip = opt.get();
-        if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
-            return ResponseEntity.status(403).build();
-        }
         trip.setArchived(true);
         trip.setArchivedAt(java.time.LocalDateTime.now());
         tripRepository.save(trip);
@@ -351,12 +351,12 @@ public class RepTripController {
     @PatchMapping("/{id}/unarchive")
     public ResponseEntity<Void> unarchiveTrip(@PathVariable Long id, Authentication auth) {
         AppUser user = requireUser(auth);
+        if (!user.getRole().isAdminLike()) {
+            return ResponseEntity.status(403).build();
+        }
         Optional<RepTrip> opt = tripRepository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         RepTrip trip = opt.get();
-        if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
-            return ResponseEntity.status(403).build();
-        }
         trip.setArchived(false);
         trip.setArchivedAt(null);
         tripRepository.save(trip);

@@ -142,7 +142,11 @@ public class ExpenseController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void archive(@PathVariable Long id, Authentication auth) {
         AppUser user = requireUser(auth);
-        Expense e = requireOwnedOrAdmin(id, user);
+        if (!user.getRole().isAdminLike()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can archive expenses");
+        }
+        Expense e = expenseRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found"));
         e.setArchived(true);
         e.setArchivedAt(LocalDateTime.now());
         expenseRepository.save(e);
@@ -152,7 +156,11 @@ public class ExpenseController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unarchive(@PathVariable Long id, Authentication auth) {
         AppUser user = requireUser(auth);
-        Expense e = requireOwnedOrAdmin(id, user);
+        if (!user.getRole().isAdminLike()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can unarchive expenses");
+        }
+        Expense e = expenseRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found"));
         e.setArchived(false);
         e.setArchivedAt(null);
         expenseRepository.save(e);

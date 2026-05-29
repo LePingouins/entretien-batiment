@@ -8,7 +8,12 @@ import {
   expenseReceiptUrl,
   setExpenseStatus,
   representantCsvExportUrl,
+  archiveExpense,
+  deleteExpense,
+  archiveRepTrip,
+  deleteRepTrip,
 } from '../lib/api';
+import { useConfirm } from '../context/ConfirmContext';
 import { SecureImage } from '../components/SecureImage';
 import { downloadSecureFile, openSecureFile } from '../lib/secureFile';
 import type {
@@ -31,6 +36,7 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
 const AdminRepresentantsPage: React.FC = () => {
   const { t, lang } = useLang();
   const toast = useToast();
+  const confirm = useConfirm();
   const [list, setList]         = useState<RepresentantListItem[]>([]);
   const [loading, setLoading]   = useState(true);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -39,6 +45,70 @@ const AdminRepresentantsPage: React.FC = () => {
   const [startDate, setStartDate] = useState<string>(isoMonthsAgo(3));
   const [endDate, setEndDate]     = useState<string>(todayIso());
   const [updatingExpense, setUpdatingExpense] = useState<number | null>(null);
+
+  const handleArchiveTrip = async (id: number) => {
+    const ok = await confirm({
+      title: lang === 'fr' ? 'Archiver ce trajet ?' : 'Archive this trip?',
+      message: lang === 'fr' ? 'Il sera déplacé vers la page Archives.' : 'It will move to the Archive page.',
+      confirmLabel: lang === 'fr' ? 'Archiver' : 'Archive',
+    });
+    if (!ok) return;
+    try {
+      await archiveRepTrip(id);
+      setProfile(prev => prev ? { ...prev, trips: prev.trips.filter(tr => tr.id !== id) } : prev);
+      toast.success(lang === 'fr' ? 'Trajet archivé' : 'Trip archived');
+    } catch {
+      toast.error(lang === 'fr' ? 'Erreur lors de l’archivage' : 'Failed to archive');
+    }
+  };
+
+  const handleDeleteTrip = async (id: number) => {
+    const ok = await confirm({
+      title: lang === 'fr' ? 'Supprimer ce trajet ?' : 'Delete this trip?',
+      message: lang === 'fr' ? 'Action irréversible. Les photos seront aussi supprimées.' : 'Permanent. Photos will also be deleted.',
+      confirmLabel: lang === 'fr' ? 'Supprimer' : 'Delete',
+    });
+    if (!ok) return;
+    try {
+      await deleteRepTrip(id);
+      setProfile(prev => prev ? { ...prev, trips: prev.trips.filter(tr => tr.id !== id) } : prev);
+      toast.success(lang === 'fr' ? 'Trajet supprimé' : 'Trip deleted');
+    } catch {
+      toast.error(lang === 'fr' ? 'Erreur lors de la suppression' : 'Failed to delete');
+    }
+  };
+
+  const handleArchiveExpense = async (id: number) => {
+    const ok = await confirm({
+      title: lang === 'fr' ? 'Archiver cette dépense ?' : 'Archive this expense?',
+      message: lang === 'fr' ? 'Elle sera déplacée vers la page Archives.' : 'It will move to the Archive page.',
+      confirmLabel: lang === 'fr' ? 'Archiver' : 'Archive',
+    });
+    if (!ok) return;
+    try {
+      await archiveExpense(id);
+      setProfile(prev => prev ? { ...prev, expenses: prev.expenses.filter(ex => ex.id !== id) } : prev);
+      toast.success(lang === 'fr' ? 'Dépense archivée' : 'Expense archived');
+    } catch {
+      toast.error(lang === 'fr' ? 'Erreur lors de l’archivage' : 'Failed to archive');
+    }
+  };
+
+  const handleDeleteExpense = async (id: number) => {
+    const ok = await confirm({
+      title: lang === 'fr' ? 'Supprimer cette dépense ?' : 'Delete this expense?',
+      message: lang === 'fr' ? 'Action irréversible. Les reçus seront aussi supprimés.' : 'Permanent. Receipts will also be deleted.',
+      confirmLabel: lang === 'fr' ? 'Supprimer' : 'Delete',
+    });
+    if (!ok) return;
+    try {
+      await deleteExpense(id);
+      setProfile(prev => prev ? { ...prev, expenses: prev.expenses.filter(ex => ex.id !== id) } : prev);
+      toast.success(lang === 'fr' ? 'Dépense supprimée' : 'Expense deleted');
+    } catch {
+      toast.error(lang === 'fr' ? 'Erreur lors de la suppression' : 'Failed to delete');
+    }
+  };
 
   const handleExpenseStatus = async (id: number, status: 'APPROVED' | 'REJECTED') => {
     let note: string | undefined;
@@ -259,6 +329,7 @@ const AdminRepresentantsPage: React.FC = () => {
                             <th className="px-3 py-2 text-right">KM</th>
                             <th className="px-3 py-2 text-right">{lang === 'fr' ? 'Remb.' : 'Reimb.'}</th>
                             <th className="px-3 py-2 text-center">Status</th>
+                            <th className="px-3 py-2"></th>
                           </tr>
                         </thead>
                         <tbody className="text-surface-800 dark:text-surface-100">
@@ -268,6 +339,22 @@ const AdminRepresentantsPage: React.FC = () => {
                               <td className="px-3 py-1.5 text-right">{trip.totalKm?.toFixed?.(1) ?? '—'}</td>
                               <td className="px-3 py-1.5 text-right whitespace-nowrap">{fmtMoney((trip as any).reimbursementCents)}</td>
                               <td className="px-3 py-1.5 text-center text-xs">{trip.approvalStatus ?? trip.status}</td>
+                              <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                                <button
+                                  onClick={() => handleArchiveTrip(trip.id)}
+                                  className="px-2 py-1 rounded text-xs font-semibold bg-surface-200 hover:bg-surface-300 text-surface-700 dark:bg-surface-700 dark:hover:bg-surface-600 dark:text-surface-200 mr-1"
+                                  title={lang === 'fr' ? 'Archiver' : 'Archive'}
+                                >
+                                  {lang === 'fr' ? 'Archiver' : 'Archive'}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTrip(trip.id)}
+                                  className="px-2 py-1 rounded text-xs font-semibold bg-red-600 hover:bg-red-700 text-white"
+                                  title={lang === 'fr' ? 'Supprimer' : 'Delete'}
+                                >
+                                  {lang === 'fr' ? 'Supprimer' : 'Delete'}
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -352,6 +439,20 @@ const AdminRepresentantsPage: React.FC = () => {
                                     </button>
                                   </div>
                                 )}
+                                <div className="flex gap-1 justify-center mt-1">
+                                  <button
+                                    onClick={() => handleArchiveExpense(e.id)}
+                                    className="px-2 py-1 rounded text-xs font-semibold bg-surface-200 hover:bg-surface-300 text-surface-700 dark:bg-surface-700 dark:hover:bg-surface-600 dark:text-surface-200"
+                                  >
+                                    {lang === 'fr' ? 'Archiver' : 'Archive'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteExpense(e.id)}
+                                    className="px-2 py-1 rounded text-xs font-semibold bg-red-600 hover:bg-red-700 text-white"
+                                  >
+                                    {lang === 'fr' ? 'Supprimer' : 'Delete'}
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
