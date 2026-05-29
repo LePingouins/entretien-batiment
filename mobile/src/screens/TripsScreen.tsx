@@ -431,6 +431,18 @@ export default function TripsScreen({ onLogout }: Props) {
     doEndTrip();
   }
 
+  // Race a promise against a timeout. Resolves null instead of throwing
+  // so the end-trip flow can fall back gracefully when GPS is unavailable
+  // (e.g. user forgot to stop a test trip indoors with no fix).
+  function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+    return new Promise<T | null>((resolve) => {
+      let done = false;
+      const timer = setTimeout(() => { if (!done) { done = true; resolve(null); } }, ms);
+      p.then((v) => { if (!done) { done = true; clearTimeout(timer); resolve(v); } })
+       .catch(() => { if (!done) { done = true; clearTimeout(timer); resolve(null); } });
+    });
+  }
+
   async function doEndTrip() {
     if (!activeTripId) return;
     setEndingTrip(true);
@@ -441,21 +453,123 @@ export default function TripsScreen({ onLogout }: Props) {
         await stopLocationTracking();
       }
 
-      const [loc, waypoints, method, plannedDest, startCoords] = await Promise.all([
-        getCurrentLocation(),
+      const [locResult, waypoints, method, plannedDest, startCoords] = await Promise.all([
+        withTimeout(getCurrentLocation(), 10_000),
         getWaypoints(activeTripId),
         getActiveTripMethod(),
         getPlannedEndAddress(),
         getActiveTripStartCoords(),
       ]);
-      const { latitude: lat, longitude: lng } = loc.coords;
+
+      let lat: number | null = locResult?.coords?.latitude ?? null;
+      let lng: number | null = locResult?.coords?.longitude ?? null;
+      let usedFallback = false;
+
+      // Fallback chain when live GPS is unavailable (no signal, indoor test,
+      // user forgot to stop trip). Prevents stuck trips that can only be
+      // cleared by reinstalling the app.
+      if (lat == null || lng == null) {
+        const lastWaypoint = waypoints.length > 0 ? waypoints[waypoints.length - 1] : null;
+        if (lastWaypoint) {
+          lat = lastWaypoint[0];
+          lng = lastWaypoint[1];
+          usedFallback = true;
+        } else if (startCoords) {
+          lat = startCoords[0];
+          lng = startCoords[1];
+          usedFallback = true;
+        }
+      }
+
+      if (lat == null || lng == null) {
+        // Truly no positional data at all (no GPS fix, no waypoints, no
+        // start coords). Let the user force-end with empty coordinates so
+        // they aren't stuck with a runaway timer.
+        Alert.alert(
+          'Aucune position GPS',
+          'Impossible d\'obtenir une position. Voulez-vous quand même terminer le trajet ? La distance sera 0 km et vous pourrez l\'ajuster manuellement plus tard.',
+          [
+            { text: 'Annuler', style: 'cancel' },
+            {
+              text: 'Terminer sans GPS',
+              style: 'destructive',
+              onPress: () => { forceEndTrip().catch(() => {}); },
+            },
+          ],
+        );
+        return;
+      }
+
       const gpsAddr = await reverseGeocode(lat, lng);
 
-      setPendingEnd({ lat, lng, startLat: startCoords?.[0] ?? null, startLng: startCoords?.[1] ?? null, waypoints, method });
+      setPendingEnd({
+        lat, lng,
+        startLat: startCoords?.[0] ?? null,
+        startLng: startCoords?.[1] ?? null,
+        waypoints,
+        method,
+      });
       setEndAddrInput(plannedDest || gpsAddr);
       setEndConfirmVisible(true);
+
+      if (usedFallback) {
+        // Non-blocking notice — modal still opens so user can confirm.
+        setTimeout(() => {
+          Alert.alert(
+            'Position GPS indisponible',
+            'La position actuelle n\'a pas pu être obtenue. La dernière position connue est utilisée comme point d\'arrivée.',
+          );
+        }, 50);
+      }
     } catch {
-      Alert.alert('Erreur', 'Impossible d\'obtenir la position. Réessayez.');
+      Alert.alert(
+        'Erreur',
+        'Une erreur est survenue. Voulez-vous forcer la fin du trajet ?',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Forcer la fin', style: 'destructive', onPress: () => { forceEndTrip().catch(() => {}); } },
+        ],
+      );
+    } finally {
+      setEndingTrip(false);
+    }
+  }
+
+  // Last-resort "force end" used when no GPS / no waypoints / no start
+  // coords exist. Sends status=COMPLETED with totalKm=0 and clears local
+  // state so the user can recover without reinstalling the app.
+  async function forceEndTrip() {
+    if (!activeTripId) return;
+    setEndingTrip(true);
+    try {
+      const tripId = activeTripId;
+      const waypoints = await getWaypoints(tripId).catch(() => [] as [number, number, number][]);
+      const durationMinutes = activeTripStart
+        ? Math.round((Date.now() - activeTripStart) / 60_000)
+        : 0;
+      const updated = await endTrip(
+        tripId,
+        0, 0, '',
+        0, durationMinutes,
+        waypoints,
+        { distanceSource: 'haversine', driverNote: 'Forcé — aucune position GPS' },
+      );
+
+      await clearActiveTripId();
+      await clearWaypoints(tripId);
+
+      setActiveTripId(null);
+      setActiveTripStart(null);
+      setElapsed(0);
+      setWaypointCount(0);
+      setActiveStops([]);
+      setPendingEnd(null);
+      setEndConfirmVisible(false);
+      setPreSubmitVisible(false);
+      setPreSubmitData(null);
+      setTrips((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    } catch {
+      Alert.alert('Erreur', 'Impossible de forcer la fin du trajet. Vérifiez votre connexion.');
     } finally {
       setEndingTrip(false);
     }

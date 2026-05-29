@@ -12,13 +12,19 @@ import {
   deleteExpense,
   archiveRepTrip,
   deleteRepTrip,
+  approveTrip,
+  rejectTrip,
 } from '../lib/api';
 import { useConfirm } from '../context/ConfirmContext';
 import { SecureImage } from '../components/SecureImage';
 import { downloadSecureFile, openSecureFile } from '../lib/secureFile';
+import TripDetailModal from '../components/TripDetailModal';
+import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import type {
   RepresentantListItem,
   RepresentantProfile,
+  RepTrip,
+  Expense,
 } from '../types/api';
 
 const fmtMoney = (c?: number): string => {
@@ -37,6 +43,8 @@ const AdminRepresentantsPage: React.FC = () => {
   const { t, lang } = useLang();
   const toast = useToast();
   const confirm = useConfirm();
+  const { colorScheme } = React.useContext(ColorSchemeContext);
+  const isDark = colorScheme === 'dark';
   const [list, setList]         = useState<RepresentantListItem[]>([]);
   const [loading, setLoading]   = useState(true);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -45,6 +53,9 @@ const AdminRepresentantsPage: React.FC = () => {
   const [startDate, setStartDate] = useState<string>(isoMonthsAgo(3));
   const [endDate, setEndDate]     = useState<string>(todayIso());
   const [updatingExpense, setUpdatingExpense] = useState<number | null>(null);
+  const [updatingTrip, setUpdatingTrip] = useState<number | null>(null);
+  const [selectedTrip, setSelectedTrip] = useState<RepTrip | null>(null);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
 
   const handleArchiveTrip = async (id: number) => {
     const ok = await confirm({
@@ -110,6 +121,33 @@ const AdminRepresentantsPage: React.FC = () => {
     }
   };
 
+  const handleTripStatus = async (id: number, status: 'APPROVED' | 'REJECTED') => {
+    let note: string | undefined;
+    if (status === 'REJECTED') {
+      const input = window.prompt(lang === 'fr' ? 'Motif du refus (optionnel) :' : 'Rejection reason (optional):');
+      if (input === null) return; // cancelled
+      note = input.trim() || undefined;
+    }
+    setUpdatingTrip(id);
+    try {
+      const updated = status === 'APPROVED'
+        ? await approveTrip(id, note)
+        : await rejectTrip(id, note || '');
+      setProfile(prev => prev ? {
+        ...prev,
+        trips: prev.trips.map(tr => tr.id === id ? updated : tr),
+      } : prev);
+      if (selectedTrip?.id === id) setSelectedTrip(updated);
+      toast.success(status === 'APPROVED'
+        ? (lang === 'fr' ? 'Trajet approuvé' : 'Trip approved')
+        : (lang === 'fr' ? 'Trajet refusé'  : 'Trip rejected'));
+    } catch {
+      toast.error(lang === 'fr' ? 'Erreur lors de la mise à jour' : 'Failed to update status');
+    } finally {
+      setUpdatingTrip(null);
+    }
+  };
+
   const handleExpenseStatus = async (id: number, status: 'APPROVED' | 'REJECTED') => {
     let note: string | undefined;
     if (status === 'REJECTED') {
@@ -124,6 +162,7 @@ const AdminRepresentantsPage: React.FC = () => {
         ...prev,
         expenses: prev.expenses.map(e => e.id === id ? { ...e, status: updated.status } : e),
       } : prev);
+      if (selectedExpense?.id === id) setSelectedExpense({ ...selectedExpense, status: updated.status });
       toast.success(status === 'APPROVED'
         ? (lang === 'fr' ? 'Dépense approuvée' : 'Expense approved')
         : (lang === 'fr' ? 'Dépense refusée'  : 'Expense rejected'));
@@ -333,13 +372,38 @@ const AdminRepresentantsPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="text-surface-800 dark:text-surface-100">
-                          {profile.trips.map((trip) => (
-                            <tr key={trip.id} className="border-t border-surface-200 dark:border-surface-700">
+                          {profile.trips.map((trip) => {
+                            const tripStatus = trip.approvalStatus ?? trip.status;
+                            return (
+                            <tr
+                              key={trip.id}
+                              onClick={() => setSelectedTrip(trip)}
+                              className="border-t border-surface-200 dark:border-surface-700 cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-800/60"
+                              title={lang === 'fr' ? 'Voir les détails du trajet' : 'View trip details'}
+                            >
                               <td className="px-3 py-1.5 whitespace-nowrap">{trip.date}</td>
                               <td className="px-3 py-1.5 text-right">{trip.totalKm?.toFixed?.(1) ?? '—'}</td>
                               <td className="px-3 py-1.5 text-right whitespace-nowrap">{fmtMoney((trip as any).reimbursementCents)}</td>
-                              <td className="px-3 py-1.5 text-center text-xs">{trip.approvalStatus ?? trip.status}</td>
-                              <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                              <td className="px-3 py-1.5 text-center text-xs">{tripStatus}</td>
+                              <td className="px-3 py-1.5 text-right whitespace-nowrap" onClick={(ev) => ev.stopPropagation()}>
+                                {trip.approvalStatus === 'PENDING' && (
+                                  <div className="flex gap-1 justify-end mb-1">
+                                    <button
+                                      disabled={updatingTrip === trip.id}
+                                      onClick={() => handleTripStatus(trip.id, 'APPROVED')}
+                                      className="px-2 py-1 rounded text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+                                    >
+                                      {lang === 'fr' ? 'Approuver' : 'Approve'}
+                                    </button>
+                                    <button
+                                      disabled={updatingTrip === trip.id}
+                                      onClick={() => handleTripStatus(trip.id, 'REJECTED')}
+                                      className="px-2 py-1 rounded text-xs font-semibold bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                                    >
+                                      {lang === 'fr' ? 'Refuser' : 'Reject'}
+                                    </button>
+                                  </div>
+                                )}
                                 <button
                                   onClick={() => handleArchiveTrip(trip.id)}
                                   className="px-2 py-1 rounded text-xs font-semibold bg-surface-200 hover:bg-surface-300 text-surface-700 dark:bg-surface-700 dark:hover:bg-surface-600 dark:text-surface-200 mr-1"
@@ -356,7 +420,8 @@ const AdminRepresentantsPage: React.FC = () => {
                                 </button>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     )}
@@ -384,12 +449,17 @@ const AdminRepresentantsPage: React.FC = () => {
                         </thead>
                         <tbody className="text-surface-800 dark:text-surface-100">
                           {profile.expenses.map((e) => (
-                            <tr key={e.id} className="border-t border-surface-200 dark:border-surface-700">
+                            <tr
+                              key={e.id}
+                              onClick={() => setSelectedExpense(e)}
+                              className="border-t border-surface-200 dark:border-surface-700 cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-800/60"
+                              title={lang === 'fr' ? 'Voir les détails de la dépense' : 'View expense details'}
+                            >
                               <td className="px-3 py-1.5 whitespace-nowrap">{e.date}</td>
                               <td className="px-3 py-1.5">{e.supplier || '—'}</td>
                               <td className="px-3 py-1.5">{e.description || '—'}</td>
                               <td className="px-3 py-1.5 text-right whitespace-nowrap">{fmtMoney(e.totalCents)}</td>
-                              <td className="px-3 py-1.5 text-center">
+                              <td className="px-3 py-1.5 text-center" onClick={(ev) => ev.stopPropagation()}>
                                 {e.receipts.length === 0 ? (
                                   <span className="text-surface-400">—</span>
                                 ) : (
@@ -420,7 +490,7 @@ const AdminRepresentantsPage: React.FC = () => {
                                   return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">⏳ {lang === 'fr' ? 'En attente' : 'Pending'}</span>;
                                 })()}
                               </td>
-                              <td className="px-3 py-1.5 text-center whitespace-nowrap">
+                              <td className="px-3 py-1.5 text-center whitespace-nowrap" onClick={(ev) => ev.stopPropagation()}>
                                 {e.status === 'PENDING' && (
                                   <div className="flex gap-1 justify-center">
                                     <button
@@ -464,6 +534,154 @@ const AdminRepresentantsPage: React.FC = () => {
               )}
             </>
           )}
+        </div>
+      </div>
+
+      {selectedTrip && (
+        <TripDetailModal
+          trip={selectedTrip}
+          isDark={isDark}
+          onClose={() => setSelectedTrip(null)}
+          onUpdate={(updated) => {
+            setProfile(prev => prev ? {
+              ...prev,
+              trips: prev.trips.map(tr => tr.id === updated.id ? updated : tr),
+            } : prev);
+            setSelectedTrip(updated);
+          }}
+        />
+      )}
+
+      {selectedExpense && (
+        <ExpenseDetailModal
+          expense={selectedExpense}
+          lang={lang}
+          updating={updatingExpense === selectedExpense.id}
+          onClose={() => setSelectedExpense(null)}
+          onApprove={() => handleExpenseStatus(selectedExpense.id, 'APPROVED')}
+          onReject={() => handleExpenseStatus(selectedExpense.id, 'REJECTED')}
+          onArchive={() => { handleArchiveExpense(selectedExpense.id); setSelectedExpense(null); }}
+          onDelete={() => { handleDeleteExpense(selectedExpense.id); setSelectedExpense(null); }}
+        />
+      )}
+    </div>
+  );
+};
+
+interface ExpenseDetailModalProps {
+  expense: Expense;
+  lang: string;
+  updating: boolean;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}
+
+const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
+  expense, lang, updating, onClose, onApprove, onReject, onArchive, onDelete,
+}) => {
+  const statusBadge = (() => {
+    if (expense.status === 'APPROVED') return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">✅ {lang === 'fr' ? 'Approuvé' : 'Approved'}</span>;
+    if (expense.status === 'REJECTED') return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">⛔ {lang === 'fr' ? 'Refusé' : 'Rejected'}</span>;
+    return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">⏳ {lang === 'fr' ? 'En attente' : 'Pending'}</span>;
+  })();
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-surface-900 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(ev) => ev.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200 dark:border-surface-700">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-surface-900 dark:text-white">
+              {lang === 'fr' ? 'Détails de la dépense' : 'Expense details'}
+            </h2>
+            {statusBadge}
+          </div>
+          <button onClick={onClose} className="text-surface-500 hover:text-surface-800 dark:hover:text-white text-2xl leading-none">×</button>
+        </div>
+        <div className="p-4 space-y-4 text-sm">
+          <div className="grid grid-cols-2 gap-3">
+            <div><div className="text-surface-500 text-xs">Date</div><div className="text-surface-900 dark:text-white">{expense.date}</div></div>
+            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Fournisseur' : 'Supplier'}</div><div className="text-surface-900 dark:text-white">{expense.supplier || '—'}</div></div>
+            <div className="col-span-2"><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Description' : 'Description'}</div><div className="text-surface-900 dark:text-white whitespace-pre-wrap">{expense.description || '—'}</div></div>
+            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Province' : 'Province'}</div><div className="text-surface-900 dark:text-white">{expense.province || '—'}</div></div>
+            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Code imputation' : 'Imputation code'}</div><div className="text-surface-900 dark:text-white">{expense.imputationCode || '—'}</div></div>
+            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Sous-total' : 'Subtotal'}</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.subtotalCents)}</div></div>
+            <div><div className="text-surface-500 text-xs">TPS</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.tpsCents)}</div></div>
+            <div><div className="text-surface-500 text-xs">TVQ</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.tvqCents)}</div></div>
+            <div><div className="text-surface-500 text-xs">TVH</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.tvhCents)}</div></div>
+            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Pourboire' : 'Tip'}</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.tipCents)}</div></div>
+            <div><div className="text-surface-500 text-xs">Total</div><div className="text-surface-900 dark:text-white font-semibold">{fmtMoney(expense.totalCents)}</div></div>
+          </div>
+
+          {expense.approvalNote && (
+            <div className="rounded p-3 bg-surface-100 dark:bg-surface-800">
+              <div className="text-surface-500 text-xs mb-1">{lang === 'fr' ? 'Note d’approbation' : 'Approval note'}</div>
+              <div className="text-surface-900 dark:text-white whitespace-pre-wrap">{expense.approvalNote}</div>
+            </div>
+          )}
+
+          <div>
+            <div className="text-surface-500 text-xs mb-2">{lang === 'fr' ? 'Reçus' : 'Receipts'} ({expense.receipts.length})</div>
+            {expense.receipts.length === 0 ? (
+              <div className="text-surface-400">—</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {expense.receipts.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => openSecureFile(expenseReceiptUrl(r.filename))}
+                    className="block rounded overflow-hidden border border-surface-200 dark:border-surface-700 hover:opacity-80 transition-opacity"
+                    title={r.originalName || r.filename}
+                  >
+                    {(r.contentType || '').startsWith('image/') ? (
+                      <SecureImage src={expenseReceiptUrl(r.filename)} alt="" className="w-full h-32 object-cover" />
+                    ) : (
+                      <div className="w-full h-32 flex items-center justify-center bg-surface-100 dark:bg-surface-800 text-3xl">📄</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 justify-end px-4 py-3 border-t border-surface-200 dark:border-surface-700">
+          {expense.status === 'PENDING' && (
+            <>
+              <button
+                disabled={updating}
+                onClick={onApprove}
+                className="px-3 py-1.5 rounded text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+              >
+                {lang === 'fr' ? 'Approuver' : 'Approve'}
+              </button>
+              <button
+                disabled={updating}
+                onClick={onReject}
+                className="px-3 py-1.5 rounded text-sm font-semibold bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+              >
+                {lang === 'fr' ? 'Refuser' : 'Reject'}
+              </button>
+            </>
+          )}
+          <button
+            onClick={onArchive}
+            className="px-3 py-1.5 rounded text-sm font-semibold bg-surface-200 hover:bg-surface-300 text-surface-700 dark:bg-surface-700 dark:hover:bg-surface-600 dark:text-surface-200"
+          >
+            {lang === 'fr' ? 'Archiver' : 'Archive'}
+          </button>
+          <button
+            onClick={onDelete}
+            className="px-3 py-1.5 rounded text-sm font-semibold bg-red-600 hover:bg-red-700 text-white"
+          >
+            {lang === 'fr' ? 'Supprimer' : 'Delete'}
+          </button>
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 rounded text-sm font-semibold border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-800"
+          >
+            {lang === 'fr' ? 'Fermer' : 'Close'}
+          </button>
         </div>
       </div>
     </div>
