@@ -67,7 +67,7 @@ export function PWAUpdatePrompt() {
 
   const handleUpdate = () => {
     setUpdating(true);
-    // Workbox's generated SW always listens for this message and calls skipWaiting()
+    // Workbox's generated SW always listens for SKIP_WAITING
     waitingSW.postMessage({ type: 'SKIP_WAITING' });
     // Once the new SW takes control, reload to serve fresh assets
     navigator.serviceWorker.addEventListener('controllerchange', () => {
