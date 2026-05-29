@@ -1,28 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useLang } from '../context/LangContext';
 
-// v44 — prompt mode with periodic polling
-// How often (ms) the running app pings the server for a new build.
-// 60s is a good balance: users see updates quickly without hammering the
-// server. Each check is a tiny conditional GET against the SW script.
 const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
 
-/**
- * Mounts the PWA service-worker registration and shows a small banner when a
- * new version of the app has been deployed. Clicking the button activates the
- * waiting service worker and reloads the page — no manual cache clear needed.
- *
- * Why a banner instead of a silent reload:
- *   The previous implementation reloaded automatically as soon as a new SW
- *   took control. That works, but can interrupt a user filling out a long
- *   form. A one-click banner keeps the choice in the user's hands while
- *   still being trivial for non-technical users ("Mettre à jour" / "Update").
- *
- * Why the periodic check:
- *   `useRegisterSW` only checks for a new SW on initial page load. A PWA
- *   that stays open for hours/days would otherwise never discover a deploy.
- */
 export function PWAUpdatePrompt() {
   const { lang } = useLang();
   const [updating, setUpdating] = useState(false);
@@ -34,16 +15,22 @@ export function PWAUpdatePrompt() {
     onRegisteredSW(_swUrl, registration) {
       if (!registration) return;
       setInterval(() => {
-        // Only check when online and tab is visible — avoids waking the SW
-        // unnecessarily on background tabs.
         if (!navigator.onLine) return;
         if (document.visibilityState !== 'visible') return;
-        registration.update().catch(() => {
-          /* network blip — try again next interval */
-        });
+        registration.update().catch(() => {});
       }, UPDATE_CHECK_INTERVAL_MS);
     },
   });
+
+  // Detect a SW that was already waiting when the page loaded.
+  // useRegisterSW only fires onNeedRefresh for SWs that transition to
+  // "waiting" while the page is open. If the user reloaded AFTER a deploy
+  // (so the new SW was already waiting), we catch it here.
+  useEffect(() => {
+    navigator.serviceWorker?.getRegistration().then(reg => {
+      if (reg?.waiting) setNeedRefresh(true);
+    });
+  }, [setNeedRefresh]);
 
   if (!needRefresh) return null;
 
@@ -65,7 +52,6 @@ export function PWAUpdatePrompt() {
 
   const handleUpdate = async () => {
     setUpdating(true);
-    // `true` => reload the page once the new SW takes over.
     await updateServiceWorker(true);
   };
 
@@ -75,6 +61,7 @@ export function PWAUpdatePrompt() {
       aria-live="polite"
       className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] w-[min(92vw,420px)] rounded-xl shadow-2xl border border-brand-500/40 bg-white dark:bg-surface-800 p-4 flex items-start gap-3"
     >
+      <span className="text-xl leading-none mt-0.5">🔄</span>
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-sm text-surface-900 dark:text-surface-100">
           {t.title}
