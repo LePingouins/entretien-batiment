@@ -22,6 +22,7 @@ export function PWAUpdatePrompt() {
     },
   });
 
+  // Small v5 test
   // Detect a SW that was already waiting when the page loaded.
   // useRegisterSW only fires onNeedRefresh for SWs that transition to
   // "waiting" while the page is open. If the user reloaded AFTER a deploy
