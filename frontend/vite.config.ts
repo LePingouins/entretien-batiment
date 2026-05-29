@@ -39,6 +39,11 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Injecting the build time forces sw.js to change on every deploy,
+        // so the browser always detects a new version via reg.update().
+        additionalManifestEntries: [
+          { url: '/', revision: Date.now().toString() }
+        ],
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [

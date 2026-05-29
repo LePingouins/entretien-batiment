@@ -45,7 +45,9 @@ console.log('[PWA] PWAUpdatePrompt mounted v2');
       const interval = setInterval(() => {
         if (!navigator.onLine || document.visibilityState !== 'visible') return;
         console.log('[PWA] polling for update…');
-        reg.update().catch(() => {});
+        reg.update()
+          .then(() => console.log('[PWA] reg.update() resolved — no new SW found'))
+          .catch((e) => console.warn('[PWA] reg.update() error:', e));
       }, 60_000);
       cleanups.push(() => clearInterval(interval));
     }
