@@ -11,6 +11,10 @@ WorkingDirectory=/root/entretien-batiment
 # Load all variables from .env
 EnvironmentFile=/root/entretien-batiment/.env
 
+# Pin the upload directory to an absolute path so files are always found
+# regardless of which directory the JAR is launched from.
+Environment=UPLOAD_DIR=/root/entretien-batiment/uploads
+
 # Find and run the JAR (glob expanded by shell)
 ExecStart=/bin/bash -c 'exec java -jar /root/entretien-batiment/backend/build/libs/$(ls /root/entretien-batiment/backend/build/libs/*.jar | grep -v plain | xargs -n1 basename | head -n1)'
 ExecStop=/bin/kill -SIGTERM $MAINPID
