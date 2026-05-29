@@ -8,7 +8,7 @@ export function PWAUpdatePrompt() {
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
-console.log('[PWA] PWAUpdatePrompt mounted v3');
+console.log('[PWA] PWAUpdatePrompt mounted v4');
 
     const cleanups: (() => void)[] = [];
 
@@ -18,7 +18,7 @@ console.log('[PWA] PWAUpdatePrompt mounted v3');
       if (!reg) return;
 
       // Case 1: a new SW was already waiting when this page loaded
-      if (reg.waiting && navigator.serviceWorker.controller) {
+      if (reg.waiting) {
         console.log('[PWA] Found waiting SW on load — showing banner');
         setWaitingSW(reg.waiting);
       }
@@ -30,7 +30,7 @@ console.log('[PWA] PWAUpdatePrompt mounted v3');
         if (!installing) return;
         function onStateChange() {
           console.log('[PWA] installing state →', installing!.state);
-          if (installing!.state === 'installed' && navigator.serviceWorker.controller) {
+          if (installing!.state === 'installed') {
             console.log('[PWA] New SW installed and waiting — showing banner');
             setWaitingSW(installing!);
           }
