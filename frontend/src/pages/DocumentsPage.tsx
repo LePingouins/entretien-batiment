@@ -1,11 +1,14 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOutletContext } from 'react-router-dom';
 import { useLang } from '../context/LangContext';
-import { getWorkOrdersWithInvoices, getUrgentWorkOrdersWithInvoices } from '../lib/api';
+import { getWorkOrdersWithInvoices, getUrgentWorkOrdersWithInvoices, updateUrgentWorkOrder } from '../lib/api';
+import api from '../lib/api';
 import type { WorkOrderResponse, UrgentWorkOrderResponse } from '../types/api';
 import { SecureImage } from '../components/SecureImage';
 import { openSecureFile, downloadSecureFile } from '../lib/secureFile';
+import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
 
 type ColorScheme = 'default' | 'dark' | 'performance' | string;
 
@@ -21,13 +24,17 @@ interface DocumentCard {
 }
 
 function DocumentsPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const outlet = useOutletContext<{ colorScheme: ColorScheme }>();
   const colorScheme: ColorScheme = outlet?.colorScheme || 'default';
   const isDark = colorScheme === 'dark';
+  const confirm = useConfirm();
+  const { addToast } = useToast();
+  const queryClient = useQueryClient();
 
   const [filter, setFilter] = React.useState<'ALL' | 'REGULAR' | 'URGENT'>('ALL');
   const [q, setQ] = React.useState('');
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   const { data: regularWOs, isLoading: loadingRegular } = useQuery({
     queryKey: ['documentsRegularWOs'],
@@ -101,6 +108,38 @@ function DocumentsPage() {
       return true;
     });
   }, [documents, filter, q]);
+
+  const handleDeleteInvoice = async (doc: DocumentCard) => {
+    const ok = await confirm({
+      title: lang === 'fr' ? 'Supprimer la facture' : 'Delete Invoice',
+      message: lang === 'fr'
+        ? `Supprimer la facture pour "${doc.title}" ? Cette action est irréversible.`
+        : `Remove the invoice for "${doc.title}"? This cannot be undone.`,
+      confirmLabel: lang === 'fr' ? 'Supprimer' : 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    const key = `${doc.type}-${doc.id}`;
+    setDeletingId(key);
+    try {
+      if (doc.type === 'URGENT') {
+        await updateUrgentWorkOrder(doc.id, { removeInvoice: true });
+      } else {
+        const formData = new FormData();
+        formData.append('removeInvoice', 'true');
+        await api.put(`/api/admin/work-orders/${doc.id}`, formData);
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['documentsRegularWOs'] }),
+        queryClient.invalidateQueries({ queryKey: ['documentsUrgentWOs'] }),
+      ]);
+      addToast(lang === 'fr' ? 'Facture supprimée.' : 'Invoice removed.', 'success');
+    } catch {
+      addToast(lang === 'fr' ? 'Échec de la suppression.' : 'Failed to remove invoice.', 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const isPdf = (filename: string) => filename.toLowerCase().endsWith('.pdf');
   const isImage = (filename: string) => /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(filename);
@@ -235,6 +274,17 @@ function DocumentsPage() {
                       className={`flex-1 text-center px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isDark ? 'bg-green-700 hover:bg-green-600 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
                     >
                       {t.download || 'Download'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingId === `${doc.type}-${doc.id}`}
+                      onClick={() => handleDeleteInvoice(doc)}
+                      title={lang === 'fr' ? 'Supprimer la facture' : 'Delete invoice'}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50 ${isDark ? 'border-red-700 text-red-400 hover:bg-red-900/40' : 'border-red-300 text-red-600 hover:bg-red-50'}`}
+                    >
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                     </button>
                   </div>
                 </div>
