@@ -41,7 +41,11 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const AdminRepresentantsPage: React.FC = () => {
   const { t, lang } = useLang();
-  const toast = useToast();
+  const { addToast } = useToast();
+  const toast = {
+    success: (msg: string) => addToast(msg, 'success'),
+    error:   (msg: string) => addToast(msg, 'error'),
+  };
   const confirm = useConfirm();
   const { colorScheme } = React.useContext(ColorSchemeContext);
   const isDark = colorScheme === 'dark';
@@ -296,14 +300,14 @@ const AdminRepresentantsPage: React.FC = () => {
                     />
                   </label>
                   <div className="flex gap-2 flex-wrap">
-                    {[
+                    {([
                       { label: lang === 'fr' ? '2 semaines' : '2 weeks', weeks: 2 },
                       { label: lang === 'fr' ? '1 mois' : '1 month', months: 1 },
                       { label: lang === 'fr' ? '3 mois' : '3 months', months: 3 },
-                    ].map((preset) => {
+                    ] as Array<{ label: string; weeks?: number; months?: number }>).map((preset) => {
                       const d = new Date();
-                      if ('weeks' in preset) d.setDate(d.getDate() - preset.weeks * 7);
-                      else d.setMonth(d.getMonth() - preset.months);
+                      if (preset.weeks != null) d.setDate(d.getDate() - preset.weeks * 7);
+                      else if (preset.months != null) d.setMonth(d.getMonth() - preset.months);
                       const presetStart = d.toISOString().slice(0, 10);
                       const isActive = startDate === presetStart && endDate === todayIso();
                       return (
@@ -600,18 +604,61 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
           <button onClick={onClose} className="text-surface-500 hover:text-surface-800 dark:hover:text-white text-2xl leading-none">×</button>
         </div>
         <div className="p-4 space-y-4 text-sm">
-          <div className="grid grid-cols-2 gap-3">
-            <div><div className="text-surface-500 text-xs">Date</div><div className="text-surface-900 dark:text-white">{expense.date}</div></div>
-            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Fournisseur' : 'Supplier'}</div><div className="text-surface-900 dark:text-white">{expense.supplier || '—'}</div></div>
-            <div className="col-span-2"><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Description' : 'Description'}</div><div className="text-surface-900 dark:text-white whitespace-pre-wrap">{expense.description || '—'}</div></div>
-            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Province' : 'Province'}</div><div className="text-surface-900 dark:text-white">{expense.province || '—'}</div></div>
-            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Code imputation' : 'Imputation code'}</div><div className="text-surface-900 dark:text-white">{expense.imputationCode || '—'}</div></div>
-            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Sous-total' : 'Subtotal'}</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.subtotalCents)}</div></div>
-            <div><div className="text-surface-500 text-xs">TPS</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.tpsCents)}</div></div>
-            <div><div className="text-surface-500 text-xs">TVQ</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.tvqCents)}</div></div>
-            <div><div className="text-surface-500 text-xs">TVH</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.tvhCents)}</div></div>
-            <div><div className="text-surface-500 text-xs">{lang === 'fr' ? 'Pourboire' : 'Tip'}</div><div className="text-surface-900 dark:text-white">{fmtMoney(expense.tipCents)}</div></div>
-            <div><div className="text-surface-500 text-xs">Total</div><div className="text-surface-900 dark:text-white font-semibold">{fmtMoney(expense.totalCents)}</div></div>
+          {/* Meta info */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+            <div>
+              <div className="text-surface-500 text-xs">Date</div>
+              <div className="text-surface-900 dark:text-white">{expense.date}</div>
+            </div>
+            <div>
+              <div className="text-surface-500 text-xs">{lang === 'fr' ? 'Fournisseur' : 'Supplier'}</div>
+              <div className="text-surface-900 dark:text-white">{expense.supplier || '—'}</div>
+            </div>
+            <div>
+              <div className="text-surface-500 text-xs">{lang === 'fr' ? 'Province' : 'Province'}</div>
+              <div className="text-surface-900 dark:text-white">{expense.province || '—'}</div>
+            </div>
+            <div>
+              <div className="text-surface-500 text-xs">{lang === 'fr' ? 'Code imputation' : 'Imputation code'}</div>
+              <div className="text-surface-900 dark:text-white">{expense.imputationCode || '—'}</div>
+            </div>
+            <div className="sm:col-span-2">
+              <div className="text-surface-500 text-xs">{lang === 'fr' ? 'Description' : 'Description'}</div>
+              <div className="text-surface-900 dark:text-white whitespace-pre-wrap">{expense.description || '—'}</div>
+            </div>
+          </div>
+
+          {/* Receipt-style amount breakdown */}
+          <div className="rounded-lg border border-surface-200 dark:border-surface-700 overflow-hidden">
+            <div className="px-3 py-2 bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-300 text-xs font-semibold uppercase tracking-wide">
+              {lang === 'fr' ? 'Montants' : 'Amounts'}
+            </div>
+            <div className="divide-y divide-surface-200 dark:divide-surface-700">
+              <div className="flex justify-between px-3 py-1.5">
+                <span className="text-surface-600 dark:text-surface-300">{lang === 'fr' ? 'Sous-total' : 'Subtotal'}</span>
+                <span className="text-surface-900 dark:text-white tabular-nums">{fmtMoney(expense.subtotalCents)}</span>
+              </div>
+              <div className="flex justify-between px-3 py-1.5">
+                <span className="text-surface-600 dark:text-surface-300">TPS</span>
+                <span className="text-surface-900 dark:text-white tabular-nums">{fmtMoney(expense.tpsCents)}</span>
+              </div>
+              <div className="flex justify-between px-3 py-1.5">
+                <span className="text-surface-600 dark:text-surface-300">TVQ</span>
+                <span className="text-surface-900 dark:text-white tabular-nums">{fmtMoney(expense.tvqCents)}</span>
+              </div>
+              <div className="flex justify-between px-3 py-1.5">
+                <span className="text-surface-600 dark:text-surface-300">TVH</span>
+                <span className="text-surface-900 dark:text-white tabular-nums">{fmtMoney(expense.tvhCents)}</span>
+              </div>
+              <div className="flex justify-between px-3 py-1.5">
+                <span className="text-surface-600 dark:text-surface-300">{lang === 'fr' ? 'Pourboire' : 'Tip'}</span>
+                <span className="text-surface-900 dark:text-white tabular-nums">{fmtMoney(expense.tipCents)}</span>
+              </div>
+              <div className="flex justify-between px-3 py-2 bg-surface-50 dark:bg-surface-800/60">
+                <span className="text-surface-900 dark:text-white font-semibold">Total</span>
+                <span className="text-surface-900 dark:text-white font-bold tabular-nums">{fmtMoney(expense.totalCents)}</span>
+              </div>
+            </div>
           </div>
 
           {expense.approvalNote && (
