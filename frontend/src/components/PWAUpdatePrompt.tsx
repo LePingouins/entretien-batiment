@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useLang } from '../context/LangContext';
 
+// v2 — prompt mode with periodic polling
 // How often (ms) the running app pings the server for a new build.
 // 60s is a good balance: users see updates quickly without hammering the
 // server. Each check is a tiny conditional GET against the SW script.
