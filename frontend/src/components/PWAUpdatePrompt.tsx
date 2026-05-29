@@ -1,39 +1,53 @@
 import { useEffect, useState } from 'react';
-import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useLang } from '../context/LangContext';
-
-const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
 
 export function PWAUpdatePrompt() {
   const { lang } = useLang();
+  const [waitingSW, setWaitingSW] = useState<ServiceWorker | null>(null);
   const [updating, setUpdating] = useState(false);
 
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegisteredSW(_swUrl, registration) {
-      if (!registration) return;
-      setInterval(() => {
-        if (!navigator.onLine) return;
-        if (document.visibilityState !== 'visible') return;
-        registration.update().catch(() => {});
-      }, UPDATE_CHECK_INTERVAL_MS);
-    },
-  });
-
-  // Small v5 test
-  // Detect a SW that was already waiting when the page loaded.
-  // useRegisterSW only fires onNeedRefresh for SWs that transition to
-  // "waiting" while the page is open. If the user reloaded AFTER a deploy
-  // (so the new SW was already waiting), we catch it here.
   useEffect(() => {
-    navigator.serviceWorker?.getRegistration().then(reg => {
-      if (reg?.waiting) setNeedRefresh(true);
-    });
-  }, [setNeedRefresh]);
+    if (!('serviceWorker' in navigator)) return;
 
-  if (!needRefresh) return null;
+    const cleanups: (() => void)[] = [];
+
+    async function setup() {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) return;
+
+      // Case 1: a new SW was already waiting when this page loaded
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        setWaitingSW(reg.waiting);
+      }
+
+      // Case 2: a new SW installs while the page is open
+      function onUpdateFound() {
+        const installing = reg?.installing;
+        if (!installing) return;
+        function onStateChange() {
+          if (installing!.state === 'installed' && navigator.serviceWorker.controller) {
+            setWaitingSW(installing!);
+          }
+        }
+        installing.addEventListener('statechange', onStateChange);
+        cleanups.push(() => installing.removeEventListener('statechange', onStateChange));
+      }
+      reg.addEventListener('updatefound', onUpdateFound);
+      cleanups.push(() => reg.removeEventListener('updatefound', onUpdateFound));
+
+      // Periodic polling: check for a new SW every 60s while tab is visible
+      const interval = setInterval(() => {
+        if (!navigator.onLine || document.visibilityState !== 'visible') return;
+        reg.update().catch(() => {});
+      }, 60_000);
+      cleanups.push(() => clearInterval(interval));
+    }
+
+    setup();
+    return () => cleanups.forEach(fn => fn());
+  }, []);
+
+  if (!waitingSW) return null;
 
   const t = lang === 'fr'
     ? {
@@ -51,9 +65,14 @@ export function PWAUpdatePrompt() {
         later: 'Later',
       };
 
-  const handleUpdate = async () => {
+  const handleUpdate = () => {
     setUpdating(true);
-    await updateServiceWorker(true);
+    // Workbox's generated SW always listens for this message and calls skipWaiting()
+    waitingSW.postMessage({ type: 'SKIP_WAITING' });
+    // Once the new SW takes control, reload to serve fresh assets
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
+    }, { once: true });
   };
 
   return (
@@ -82,7 +101,7 @@ export function PWAUpdatePrompt() {
         </button>
         <button
           type="button"
-          onClick={() => setNeedRefresh(false)}
+          onClick={() => setWaitingSW(null)}
           disabled={updating}
           className="px-3 py-1 text-[11px] rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition"
         >
