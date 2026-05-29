@@ -20,8 +20,13 @@ import { formatDuration } from '../lib/tripUtils';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function ensureUtc(iso: string): string {
+  if (!iso.endsWith('Z') && !/[+\-]\d{2}:\d{2}$/.test(iso)) return iso + 'Z';
+  return iso;
+}
+
 function formatActiveDuration(startIso: string): string {
-  const diffMs = Date.now() - new Date(startIso).getTime();
+  const diffMs = Date.now() - new Date(ensureUtc(startIso)).getTime();
   const totalSec = Math.floor(diffMs / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -40,7 +45,7 @@ function fmtDate(iso: string): string {
 
 function fmtTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    return new Date(ensureUtc(iso)).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   } catch {
     return '';
   }

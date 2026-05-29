@@ -19,9 +19,14 @@ function fmtDate(iso: string): string {
   } catch { return iso; }
 }
 
+function ensureUtc(iso: string): string {
+  if (!iso.endsWith('Z') && !/[+\-]\d{2}:\d{2}$/.test(iso)) return iso + 'Z';
+  return iso;
+}
+
 function fmtTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    return new Date(ensureUtc(iso)).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   } catch { return ''; }
 }
 
