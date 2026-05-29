@@ -67,7 +67,8 @@ const AdminLayout: React.FC = () => {
   };
 
   const { lang, setLang, t } = useLang();
-  const pagePath = React.useCallback((pageKey: 'DASHBOARD' | 'WORK_ORDERS' | 'URGENT_WORK_ORDERS' | 'MILEAGE' | 'ANALYTICS' | 'USERS' | 'ARCHIVE' | 'REP_TRIPS') => {
+  const roleLabel = role ? (({ ADMIN: t.adminUsersRoleAdmin, DEVELOPPER: t.adminUsersRoleDevelopper, TECHNICIEN: t.adminUsersRoleTech, WORKER: t.adminUsersRoleWorker, REPRESENTANT: t.adminUsersRoleRepresentant } as Record<string, string | undefined>)[role] ?? role) : '';
+  const pagePath = React.useCallback((pageKey: 'DASHBOARD' | 'WORK_ORDERS' | 'URGENT_WORK_ORDERS' | 'MILEAGE' | 'ANALYTICS' | 'USERS' | 'ARCHIVE' | 'REP_TRIPS' | 'REP_EXPENSES') => {
     return getRolePagePath(role, pageKey);
   }, [role]);
   // Add/remove dark class on body for dark mode
@@ -166,6 +167,8 @@ const AdminLayout: React.FC = () => {
     if (canAccess('REP_TRIPS')) items.push({ label: t.repTripsNav || 'Rep Trips', path: pagePath('REP_TRIPS'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('REP_TRIPS')) items.push({ label: t.repTripsAdminTitle || 'Rep Trips Admin', path: '/admin/admin-trips', group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('REP_TRIPS')) items.push({ label: lang === 'fr' ? 'Paramètres trajets' : 'Trip Settings', path: '/admin/trip-settings', group: lang === 'fr' ? 'Opérations' : 'Operations' });
+    if (canAccess('REPRESENTANTS')) items.push({ label: t.representantsNav || (lang === 'fr' ? 'Représentants' : 'Representatives'), path: '/admin/representants', group: lang === 'fr' ? 'Opérations' : 'Operations' });
+    if (role === 'DEVELOPPER' && canAccess('REP_EXPENSES')) items.push({ label: lang === 'fr' ? 'Mes dépenses' : 'My Expenses', path: pagePath('REP_EXPENSES'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('USERS')) items.push({ label: t.adminUsersNav || 'Users', path: pagePath('USERS'), group: lang === 'fr' ? 'Administration' : 'Administration' });
     items.push({ label: t.documentsPage || 'Documents', path: '/admin/documents', group: lang === 'fr' ? 'Ressources' : 'Resources' });
     items.push({ label: t.shoppingList || 'Shopping List', path: '/admin/shopping-list', group: lang === 'fr' ? 'Ressources' : 'Resources' });
@@ -213,7 +216,7 @@ const AdminLayout: React.FC = () => {
                 ]}
               />
             )}
-            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS')) && (
+            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS') || canAccess('REPRESENTANTS')) && (
               <NavDropdown
                 isDark={colorScheme === 'dark'}
                 label={lang === 'fr' ? 'Opérations' : 'Operations'}
@@ -223,6 +226,8 @@ const AdminLayout: React.FC = () => {
                   ...(canAccess('REP_TRIPS') ? [{ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('REP_TRIPS'), isActive: window.location.pathname.endsWith('/rep-trips') }] : []),
                   ...(canAccess('REP_TRIPS') ? [{ label: (t.repTripsAdminTitle || 'Admin Trajets'), path: '/admin/admin-trips', isActive: window.location.pathname.includes('/admin/admin-trips') }] : []),
                   ...(canAccess('REP_TRIPS') ? [{ label: lang === 'fr' ? 'Paramètres trajets' : 'Trip Settings', path: '/admin/trip-settings', isActive: window.location.pathname.includes('/admin/trip-settings') }] : []),
+                  ...(canAccess('REPRESENTANTS') ? [{ label: t.representantsNav || (lang === 'fr' ? 'Représentants' : 'Representatives'), path: '/admin/representants', isActive: window.location.pathname.includes('/admin/representants') }] : []),
+                  ...(role === 'DEVELOPPER' && canAccess('REP_EXPENSES') ? [{ label: lang === 'fr' ? 'Mes dépenses' : 'My Expenses', path: pagePath('REP_EXPENSES'), isActive: window.location.pathname.includes('/admin/expenses') }] : []),
                 ]}
               />
             )}
@@ -252,6 +257,7 @@ const AdminLayout: React.FC = () => {
             )}
             <NavSearch isDark={colorScheme === 'dark'} lang={lang} items={searchItems} />
             <BugReportButton />
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorScheme === 'dark' ? 'bg-surface-800 text-surface-400' : 'bg-surface-100 text-surface-500'}`}>{roleLabel}</span>
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>
             <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>
             <button
@@ -313,7 +319,7 @@ const AdminLayout: React.FC = () => {
                 ]}
               />
             )}
-            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS')) && (
+            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS') || canAccess('REPRESENTANTS')) && (
               <NavDropdown
                 isDark={colorScheme === 'dark'}
                 label={lang === 'fr' ? 'Opérations' : 'Operations'}
@@ -325,6 +331,7 @@ const AdminLayout: React.FC = () => {
                   ...(canAccess('REP_TRIPS') ? [{ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('REP_TRIPS'), isActive: window.location.pathname.endsWith('/rep-trips') }] : []),
                   ...(canAccess('REP_TRIPS') ? [{ label: (t.repTripsAdminTitle || 'Admin Trajets'), path: '/admin/admin-trips', isActive: window.location.pathname.includes('/admin/admin-trips') }] : []),
                   ...(canAccess('REP_TRIPS') ? [{ label: lang === 'fr' ? 'Paramètres trajets' : 'Trip Settings', path: '/admin/trip-settings', isActive: window.location.pathname.includes('/admin/trip-settings') }] : []),
+                  ...(canAccess('REPRESENTANTS') ? [{ label: t.representantsNav || (lang === 'fr' ? 'Représentants' : 'Representatives'), path: '/admin/representants', isActive: window.location.pathname.includes('/admin/representants') }] : []),
                 ]}
               />
             )}
@@ -353,6 +360,7 @@ const AdminLayout: React.FC = () => {
             <div className={`my-1 h-px ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`} />
             <NavSearch isDark={colorScheme === 'dark'} lang={lang} items={searchItems} />
             <BugReportButton />
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorScheme === 'dark' ? 'bg-surface-800 text-surface-400' : 'bg-surface-100 text-surface-500'}`}>{roleLabel}</span>
             <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors text-left ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>
           </div>
         )}

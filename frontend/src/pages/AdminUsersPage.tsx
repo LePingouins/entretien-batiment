@@ -30,7 +30,7 @@ import {
   updateAdminUserRole,
 } from '../lib/api';
 
-const ROLE_OPTIONS: UserRole[] = ['ADMIN', 'TECH', 'WORKER'];
+const ROLE_OPTIONS: UserRole[] = ['ADMIN', 'TECH', 'WORKER', 'REPRESENTANT'];
 
 const PAGE_KEY_ORDER: PageKey[] = [
   'DASHBOARD',
@@ -43,13 +43,17 @@ const PAGE_KEY_ORDER: PageKey[] = [
   'NOTIFICATIONS',
   'INVENTORY',
   'INVENTORY_PRODUCTS',
+  'REP_TRIPS',
+  'REP_EXPENSES',
+  'REPRESENTANTS',
 ];
 
 const FALLBACK_ALLOWED_BY_ROLE: Record<UserRole, PageKey[]> = {
-  ADMIN: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS'],
-  DEVELOPPER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS'],
+  ADMIN: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS', 'REP_TRIPS', 'REP_EXPENSES', 'REPRESENTANTS'],
+  DEVELOPPER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS', 'REP_TRIPS', 'REP_EXPENSES', 'REPRESENTANTS'],
   TECH: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS'],
   WORKER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS'],
+  REPRESENTANT: ['REP_TRIPS', 'REP_EXPENSES'],
 };
 
 const AdminUsersPage: React.FC = () => {
@@ -148,8 +152,9 @@ const AdminUsersPage: React.FC = () => {
     if (role === 'ADMIN') return t.adminUsersRoleAdmin || 'Admin';
     if (role === 'DEVELOPPER') return t.adminUsersRoleDevelopper || 'Developper';
     if (role === 'TECH') return t.adminUsersRoleTech || 'Technician';
+    if (role === 'REPRESENTANT') return t.adminUsersRoleRepresentant || 'Représentant';
     return t.adminUsersRoleWorker || 'Worker';
-  }, [t.adminUsersRoleAdmin, t.adminUsersRoleDevelopper, t.adminUsersRoleTech, t.adminUsersRoleWorker]);
+  }, [t.adminUsersRoleAdmin, t.adminUsersRoleDevelopper, t.adminUsersRoleTech, t.adminUsersRoleWorker, t.adminUsersRoleRepresentant]);
 
   const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -341,6 +346,12 @@ const AdminUsersPage: React.FC = () => {
         return t.pageAccessInventory || 'Inventory';
       case 'INVENTORY_PRODUCTS':
         return t.pageAccessInventoryProducts || 'Inventory Products';
+      case 'REP_TRIPS':
+        return t.pageAccessRepTrips || 'Kilométrage (Reps)';
+      case 'REP_EXPENSES':
+        return t.pageAccessRepExpenses || 'Dépenses (Reps)';
+      case 'REPRESENTANTS':
+        return t.pageAccessRepresentants || 'Représentants';
       default:
         return pageKey;
     }
@@ -355,9 +366,12 @@ const AdminUsersPage: React.FC = () => {
     t.pageAccessUrgentWorkOrders,
     t.pageAccessUsers,
     t.pageAccessWorkOrders,
+    t.pageAccessRepTrips,
+    t.pageAccessRepExpenses,
+    t.pageAccessRepresentants,
   ]);
 
-  const updatePageRoleRule = (pageKey: PageKey, field: 'admin' | 'tech' | 'worker', value: boolean) => {
+  const updatePageRoleRule = (pageKey: PageKey, field: 'admin' | 'tech' | 'worker' | 'representant', value: boolean) => {
     setPageRoleRules((prev) => prev.map((rule) => {
       if (rule.pageKey !== pageKey) return rule;
       return { ...rule, [field]: value };
@@ -679,6 +693,9 @@ const AdminUsersPage: React.FC = () => {
                     <th className={`text-center px-5 py-3 text-xs uppercase tracking-wide ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
                       {t.adminUsersRoleWorker || 'Worker'}
                     </th>
+                    <th className={`text-center px-5 py-3 text-xs uppercase tracking-wide ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>
+                      {t.adminUsersRoleRepresentant || 'Représentant'}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -708,6 +725,14 @@ const AdminUsersPage: React.FC = () => {
                           type="checkbox"
                           checked={rule.worker}
                           onChange={(e) => updatePageRoleRule(rule.pageKey, 'worker', e.target.checked)}
+                          className="h-4 w-4 rounded border-surface-300 text-brand-600 focus:ring-brand-500"
+                        />
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={rule.representant}
+                          onChange={(e) => updatePageRoleRule(rule.pageKey, 'representant', e.target.checked)}
                           className="h-4 w-4 rounded border-surface-300 text-brand-600 focus:ring-brand-500"
                         />
                       </td>

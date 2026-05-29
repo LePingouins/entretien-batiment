@@ -12,6 +12,8 @@ export const PAGE_KEYS: PageKey[] = [
   'INVENTORY',
   'INVENTORY_PRODUCTS',
   'REP_TRIPS',
+  'REP_EXPENSES',
+  'REPRESENTANTS',
 ];
 
 const PAGE_SEGMENTS: Record<PageKey, string> = {
@@ -27,6 +29,8 @@ const PAGE_SEGMENTS: Record<PageKey, string> = {
   INVENTORY_PRODUCTS: 'inventory/products',
   SUBSCRIPTIONS: 'subscriptions',
   REP_TRIPS: 'rep-trips',
+  REP_EXPENSES: 'expenses',
+  REPRESENTANTS: 'representants',
 };
 
 const ADMIN_FALLBACK_ORDER: PageKey[] = [
@@ -41,6 +45,7 @@ const ADMIN_FALLBACK_ORDER: PageKey[] = [
   'INVENTORY',
   'INVENTORY_PRODUCTS',
   'REP_TRIPS',
+  'REPRESENTANTS',
 ];
 
 const NON_ADMIN_FALLBACK_ORDER: PageKey[] = [
@@ -57,13 +62,20 @@ const NON_ADMIN_FALLBACK_ORDER: PageKey[] = [
   'REP_TRIPS',
 ];
 
-export function getRoleBasePath(role: UserRole | null | undefined): '/admin' | '/tech' | '/worker' {
+const REPRESENTANT_FALLBACK_ORDER: PageKey[] = [
+  'REP_TRIPS',
+  'REP_EXPENSES',
+];
+
+export function getRoleBasePath(role: UserRole | null | undefined): '/admin' | '/tech' | '/worker' | '/rep' {
   if (role === 'ADMIN' || role === 'DEVELOPPER') return '/admin';
   if (role === 'WORKER') return '/worker';
+  if (role === 'REPRESENTANT') return '/rep';
   return '/tech';
 }
 
 export function getRoleHomePath(role: UserRole | null | undefined): string {
+  if (role === 'REPRESENTANT') return '/rep/rep-trips';
   return getRoleBasePath(role);
 }
 
@@ -74,5 +86,6 @@ export function getRolePagePath(role: UserRole | null | undefined, pageKey: Page
 }
 
 export function getRoleFallbackOrder(role: UserRole | null | undefined): PageKey[] {
+  if (role === 'REPRESENTANT') return REPRESENTANT_FALLBACK_ORDER;
   return role === 'ADMIN' || role === 'DEVELOPPER' ? ADMIN_FALLBACK_ORDER : NON_ADMIN_FALLBACK_ORDER;
 }

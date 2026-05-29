@@ -771,6 +771,19 @@ export const en = {
   repTripsMethodBadgeRoad: 'Road',
   pageAccessRepTrips: 'Rep Trips (Mileage)',
   pageExplanationRepTrips: 'Track and log business trips with GPS-assisted mileage for tax reporting.',
+
+  // ─── Représentant Expenses / Invoices ───────────────────────
+  expensesNav: 'Expenses',
+  expensesTitle: 'My Expenses',
+  expenseNew: '+ New Expense',
+  expenseRunOcr: 'Run OCR',
+  pageAccessRepExpenses: 'Rep Expenses (Invoices)',
+  pageExplanationRepExpenses: 'Submit and track business expenses with receipt photos.',
+  representantsNav: 'Representatives',
+  representantsTitle: 'Representatives',
+  pageAccessRepresentants: 'Representatives',
+  pageExplanationRepresentants: 'Browse representatives, see their trips and expenses, export Excel reports.',
+  adminUsersRoleRepresentant: 'Representative',
 };
 
 export const fr = {
@@ -1483,8 +1496,8 @@ export const fr = {
   devInsightsArchiveIcon: '📦',
 
   // ─── Rep Trips (Suivi kilométrage — représentants) ────────────────
-  repTripsNav: 'Kilométrage — Représentants',
-  repTripsTitle: 'Kilométrage — Représentants',
+  repTripsNav: 'Kilométrage',
+  repTripsTitle: 'Kilométrage',
   repTripsSubtitle: 'Enregistrez vos déplacements d\'affaires pour les fins fiscales.',
   repTripsAdminTitle: 'Déplacements — Administrateur',
   repTripsAdminSubtitle: 'Consultez et exportez tous les déplacements des représentants.',
@@ -1538,4 +1551,18 @@ export const fr = {
   repTripsDistanceGoogleDesc: 'Distance précise via Google Routes',
   pageAccessRepTrips: 'Trajets représentants',
   pageExplanationRepTrips: 'Suivez et enregistrez les déplacements d\'affaires avec assistance GPS pour les fins fiscales.',
+
+  // ─── Représentant Dépenses / Factures ───────────────────────
+  expensesNav: 'Dépenses',
+  expensesTitle: 'Mes dépenses',
+  expenseNew: '+ Nouvelle dépense',
+  expenseRunOcr: 'Exécuter OCR',
+  pageAccessRepExpenses: 'Dépenses représentants',
+  pageExplanationRepExpenses: 'Soumettre et suivre les dépenses d\'affaires avec photos de reçus.',
+  representantsNav: 'Représentants',
+  representantsTitle: 'Représentants',
+  pageAccessRepresentants: 'Représentants',
+  pageExplanationRepresentants: 'Consultez les représentants, voyez leurs trajets et dépenses, exportez les rapports Excel.',
+  adminUsersRoleRepresentant: 'Représentant',
 };
+

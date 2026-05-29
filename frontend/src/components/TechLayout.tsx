@@ -22,9 +22,10 @@ type TechLayoutProps = {
 };
 
 const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
-  const { logout } = useAuth();
+  const { logout, role } = useAuth();
   const { canAccess } = usePageAccess();
   const { lang, setLang, t } = useLang();
+  const roleLabel = role ? (({ ADMIN: t.adminUsersRoleAdmin, DEVELOPPER: t.adminUsersRoleDevelopper, TECHNICIEN: t.adminUsersRoleTech, WORKER: t.adminUsersRoleWorker, REPRESENTANT: t.adminUsersRoleRepresentant } as Record<string, string | undefined>)[role] ?? role) : '';
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = React.useState(false);
   const [remindersEnabled, setRemindersEnabled] = React.useState(false);
@@ -234,6 +235,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
             />
             <NavSearch isDark={colorScheme === 'dark'} lang={lang} items={searchItems} />
             <BugReportButton />
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorScheme === 'dark' ? 'bg-surface-800 text-surface-400' : 'bg-surface-100 text-surface-500'}`}>{roleLabel}</span>
             <div className={`w-px h-5 mx-1 ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`}></div>
             <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>
             <button
@@ -323,6 +325,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
             <div className={`my-1 h-px ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`} />
             <NavSearch isDark={colorScheme === 'dark'} lang={lang} items={searchItems} />
             <BugReportButton />
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorScheme === 'dark' ? 'bg-surface-800 text-surface-400' : 'bg-surface-100 text-surface-500'}`}>{roleLabel}</span>
             <button onClick={handleLogout} className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors text-left ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}>{t.logout}</button>
           </div>
         )}

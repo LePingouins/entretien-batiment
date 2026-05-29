@@ -92,11 +92,15 @@ export interface Vehicle {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-export async function login(email: string, password: string): Promise<string> {
+export async function login(
+  email: string,
+  password: string,
+  rememberMe: boolean = true,
+): Promise<string> {
   const res = await api.post<{ accessToken: string }>('/api/auth/login', {
     email,
     password,
-    rememberMeEnabled: true,
+    rememberMeEnabled: rememberMe,
   });
   return res.data.accessToken;
 }

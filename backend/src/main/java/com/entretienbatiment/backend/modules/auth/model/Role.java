@@ -4,7 +4,8 @@ public enum Role {
     ADMIN,
     DEVELOPPER,
     TECH,
-    WORKER;
+    WORKER,
+    REPRESENTANT;
 
     public boolean isAdminLike() {
         return this == ADMIN || this == DEVELOPPER;

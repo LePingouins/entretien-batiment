@@ -241,6 +241,7 @@ public class AdminUserController {
     private String notificationsPathForRole(Role role) {
         if (role != null && role.isAdminLike()) return "/admin/notifications";
         if (role == Role.TECH) return "/tech/notifications";
+        if (role == Role.REPRESENTANT) return "/rep";
         return "/worker/notifications";
     }
 

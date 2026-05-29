@@ -40,6 +40,8 @@ public class PageAccessService {
     public static final String PAGE_INVENTORY_PRODUCTS = "INVENTORY_PRODUCTS";
     public static final String PAGE_SUBSCRIPTIONS = "SUBSCRIPTIONS";
     public static final String PAGE_REP_TRIPS    = "REP_TRIPS";
+    public static final String PAGE_REP_EXPENSES = "REP_EXPENSES";
+    public static final String PAGE_REPRESENTANTS = "REPRESENTANTS";
 
     private static final List<String> MANAGED_PAGE_KEYS = List.of(
             PAGE_DASHBOARD,
@@ -53,7 +55,9 @@ public class PageAccessService {
             PAGE_INVENTORY,
             PAGE_INVENTORY_PRODUCTS,
             PAGE_SUBSCRIPTIONS,
-            PAGE_REP_TRIPS
+            PAGE_REP_TRIPS,
+            PAGE_REP_EXPENSES,
+            PAGE_REPRESENTANTS
     );
 
     private static final Map<Role, Set<String>> DEFAULT_ALLOWED_BY_ROLE = defaultAllowedByRole();
@@ -92,7 +96,8 @@ public class PageAccessService {
                     pageKey,
                     resolveRoleAllowed(pageKey, Role.ADMIN, storedRules),
                     resolveRoleAllowed(pageKey, Role.TECH, storedRules),
-                    resolveRoleAllowed(pageKey, Role.WORKER, storedRules)
+                    resolveRoleAllowed(pageKey, Role.WORKER, storedRules),
+                    resolveRoleAllowed(pageKey, Role.REPRESENTANT, storedRules)
             ));
         }
         return result;
@@ -105,13 +110,14 @@ public class PageAccessService {
 
         for (RolePageAccessRuleUpdateRequest update : updates) {
             String pageKey = normalizeAndValidatePageKey(update.pageKey());
-            if (update.admin() == null || update.tech() == null || update.worker() == null) {
-                throw badRequest("Each rule must include admin, tech and worker values");
+            if (update.admin() == null || update.tech() == null || update.worker() == null || update.representant() == null) {
+                throw badRequest("Each rule must include admin, tech, worker and representant values");
             }
 
             upsertRoleRule(pageKey, Role.ADMIN, update.admin());
             upsertRoleRule(pageKey, Role.TECH, update.tech());
             upsertRoleRule(pageKey, Role.WORKER, update.worker());
+            upsertRoleRule(pageKey, Role.REPRESENTANT, update.representant());
         }
 
         return getRoleRules();
@@ -399,7 +405,9 @@ public class PageAccessService {
                 PAGE_INVENTORY,
                 PAGE_INVENTORY_PRODUCTS,
                 PAGE_SUBSCRIPTIONS,
-                PAGE_REP_TRIPS
+                PAGE_REP_TRIPS,
+                PAGE_REP_EXPENSES,
+                PAGE_REPRESENTANTS
         ));
 
         defaults.put(Role.DEVELOPPER, defaults.get(Role.ADMIN));
@@ -421,6 +429,12 @@ public class PageAccessService {
                 PAGE_REP_TRIPS
         ));
 
+        // REPRESENTANT: only their own trips (kilométrage) and own expenses (invoices)
+        defaults.put(Role.REPRESENTANT, Set.of(
+                PAGE_REP_TRIPS,
+                PAGE_REP_EXPENSES
+        ));
+
         return defaults;
     }
 
@@ -432,9 +446,9 @@ public class PageAccessService {
 
     public record PageAccessEntryDto(String pageKey, boolean allowed) {}
 
-    public record RolePageAccessRuleDto(String pageKey, boolean admin, boolean tech, boolean worker) {}
+    public record RolePageAccessRuleDto(String pageKey, boolean admin, boolean tech, boolean worker, boolean representant) {}
 
-    public record RolePageAccessRuleUpdateRequest(String pageKey, Boolean admin, Boolean tech, Boolean worker) {}
+    public record RolePageAccessRuleUpdateRequest(String pageKey, Boolean admin, Boolean tech, Boolean worker, Boolean representant) {}
 
     public record UserPageAccessItemDto(String pageKey, OverrideState state, boolean effectiveAllowed, String validFrom, String validUntil) {}
 

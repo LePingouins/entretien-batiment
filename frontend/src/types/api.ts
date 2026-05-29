@@ -69,7 +69,7 @@ export interface PageResponse<T> {
   size: number;
 }
 
-export type UserRole = 'ADMIN' | 'DEVELOPPER' | 'TECH' | 'WORKER';
+export type UserRole = 'ADMIN' | 'DEVELOPPER' | 'TECH' | 'WORKER' | 'REPRESENTANT';
 
 export interface AdminUserResponse {
   id: number;
@@ -99,7 +99,9 @@ export type PageKey =
   | 'INVENTORY'
   | 'INVENTORY_PRODUCTS'
   | 'SUBSCRIPTIONS'
-  | 'REP_TRIPS';
+  | 'REP_TRIPS'
+  | 'REP_EXPENSES'
+  | 'REPRESENTANTS';
 
 export type AccessOverrideState = 'DEFAULT' | 'ALLOW' | 'DENY';
 
@@ -117,6 +119,7 @@ export interface RolePageAccessRule {
   admin: boolean;
   tech: boolean;
   worker: boolean;
+  representant: boolean;
 }
 
 export interface UserPageAccessItem {
@@ -341,6 +344,79 @@ export interface TripGpsSummary {
   userEmail?: string;
   totalKm?: number;
   archivedAt?: string;
+}
+
+// --- Représentant Expense / Invoice Types ---
+
+export type ExpenseStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface ExpenseReceipt {
+  id: number;
+  filename: string;
+  contentType?: string;
+  originalName?: string;
+  fileSize?: number;
+  uploadedAt: string;
+}
+
+export interface Expense {
+  id: number;
+  userId: number;
+  date: string;             // YYYY-MM-DD
+  supplier?: string;
+  description?: string;
+  province?: string;
+  imputationCode?: string;
+  subtotalCents?: number;
+  tpsCents?: number;
+  tvqCents?: number;
+  tvhCents?: number;
+  tipCents?: number;
+  totalCents?: number;
+  status: ExpenseStatus;
+  approvedByUserId?: number;
+  approvedAt?: string;
+  approvalNote?: string;
+  ocrProcessedAt?: string;
+  ocrRawText?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  receipts: ExpenseReceipt[];
+}
+
+export interface ExpenseRequest {
+  date: string;
+  supplier?: string;
+  description?: string;
+  province?: string;
+  imputationCode?: string;
+  subtotalCents?: number;
+  tpsCents?: number;
+  tvqCents?: number;
+  tvhCents?: number;
+  tipCents?: number;
+  totalCents?: number;
+  notes?: string;
+}
+
+export interface RepresentantListItem {
+  id: number;
+  email: string;
+  enabled: boolean;
+  tripCount: number;
+  expenseCount: number;
+}
+
+export interface RepresentantProfile {
+  id: number;
+  email: string;
+  enabled: boolean;
+  trips: RepTrip[];
+  expenses: Expense[];
+  totalKm: number;
+  totalReimbursementCents: number;
+  totalExpenseCents: number;
 }
 
 // --- Dashboard Types ---

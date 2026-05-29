@@ -1064,3 +1064,95 @@ export async function getOnlineUsers(): Promise<OnlineUser[]> {
   const res = await api.get<OnlineUser[]>('/api/presence/online');
   return res.data;
 }
+
+// --- Expenses / Invoices (representant module) ----------------------------
+
+import type {
+  Expense as ExpenseT,
+  ExpenseRequest as ExpenseReqT,
+  ExpenseStatus,
+  RepresentantListItem,
+  RepresentantProfile,
+} from '../types/api';
+
+export async function getMyExpenses(): Promise<ExpenseT[]> {
+  const res = await api.get<ExpenseT[]>('/api/expenses');
+  return res.data;
+}
+
+export async function getExpense(id: number): Promise<ExpenseT> {
+  const res = await api.get<ExpenseT>(`/api/expenses/${id}`);
+  return res.data;
+}
+
+export async function createExpense(req: ExpenseReqT): Promise<ExpenseT> {
+  const res = await api.post<ExpenseT>('/api/expenses', req);
+  return res.data;
+}
+
+export async function updateExpense(id: number, req: ExpenseReqT): Promise<ExpenseT> {
+  const res = await api.put<ExpenseT>(`/api/expenses/${id}`, req);
+  return res.data;
+}
+
+export async function deleteExpense(id: number): Promise<void> {
+  await api.delete(`/api/expenses/${id}`);
+}
+
+export async function setExpenseStatus(id: number, status: ExpenseStatus, note?: string): Promise<ExpenseT> {
+  const res = await api.patch<ExpenseT>(`/api/expenses/${id}/status`, { status, note });
+  return res.data;
+}
+
+export async function uploadExpenseReceipt(id: number, file: File): Promise<ExpenseT> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await api.post<ExpenseT>(`/api/expenses/${id}/receipts`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+}
+
+export async function deleteExpenseReceipt(expenseId: number, receiptId: number): Promise<void> {
+  await api.delete(`/api/expenses/${expenseId}/receipts/${receiptId}`);
+}
+
+export async function runExpenseOcr(id: number): Promise<ExpenseT> {
+  const res = await api.post<ExpenseT>(`/api/expenses/${id}/ocr`);
+  return res.data;
+}
+
+export function expenseReceiptUrl(filename: string): string {
+  return `/api/files/expenses/${encodeURIComponent(filename)}`;
+}
+
+// --- Admin: Repr�sentants directory ----------------------------------------
+
+export async function listRepresentants(): Promise<RepresentantListItem[]> {
+  const res = await api.get<RepresentantListItem[]>('/api/admin/representants');
+  return res.data;
+}
+
+export async function getRepresentantProfile(
+  userId: number,
+  startDate?: string,
+  endDate?: string,
+): Promise<RepresentantProfile> {
+  const params: Record<string, string> = {};
+  if (startDate) params.startDate = startDate;
+  if (endDate)   params.endDate   = endDate;
+  const res = await api.get<RepresentantProfile>(`/api/admin/representants/${userId}`, { params });
+  return res.data;
+}
+
+export function representantExportUrl(userId: number, startDate: string, endDate: string): string {
+  const base = (import.meta.env.VITE_API_URL || '') + `/api/admin/representants/${userId}/export`;
+  const qs = new URLSearchParams({ startDate, endDate });
+  return `${base}?${qs.toString()}`;
+}
+
+export function representantCsvExportUrl(userId: number, startDate: string, endDate: string): string {
+  const base = (import.meta.env.VITE_API_URL || '') + `/api/admin/representants/${userId}/export-csv`;
+  const qs = new URLSearchParams({ startDate, endDate });
+  return `${base}?${qs.toString()}`;
+}

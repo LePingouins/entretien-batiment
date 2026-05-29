@@ -7,6 +7,8 @@ export interface ConfirmOptions {
   cancelLabel?: string;
   /** Renders the confirm button in red */
   danger?: boolean;
+  /** Hide the cancel button (use for info/alert dialogs) */
+  hideCancel?: boolean;
 }
 
 interface ConfirmContextType {
@@ -87,6 +89,7 @@ const ConfirmModalUI: React.FC<{
           {options.message}
         </p>
         <div className="flex gap-3 justify-end">
+          {!options.hideCancel && (
           <button
             onClick={onCancel}
             className="px-4 py-2 rounded-xl text-sm font-medium border border-surface-300 dark:border-surface-600
@@ -95,6 +98,7 @@ const ConfirmModalUI: React.FC<{
           >
             {options.cancelLabel || 'Cancel'}
           </button>
+          )}
           <button
             onClick={onConfirm}
             autoFocus

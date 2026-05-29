@@ -10,6 +10,7 @@ import RequirePageAccess from './RequirePageAccess';
 import AdminLayout from '../components/AdminLayout';
 import TechLayout from '../components/TechLayout';
 import WorkerLayout from '../components/WorkerLayout';
+import RepLayout from '../components/RepLayout';
 
 // ─── Lazy-loaded pages ────────────────────────────────────────────────────────
 // Each page is split into its own JS chunk by Vite.  The browser only downloads
@@ -38,8 +39,10 @@ const InventoryCountSessionsPage  = lazy(() => import('../pages/InventoryCountSe
 const InventoryCountLivePage      = lazy(() => import('../pages/InventoryCountLivePage'));
 const SubscriptionsPage           = lazy(() => import('../pages/SubscriptionsPage'));
 const RepTripsPage                = lazy(() => import('../pages/RepTripsPage'));
+const RepExpensesPage             = lazy(() => import('../pages/RepExpensesPage'));
 const AdminTripsPage              = lazy(() => import('../pages/AdminTripsPage'));
 const AdminTripSettingsPage       = lazy(() => import('../pages/AdminTripSettingsPage'));
+const AdminRepresentantsPage      = lazy(() => import('../pages/AdminRepresentantsPage'));
 
 /** Shown while a lazy page chunk is being downloaded */
 const PageLoader = () => (
@@ -63,7 +66,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'no-access',
-        element: <ProtectedRoute allowedRoles={['ADMIN', 'DEVELOPPER', 'TECH', 'WORKER']} />,
+        element: <ProtectedRoute allowedRoles={['ADMIN', 'DEVELOPPER', 'TECH', 'WORKER', 'REPRESENTANT']} />,
         children: [
           {
             index: true,
@@ -208,6 +211,14 @@ const router = createBrowserRouter([
                 ),
               },
               {
+                path: 'expenses',
+                element: (
+                  <RequirePageAccess pageKey="REP_EXPENSES">
+                    <RepExpensesPage />
+                  </RequirePageAccess>
+                ),
+              },
+              {
                 path: 'admin-trips',
                 element: (
                   <RequirePageAccess pageKey="REP_TRIPS">
@@ -220,6 +231,14 @@ const router = createBrowserRouter([
                 element: (
                   <RequirePageAccess pageKey="REP_TRIPS">
                     <AdminTripSettingsPage />
+                  </RequirePageAccess>
+                ),
+              },
+              {
+                path: 'representants',
+                element: (
+                  <RequirePageAccess pageKey="REPRESENTANTS">
+                    <AdminRepresentantsPage />
                   </RequirePageAccess>
                 ),
               },
@@ -492,6 +511,38 @@ const router = createBrowserRouter([
                 element: (
                   <RequirePageAccess pageKey="REP_TRIPS">
                     <RepTripsPage />
+                  </RequirePageAccess>
+                ),
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: 'rep',
+        element: <ProtectedRoute allowedRoles={['REPRESENTANT', 'ADMIN', 'DEVELOPPER']} />,
+        children: [
+          {
+            path: '',
+            element: <RepLayout />,
+            children: [
+              {
+                index: true,
+                element: <Navigate to="/rep/rep-trips" replace />,
+              },
+              {
+                path: 'rep-trips',
+                element: (
+                  <RequirePageAccess pageKey="REP_TRIPS">
+                    <RepTripsPage />
+                  </RequirePageAccess>
+                ),
+              },
+              {
+                path: 'expenses',
+                element: (
+                  <RequirePageAccess pageKey="REP_EXPENSES">
+                    <RepExpensesPage />
                   </RequirePageAccess>
                 ),
               },

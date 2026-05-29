@@ -131,6 +131,7 @@ public class SecurityConfig {
                 .requestMatchers("/ws-notifications/**").permitAll()
                 // Make files endpoint authenticated
                 .requestMatchers("/api/files/workorders/**").authenticated()
+                .requestMatchers("/api/files/expenses/**").authenticated()
                 
                 // Allow error page so that exceptions don't get masked as 403 Forbidden
                 .requestMatchers("/error").permitAll()
@@ -153,6 +154,7 @@ public class SecurityConfig {
                 // Explicitly allow archived endpoints if they are causing issues with authenticated()
                 .requestMatchers("/api/mileage/**").authenticated()
                 .requestMatchers("/api/rep-trips/**").authenticated()
+                .requestMatchers("/api/expenses/**").authenticated()
                 .requestMatchers("/api/urgent-work-orders/**").authenticated()
                 
                 // Catch-all

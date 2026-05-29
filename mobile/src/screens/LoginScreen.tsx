@@ -20,6 +20,7 @@ interface Props {
 export default function LoginScreen({ onLoginSuccess }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [stayLoggedIn, setStayLoggedIn] = useState(true);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
@@ -29,7 +30,7 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
     }
     setLoading(true);
     try {
-      const token = await login(email.trim().toLowerCase(), password);
+      const token = await login(email.trim().toLowerCase(), password, stayLoggedIn);
       await saveToken(token);
       onLoginSuccess();
     } catch (err: any) {
@@ -75,6 +76,17 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
           returnKeyType="done"
           onSubmitEditing={handleLogin}
         />
+
+        <TouchableOpacity
+          style={styles.rememberRow}
+          onPress={() => setStayLoggedIn((v) => !v)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.checkbox, stayLoggedIn && styles.checkboxChecked]}>
+            {stayLoggedIn && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={styles.rememberLabel}>Rester connecté pendant 30 jours</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -147,5 +159,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: '#94A3B8',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  checkboxChecked: {
+    backgroundColor: '#1D4ED8',
+    borderColor: '#1D4ED8',
+  },
+  checkmark: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  rememberLabel: {
+    color: '#374151',
+    fontSize: 14,
   },
 });
