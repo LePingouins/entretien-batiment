@@ -6,6 +6,7 @@ import {
   startRepTrip,
   updateRepTrip,
   deleteRepTrip,
+  archiveRepTrip,
   addRepTripStop,
   deleteRepTripStop,
   reverseGeocode,
@@ -288,11 +289,12 @@ interface TripCardProps {
   isDark: boolean;
   t: Record<string, string>;
   onDelete: (id: number) => void;
+  onArchive: (id: number) => void;
   onDeleteStop: (tripId: number, stopId: number) => void;
   onSelect: (trip: RepTrip) => void;
 }
 
-const TripCard: React.FC<TripCardProps> = ({ trip, isDark, t, onDelete, onDeleteStop, onSelect }) => {
+const TripCard: React.FC<TripCardProps> = ({ trip, isDark, t, onDelete, onArchive, onDeleteStop, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
   const card = isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-slate-200';
   const sub = isDark ? 'text-surface-400' : 'text-slate-500';
@@ -364,6 +366,16 @@ const TripCard: React.FC<TripCardProps> = ({ trip, isDark, t, onDelete, onDelete
             )}
           </div>
         </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.confirm(t.repTripsArchiveConfirm || 'Archive this trip?')) onArchive(trip.id);
+          }}
+          className={`shrink-0 p-1.5 rounded-lg transition-colors ${isDark ? 'text-surface-500 hover:text-brand-300 hover:bg-surface-700' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}
+          title={t.archive || 'Archive'}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        </button>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -732,6 +744,11 @@ const RepTripsPage: React.FC = () => {
     setTrips((prev) => prev.filter((trip) => trip.id !== id));
   };
 
+  const handleArchiveTrip = async (id: number) => {
+    await archiveRepTrip(id);
+    setTrips((prev) => prev.filter((trip) => trip.id !== id));
+  };
+
   const handleDeleteStop = async (tripId: number, stopId: number) => {
     await deleteRepTripStop(tripId, stopId);
     setTrips((prev) =>
@@ -800,6 +817,7 @@ const RepTripsPage: React.FC = () => {
                 isDark={isDark}
                 t={t as unknown as Record<string, string>}
                 onDelete={handleDeleteTrip}
+                onArchive={handleArchiveTrip}
                 onDeleteStop={handleDeleteStop}
                 onSelect={setSelectedTrip}
               />

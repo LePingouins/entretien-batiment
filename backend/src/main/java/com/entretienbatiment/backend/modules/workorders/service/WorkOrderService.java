@@ -12,6 +12,7 @@ import com.entretienbatiment.backend.modules.workorders.dto.AssignWorkOrderReque
 import com.entretienbatiment.backend.modules.workorders.dto.CreateWorkOrderRequest;
 import com.entretienbatiment.backend.modules.workorders.dto.UpdateWorkOrderMultipartRequest;
 import com.entretienbatiment.backend.modules.workorders.dto.WorkOrderResponse;
+import com.entretienbatiment.backend.modules.files.config.UploadPaths;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,13 +39,16 @@ public class WorkOrderService {
     private final AppUserRepository users;
     private final NotificationService notificationService;
     private final WorkOrderReminderScheduler reminderScheduler;
+    private final UploadPaths uploadPaths;
 
     public WorkOrderService(WorkOrderRepository repo, AppUserRepository users, NotificationService notificationService, WorkOrderReminderScheduler reminderScheduler,
+                             UploadPaths uploadPaths,
                              @Value("${app.default-technician-email:}") String defaultTechnicianEmail) {
         this.repo = repo;
         this.users = users;
         this.notificationService = notificationService;
         this.reminderScheduler = reminderScheduler;
+        this.uploadPaths = uploadPaths;
         this.defaultTechnicianEmail = defaultTechnicianEmail;
     }
 
@@ -636,7 +640,7 @@ public class WorkOrderService {
                 String originalFilename = file.getOriginalFilename();
                 String ext = originalFilename != null && originalFilename.contains(".") ? originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
                 String storedFilename = java.util.UUID.randomUUID() + ext;
-                java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+                java.nio.file.Path uploadDir = uploadPaths.workOrders();
                 java.nio.file.Files.createDirectories(uploadDir);
                 java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
                 file.transferTo(filePath);
@@ -675,7 +679,7 @@ public class WorkOrderService {
                         ? originalFilename.substring(originalFilename.lastIndexOf('.'))
                         : "";
                 String storedFilename = java.util.UUID.randomUUID() + ext;
-                java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+                java.nio.file.Path uploadDir = uploadPaths.workOrders();
                 java.nio.file.Files.createDirectories(uploadDir);
                 java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
                 invoiceFile.transferTo(filePath);
@@ -722,7 +726,7 @@ public class WorkOrderService {
                     ? originalFilename.substring(originalFilename.lastIndexOf('.'))
                     : "";
             String storedFilename = java.util.UUID.randomUUID() + ext;
-            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+            java.nio.file.Path uploadDir = uploadPaths.workOrders();
             java.nio.file.Files.createDirectories(uploadDir);
             java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
             file.transferTo(filePath);
@@ -753,7 +757,7 @@ public class WorkOrderService {
                     ? originalFilename.substring(originalFilename.lastIndexOf('.'))
                     : "";
             String storedFilename = java.util.UUID.randomUUID() + ext;
-            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+            java.nio.file.Path uploadDir = uploadPaths.workOrders();
             java.nio.file.Files.createDirectories(uploadDir);
             java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
             file.transferTo(filePath);
@@ -782,7 +786,7 @@ public class WorkOrderService {
         }
 
         try {
-            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get("uploads", "workorders").resolve(filename));
+            java.nio.file.Files.deleteIfExists(uploadPaths.workOrders().resolve(filename));
         } catch (Exception ignored) {
             // Keep request successful even if stale file cannot be removed.
         }

@@ -295,6 +295,8 @@ export interface RepTrip {
   suspicionFlags?: number;
   waypointsArchivedAt?: string;
   vehicleId?: number;
+  archived?: boolean;
+  archivedAt?: string;
 }
 
 export interface RepTripAuditLog {
@@ -382,6 +384,8 @@ export interface Expense {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  archived?: boolean;
+  archivedAt?: string;
   receipts: ExpenseReceipt[];
 }
 

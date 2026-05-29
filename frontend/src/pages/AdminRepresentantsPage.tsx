@@ -214,12 +214,7 @@ const AdminRepresentantsPage: React.FC = () => {
                   >
                     {lang === 'fr' ? '📥 Télécharger Excel' : '📥 Download Excel'}
                   </button>
-                  <button
-                    onClick={handleDownloadCsv}
-                    className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded font-medium"
-                  >
-                    {lang === 'fr' ? '📄 Télécharger CSV' : '📄 Download CSV'}
-                  </button>
+
                 </div>
 
                 {profileLoading || !profile ? (

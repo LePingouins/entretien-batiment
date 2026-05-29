@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import api, { unarchiveWorkOrder, getArchivedUrgentWorkOrders, getArchivedMileageEntries, unarchiveUrgentWorkOrder, unarchiveMileageEntry } from '../lib/api';
-import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority, UrgentWorkOrderResponse, MileageEntry } from '../types/api';
+import api, { unarchiveWorkOrder, getArchivedUrgentWorkOrders, getArchivedMileageEntries, unarchiveUrgentWorkOrder, unarchiveMileageEntry, getArchivedExpenses, unarchiveExpense, getArchivedRepTrips, unarchiveRepTrip } from '../lib/api';
+import { WorkOrderResponse, PageResponse, WorkOrderStatus, WorkOrderPriority, UrgentWorkOrderResponse, MileageEntry, Expense, RepTrip } from '../types/api';
 import { useLang } from '../context/LangContext';
 import { useOutletContext } from 'react-router-dom';
 import { ColorSchemeType } from './AdminWorkOrders/colorSchemes';
@@ -168,7 +168,7 @@ function ArchivePage() {
   const queryClient = useQueryClient();
   const { colorScheme } = useOutletContext<{ colorScheme: ColorSchemeType }>();
 
-  const [activeTab, setActiveTab] = React.useState<'work-orders' | 'urgent' | 'mileage'>('work-orders');
+  const [activeTab, setActiveTab] = React.useState<'work-orders' | 'urgent' | 'mileage' | 'expenses' | 'rep-trips'>('work-orders');
 
   // Filters
   const [page, setPage] = React.useState(0);
@@ -218,6 +218,20 @@ function ArchivePage() {
     enabled: activeTab === 'mileage',
   });
 
+  // Fetch archived expenses
+  const { data: expensesData, isLoading: isLoadingExpenses } = useQuery<Expense[]>({
+    queryKey: ['archivedExpenses'],
+    queryFn: () => getArchivedExpenses(),
+    enabled: activeTab === 'expenses',
+  });
+
+  // Fetch archived rep-trips
+  const { data: repTripsData, isLoading: isLoadingRepTrips } = useQuery<RepTrip[]>({
+    queryKey: ['archivedRepTrips'],
+    queryFn: () => getArchivedRepTrips(),
+    enabled: activeTab === 'rep-trips',
+  });
+
 
   // Restore handler
   const handleRestore = async (workOrder: WorkOrderResponse) => {
@@ -253,6 +267,26 @@ function ArchivePage() {
     }
   };
 
+  const handleRestoreExpense = async (id: number) => {
+    try {
+      await unarchiveExpense(id);
+      queryClient.invalidateQueries({ queryKey: ['archivedExpenses'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    } catch (err) {
+      alert('Failed to restore expense');
+    }
+  };
+
+  const handleRestoreRepTrip = async (id: number) => {
+    try {
+      await unarchiveRepTrip(id);
+      queryClient.invalidateQueries({ queryKey: ['archivedRepTrips'] });
+      queryClient.invalidateQueries({ queryKey: ['repTrips'] });
+    } catch (err) {
+      alert('Failed to restore trip');
+    }
+  };
+
   const statusOptions = ['', 'COMPLETED', 'CANCELLED'];
   const priorityOptions = ['', 'URGENT', 'HIGH', 'MEDIUM', 'LOW'];
   const locationOptions = [
@@ -285,6 +319,18 @@ function ArchivePage() {
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'mileage' ? getButtonStyles(colorScheme) : colorScheme === 'dark' ? 'text-surface-400 hover:text-surface-200 bg-surface-800' : 'text-surface-500 hover:text-surface-700 bg-surface-100'}`}
         >
           {t.mileage || 'Mileage'}
+        </button>
+        <button
+          onClick={() => setActiveTab('expenses')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'expenses' ? getButtonStyles(colorScheme) : colorScheme === 'dark' ? 'text-surface-400 hover:text-surface-200 bg-surface-800' : 'text-surface-500 hover:text-surface-700 bg-surface-100'}`}
+        >
+          {t.expensesTitle || (t.expense || 'Expenses')}
+        </button>
+        <button
+          onClick={() => setActiveTab('rep-trips')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'rep-trips' ? getButtonStyles(colorScheme) : colorScheme === 'dark' ? 'text-surface-400 hover:text-surface-200 bg-surface-800' : 'text-surface-500 hover:text-surface-700 bg-surface-100'}`}
+        >
+          {t.repTripsTitle || 'Rep Trips'}
         </button>
       </div>
 
@@ -617,6 +663,120 @@ function ArchivePage() {
                     </div>
                     <button
                       onClick={() => handleRestoreMileage(m.id)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${getButtonStyles(colorScheme)}`}
+                    >
+                      {t.restore}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Expenses Content */}
+      {activeTab === 'expenses' && (
+        <>
+          {isLoadingExpenses && (
+            <div className={`text-center py-8 ${textColors.secondary}`}>
+              {t.loading}
+            </div>
+          )}
+          {!isLoadingExpenses && (!expensesData || expensesData.length === 0) && (
+            <div className={`text-center py-8 ${textColors.secondary}`}>
+              {t.noArchivedExpenses || 'No archived expenses'}
+            </div>
+          )}
+          {expensesData && expensesData.length > 0 && (
+            <div className="space-y-4">
+              {expensesData.map((e) => (
+                <div key={e.id} className={`p-4 rounded-xl ${getCardStyles(colorScheme)}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className={`font-semibold ${textColors.primary}`}>
+                          {new Date(e.date).toLocaleDateString()}
+                        </span>
+                        <span className={`px-2 py-0.5 text-xs rounded-lg ${colorScheme === 'dark' ? 'bg-surface-700 text-surface-400' : 'bg-surface-100 text-surface-600'}`}>
+                          {((e.totalCents ?? 0) / 100).toFixed(2)} $
+                        </span>
+                        <span className={`px-2 py-0.5 text-xs rounded-lg ${colorScheme === 'dark' ? 'bg-surface-700 text-surface-400' : 'bg-surface-100 text-surface-600'}`}>
+                          {e.status}
+                        </span>
+                      </div>
+                      {e.supplier && (
+                        <div className={`text-sm ${textColors.secondary} font-medium`}>{e.supplier}</div>
+                      )}
+                      {e.description && (
+                        <p className={`text-sm mt-1 ${textColors.muted}`}>{e.description}</p>
+                      )}
+                      <div className={`text-xs mt-2 ${textColors.muted}`}>
+                        <span className="select-all mr-2">ID: {e.id}</span>
+                        {t.archivedAt}: {e.archivedAt ? new Date(e.archivedAt).toLocaleDateString() : '-'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRestoreExpense(e.id)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${getButtonStyles(colorScheme)}`}
+                    >
+                      {t.restore}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Rep Trips Content */}
+      {activeTab === 'rep-trips' && (
+        <>
+          {isLoadingRepTrips && (
+            <div className={`text-center py-8 ${textColors.secondary}`}>
+              {t.loading}
+            </div>
+          )}
+          {!isLoadingRepTrips && (!repTripsData || repTripsData.length === 0) && (
+            <div className={`text-center py-8 ${textColors.secondary}`}>
+              {t.noArchivedRepTrips || 'No archived trips'}
+            </div>
+          )}
+          {repTripsData && repTripsData.length > 0 && (
+            <div className="space-y-4">
+              {repTripsData.map((trip) => (
+                <div key={trip.id} className={`p-4 rounded-xl ${getCardStyles(colorScheme)}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className={`font-semibold ${textColors.primary}`}>
+                          {new Date(trip.date).toLocaleDateString()}
+                        </span>
+                        {trip.totalKm != null && (
+                          <span className={`px-2 py-0.5 text-xs rounded-lg ${colorScheme === 'dark' ? 'bg-surface-700 text-surface-400' : 'bg-surface-100 text-surface-600'}`}>
+                            {trip.totalKm} km
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 text-xs rounded-lg ${colorScheme === 'dark' ? 'bg-surface-700 text-surface-400' : 'bg-surface-100 text-surface-600'}`}>
+                          {trip.status}
+                        </span>
+                      </div>
+                      {trip.purpose && (
+                        <div className={`text-sm ${textColors.secondary} font-medium`}>{trip.purpose}</div>
+                      )}
+                      {(trip.startAddress || trip.endAddress) && (
+                        <p className={`text-sm mt-1 ${textColors.muted}`}>
+                          {trip.startAddress || '—'} → {trip.endAddress || '—'}
+                        </p>
+                      )}
+                      <div className={`text-xs mt-2 ${textColors.muted}`}>
+                        <span className="select-all mr-2">ID: {trip.id}</span>
+                        {t.archivedAt}: {trip.archivedAt ? new Date(trip.archivedAt).toLocaleDateString() : '-'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRestoreRepTrip(trip.id)}
                       className={`px-4 py-2 rounded-lg font-medium transition-colors ${getButtonStyles(colorScheme)}`}
                     >
                       {t.restore}

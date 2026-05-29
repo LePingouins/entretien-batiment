@@ -876,6 +876,19 @@ export async function deleteRepTrip(id: number): Promise<void> {
   await api.delete(`/api/rep-trips/${id}`);
 }
 
+export async function archiveRepTrip(id: number): Promise<void> {
+  await api.patch(`/api/rep-trips/${id}/archive`);
+}
+
+export async function unarchiveRepTrip(id: number): Promise<void> {
+  await api.patch(`/api/rep-trips/${id}/unarchive`);
+}
+
+export async function getArchivedRepTrips(): Promise<RepTrip[]> {
+  const res = await api.get<RepTrip[]>('/api/rep-trips/archived');
+  return res.data;
+}
+
 export async function addRepTripStop(tripId: number, payload: Partial<RepTripStop>): Promise<RepTripStop> {
   const res = await api.post<RepTripStop>(`/api/rep-trips/${tripId}/stops`, payload);
   return res.data;
@@ -1097,6 +1110,19 @@ export async function updateExpense(id: number, req: ExpenseReqT): Promise<Expen
 
 export async function deleteExpense(id: number): Promise<void> {
   await api.delete(`/api/expenses/${id}`);
+}
+
+export async function archiveExpense(id: number): Promise<void> {
+  await api.patch(`/api/expenses/${id}/archive`);
+}
+
+export async function unarchiveExpense(id: number): Promise<void> {
+  await api.patch(`/api/expenses/${id}/unarchive`);
+}
+
+export async function getArchivedExpenses(): Promise<ExpenseT[]> {
+  const res = await api.get<ExpenseT[]>('/api/expenses/archived');
+  return res.data;
 }
 
 export async function setExpenseStatus(id: number, status: ExpenseStatus, note?: string): Promise<ExpenseT> {

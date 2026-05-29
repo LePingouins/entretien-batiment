@@ -1,21 +1,27 @@
 package com.entretienbatiment.backend.modules.files.controller;
 
+import com.entretienbatiment.backend.modules.files.config.UploadPaths;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.net.MalformedURLException;
 
 @RestController
 @RequestMapping("/api/files/workorders")
 public class FilesController {
+    private final UploadPaths uploadPaths;
+
+    public FilesController(UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
+    }
+
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
         try {
-            Path uploadsRoot = Paths.get("uploads/workorders").toAbsolutePath().normalize();
+            Path uploadsRoot = uploadPaths.workOrders().toAbsolutePath().normalize();
             Path file = uploadsRoot.resolve(filename).normalize();
             // Guard against path traversal: reject any path that escapes the uploads directory
             if (!file.startsWith(uploadsRoot)) {

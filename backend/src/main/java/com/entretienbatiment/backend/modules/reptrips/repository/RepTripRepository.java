@@ -29,6 +29,12 @@ public interface RepTripRepository extends JpaRepository<RepTrip, Long> {
 
     List<RepTrip> findByUserIdOrderByDateDescCreatedAtDesc(Long userId);
 
+    List<RepTrip> findByUserIdAndArchivedFalseOrderByDateDescCreatedAtDesc(Long userId);
+
+    List<RepTrip> findByUserIdAndArchivedTrueOrderByArchivedAtDesc(Long userId);
+
+    List<RepTrip> findByArchivedTrueOrderByArchivedAtDesc();
+
     @Query("SELECT t FROM RepTrip t WHERE t.userId = :userId AND t.status = 'IN_PROGRESS' ORDER BY t.createdAt DESC")
     List<RepTrip> findActiveByUserId(@Param("userId") Long userId);
 

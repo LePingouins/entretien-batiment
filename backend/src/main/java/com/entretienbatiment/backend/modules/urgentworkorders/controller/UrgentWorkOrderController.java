@@ -4,6 +4,7 @@ import com.entretienbatiment.backend.modules.auth.repository.AppUserRepository;
 import com.entretienbatiment.backend.modules.auth.model.Role;
 import com.entretienbatiment.backend.modules.notifications.service.NotificationService;
 import com.entretienbatiment.backend.modules.audit.service.AuditLogService;
+import com.entretienbatiment.backend.modules.files.config.UploadPaths;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,18 +30,21 @@ public class UrgentWorkOrderController {
     private final NotificationService notificationService;
     private final AppUserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final UploadPaths uploadPaths;
 
     public UrgentWorkOrderController(
             UrgentWorkOrderService service,
             NotificationService notificationService,
             AppUserRepository userRepository,
             AuditLogService auditLogService,
+            UploadPaths uploadPaths,
             @Value("${app.default-technician-email:}") String defaultTechnicianEmail
     ) {
         this.service = service;
         this.notificationService = notificationService;
         this.userRepository = userRepository;
         this.auditLogService = auditLogService;
+        this.uploadPaths = uploadPaths;
         this.defaultTechnicianEmail = defaultTechnicianEmail;
     }
 
@@ -403,7 +407,7 @@ public class UrgentWorkOrderController {
                     ? originalFilename.substring(originalFilename.lastIndexOf('.'))
                     : "";
             String storedFilename = java.util.UUID.randomUUID() + ext;
-            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+            java.nio.file.Path uploadDir = uploadPaths.workOrders();
             java.nio.file.Files.createDirectories(uploadDir);
             java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
             file.transferTo(filePath);
@@ -434,7 +438,7 @@ public class UrgentWorkOrderController {
                     ? originalFilename.substring(originalFilename.lastIndexOf('.'))
                     : "";
             String storedFilename = java.util.UUID.randomUUID() + ext;
-            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "workorders");
+            java.nio.file.Path uploadDir = uploadPaths.workOrders();
             java.nio.file.Files.createDirectories(uploadDir);
             java.nio.file.Path filePath = uploadDir.resolve(storedFilename);
             file.transferTo(filePath);
@@ -460,7 +464,7 @@ public class UrgentWorkOrderController {
             return;
         }
         try {
-            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get("uploads", "workorders").resolve(filename));
+            java.nio.file.Files.deleteIfExists(uploadPaths.workOrders().resolve(filename));
         } catch (Exception ignored) {
             // Keep request successful even if stale file cannot be removed.
         }

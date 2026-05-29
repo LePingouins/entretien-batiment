@@ -151,6 +151,12 @@ public class RepTrip {
     @Column(name = "vehicle_id")
     private Long vehicleId;
 
+    @Column(nullable = false)
+    private Boolean archived = false;
+
+    @Column(name = "archived_at")
+    private LocalDateTime archivedAt;
+
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @com.fasterxml.jackson.annotation.JsonManagedReference
     private List<RepTripStop> stops = new ArrayList<>();
@@ -279,6 +285,12 @@ public class RepTrip {
 
     public Long getVehicleId() { return vehicleId; }
     public void setVehicleId(Long vehicleId) { this.vehicleId = vehicleId; }
+
+    public Boolean getArchived() { return archived; }
+    public void setArchived(Boolean archived) { this.archived = archived; }
+
+    public LocalDateTime getArchivedAt() { return archivedAt; }
+    public void setArchivedAt(LocalDateTime archivedAt) { this.archivedAt = archivedAt; }
 
     /** Haversine formula — distance in km between two lat/lng points */
     public static double haversineKm(double lat1, double lon1, double lat2, double lon2) {

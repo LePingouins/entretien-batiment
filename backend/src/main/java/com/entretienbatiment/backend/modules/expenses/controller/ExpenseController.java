@@ -8,6 +8,7 @@ import com.entretienbatiment.backend.modules.expenses.model.Expense;
 import com.entretienbatiment.backend.modules.expenses.model.ExpenseReceipt;
 import com.entretienbatiment.backend.modules.expenses.repository.ExpenseReceiptRepository;
 import com.entretienbatiment.backend.modules.expenses.repository.ExpenseRepository;
+import com.entretienbatiment.backend.modules.files.config.UploadPaths;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,7 +19,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -33,19 +33,22 @@ import java.util.UUID;
 @PreAuthorize("@pageAccessService.canAccess(authentication, 'REP_EXPENSES')")
 public class ExpenseController {
 
-    private static final Path UPLOAD_DIR = Paths.get("uploads", "expenses");
-
     private final ExpenseRepository expenseRepository;
     private final ExpenseReceiptRepository receiptRepository;
     private final AppUserRepository userRepository;
+    private final UploadPaths uploadPaths;
 
     public ExpenseController(ExpenseRepository expenseRepository,
                              ExpenseReceiptRepository receiptRepository,
-                             AppUserRepository userRepository) {
+                             AppUserRepository userRepository,
+                             UploadPaths uploadPaths) {
         this.expenseRepository = expenseRepository;
         this.receiptRepository = receiptRepository;
         this.userRepository = userRepository;
+        this.uploadPaths = uploadPaths;
     }
+
+    private Path uploadDir() { return uploadPaths.expenses(); }
 
     // ───────────────────────────── Helpers ──────────────────────────────────
 
@@ -84,7 +87,17 @@ public class ExpenseController {
     @GetMapping
     public List<Expense> listMine(Authentication auth) {
         AppUser user = requireUser(auth);
-        return expenseRepository.findByUserIdOrderByDateDescIdDesc(user.getId());
+        return expenseRepository.findByUserIdAndArchivedFalseOrderByDateDescIdDesc(user.getId());
+    }
+
+    /** Rep: list MY archived expenses. Admin: list ALL archived expenses. */
+    @GetMapping("/archived")
+    public List<Expense> listArchived(Authentication auth) {
+        AppUser user = requireUser(auth);
+        if (user.getRole().isAdminLike()) {
+            return expenseRepository.findByArchivedTrueOrderByArchivedAtDesc();
+        }
+        return expenseRepository.findByUserIdAndArchivedTrueOrderByArchivedAtDesc(user.getId());
     }
 
     @GetMapping("/{id}")
@@ -123,6 +136,26 @@ public class ExpenseController {
             deleteReceiptFileQuietly(r.getFilename());
         }
         expenseRepository.delete(e);
+    }
+
+    @PatchMapping("/{id}/archive")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void archive(@PathVariable Long id, Authentication auth) {
+        AppUser user = requireUser(auth);
+        Expense e = requireOwnedOrAdmin(id, user);
+        e.setArchived(true);
+        e.setArchivedAt(LocalDateTime.now());
+        expenseRepository.save(e);
+    }
+
+    @PatchMapping("/{id}/unarchive")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unarchive(@PathVariable Long id, Authentication auth) {
+        AppUser user = requireUser(auth);
+        Expense e = requireOwnedOrAdmin(id, user);
+        e.setArchived(false);
+        e.setArchivedAt(null);
+        expenseRepository.save(e);
     }
 
     // ─────────────────────── Approval (admin only) ──────────────────────────
@@ -171,8 +204,8 @@ public class ExpenseController {
                     : "";
             String stored = UUID.randomUUID() + ext;
 
-            Files.createDirectories(UPLOAD_DIR);
-            file.transferTo(UPLOAD_DIR.resolve(stored).toAbsolutePath());
+            Files.createDirectories(uploadDir());
+            file.transferTo(uploadDir().resolve(stored).toAbsolutePath());
 
             ExpenseReceipt r = new ExpenseReceipt();
             r.setExpense(e);
@@ -206,7 +239,7 @@ public class ExpenseController {
     private void deleteReceiptFileQuietly(String filename) {
         if (filename == null) return;
         try {
-            Files.deleteIfExists(UPLOAD_DIR.resolve(filename));
+            Files.deleteIfExists(uploadDir().resolve(filename));
         } catch (Exception ignored) { }
     }
 

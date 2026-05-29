@@ -14,6 +14,7 @@ import com.entretienbatiment.backend.modules.reptrips.model.RepTripAuditLog;
 import com.entretienbatiment.backend.modules.reptrips.model.RepTripPhoto;
 import com.entretienbatiment.backend.modules.reptrips.model.UserMileageRate;
 import com.entretienbatiment.backend.modules.reptrips.model.Vehicle;
+import com.entretienbatiment.backend.modules.files.config.UploadPaths;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -65,6 +66,9 @@ public class RepTripController {
     @Autowired
     private VehicleRepository vehicleRepository;
 
+    @Autowired
+    private UploadPaths uploadPaths;
+
     @Value("${google.routes.api.key:}")
     private String googleRoutesApiKey;
 
@@ -91,7 +95,17 @@ public class RepTripController {
     @GetMapping
     public List<RepTrip> getMyTrips(Authentication auth) {
         AppUser user = requireUser(auth);
-        return tripRepository.findByUserIdOrderByDateDescCreatedAtDesc(user.getId());
+        return tripRepository.findByUserIdAndArchivedFalseOrderByDateDescCreatedAtDesc(user.getId());
+    }
+
+    /** Rep: list MY archived trips. Admin: list ALL archived trips. */
+    @GetMapping("/archived")
+    public List<RepTrip> getArchivedTrips(Authentication auth) {
+        AppUser user = requireUser(auth);
+        if (user.getRole().isAdminLike()) {
+            return tripRepository.findByArchivedTrueOrderByArchivedAtDesc();
+        }
+        return tripRepository.findByUserIdAndArchivedTrueOrderByArchivedAtDesc(user.getId());
     }
 
     // ─── User: get single trip ────────────────────────────────────────────────
@@ -295,7 +309,57 @@ public class RepTripController {
         if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
             return ResponseEntity.status(403).build();
         }
+        // Clean photo files from disk before removing DB rows (rep_trip_photo
+        // rows themselves are removed by the ON DELETE CASCADE FK).
+        List<RepTripPhoto> photos = photoRepository.findByTripIdOrderByUploadedAtAsc(id);
+        for (RepTripPhoto p : photos) {
+            if (p.getFilePath() != null) {
+                try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(p.getFilePath())); }
+                catch (Exception ignored) {}
+            }
+        }
+        photoRepository.deleteAll(photos);
+        // Remove the trip-specific upload directory (best-effort; safe if missing).
+        try {
+            java.nio.file.Path dir = uploadPaths.repTrips().resolve(String.valueOf(id));
+            if (java.nio.file.Files.isDirectory(dir)) {
+                try (java.util.stream.Stream<java.nio.file.Path> stream = java.nio.file.Files.walk(dir)) {
+                    stream.sorted(java.util.Comparator.reverseOrder())
+                          .forEach(p -> { try { java.nio.file.Files.deleteIfExists(p); } catch (Exception ignored) {} });
+                }
+            }
+        } catch (Exception ignored) {}
         tripRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/archive")
+    public ResponseEntity<Void> archiveTrip(@PathVariable Long id, Authentication auth) {
+        AppUser user = requireUser(auth);
+        Optional<RepTrip> opt = tripRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RepTrip trip = opt.get();
+        if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
+            return ResponseEntity.status(403).build();
+        }
+        trip.setArchived(true);
+        trip.setArchivedAt(java.time.LocalDateTime.now());
+        tripRepository.save(trip);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/unarchive")
+    public ResponseEntity<Void> unarchiveTrip(@PathVariable Long id, Authentication auth) {
+        AppUser user = requireUser(auth);
+        Optional<RepTrip> opt = tripRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RepTrip trip = opt.get();
+        if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
+            return ResponseEntity.status(403).build();
+        }
+        trip.setArchived(false);
+        trip.setArchivedAt(null);
+        tripRepository.save(trip);
         return ResponseEntity.noContent().build();
     }
 
@@ -987,7 +1051,7 @@ public class RepTripController {
             return ResponseEntity.status(403).build();
         }
         try {
-            java.nio.file.Path dir = java.nio.file.Paths.get("uploads", "rep-trips", String.valueOf(tripId));
+            java.nio.file.Path dir = uploadPaths.repTrips().resolve(String.valueOf(tripId));
             java.nio.file.Files.createDirectories(dir);
             String safeName = System.currentTimeMillis() + "_" + kind + "_" +
                     file.getOriginalFilename().replaceAll("[^A-Za-z0-9._-]", "_");

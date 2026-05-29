@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.entretienbatiment.backend.modules.workorders.service.WorkOrderReminderScheduler;
+import com.entretienbatiment.backend.modules.files.config.UploadPaths;
 import com.entretienbatiment.backend.modules.urgentworkorders.model.UrgentWorkOrder;
 import com.entretienbatiment.backend.modules.urgentworkorders.repository.UrgentWorkOrderRepository;
 
@@ -12,10 +13,12 @@ import com.entretienbatiment.backend.modules.urgentworkorders.repository.UrgentW
 public class UrgentWorkOrderService {
     private final UrgentWorkOrderRepository repository;
     private final WorkOrderReminderScheduler reminderScheduler;
+    private final UploadPaths uploadPaths;
 
-    public UrgentWorkOrderService(UrgentWorkOrderRepository repository, WorkOrderReminderScheduler reminderScheduler) {       
+    public UrgentWorkOrderService(UrgentWorkOrderRepository repository, WorkOrderReminderScheduler reminderScheduler, UploadPaths uploadPaths) {
         this.repository = repository;
         this.reminderScheduler = reminderScheduler;
+        this.uploadPaths = uploadPaths;
     }
 
     public Optional<UrgentWorkOrder> findById(Long id) {
@@ -79,7 +82,7 @@ public class UrgentWorkOrderService {
             String filename = uwo.getAttachmentFilename();
             if (filename != null && !filename.isBlank()) {
                 try {
-                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get("uploads", "workorders").resolve(filename));
+                    java.nio.file.Files.deleteIfExists(uploadPaths.workOrders().resolve(filename));
                 } catch (Exception ignored) {
                     // Keep request successful even if stale file cannot be removed.
                 }

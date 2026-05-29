@@ -1,12 +1,12 @@
 package com.entretienbatiment.backend.modules.files.controller;
 
+import com.entretienbatiment.backend.modules.files.config.UploadPaths;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.net.MalformedURLException;
 
 /**
@@ -18,10 +18,16 @@ import java.net.MalformedURLException;
 @RequestMapping("/api/files/expenses")
 public class ExpenseFilesController {
 
+    private final UploadPaths uploadPaths;
+
+    public ExpenseFilesController(UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
+    }
+
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
         try {
-            Path uploadsRoot = Paths.get("uploads/expenses").toAbsolutePath().normalize();
+            Path uploadsRoot = uploadPaths.expenses().toAbsolutePath().normalize();
             Path file = uploadsRoot.resolve(filename).normalize();
             // Guard against path traversal
             if (!file.startsWith(uploadsRoot)) {
