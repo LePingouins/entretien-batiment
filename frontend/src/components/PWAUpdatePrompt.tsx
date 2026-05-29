@@ -8,24 +8,30 @@ export function PWAUpdatePrompt() {
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
+    console.log('[PWA] PWAUpdatePrompt mounted');
 
     const cleanups: (() => void)[] = [];
 
     async function setup() {
       const reg = await navigator.serviceWorker.getRegistration();
+      console.log('[PWA] registration:', reg, 'controller:', !!navigator.serviceWorker.controller, 'waiting:', !!reg?.waiting);
       if (!reg) return;
 
       // Case 1: a new SW was already waiting when this page loaded
       if (reg.waiting && navigator.serviceWorker.controller) {
+        console.log('[PWA] Found waiting SW on load — showing banner');
         setWaitingSW(reg.waiting);
       }
 
       // Case 2: a new SW installs while the page is open
       function onUpdateFound() {
+        console.log('[PWA] updatefound fired');
         const installing = reg?.installing;
         if (!installing) return;
         function onStateChange() {
+          console.log('[PWA] installing state →', installing!.state);
           if (installing!.state === 'installed' && navigator.serviceWorker.controller) {
+            console.log('[PWA] New SW installed and waiting — showing banner');
             setWaitingSW(installing!);
           }
         }
@@ -38,6 +44,7 @@ export function PWAUpdatePrompt() {
       // Periodic polling: check for a new SW every 60s while tab is visible
       const interval = setInterval(() => {
         if (!navigator.onLine || document.visibilityState !== 'visible') return;
+        console.log('[PWA] polling for update…');
         reg.update().catch(() => {});
       }, 60_000);
       cleanups.push(() => clearInterval(interval));
