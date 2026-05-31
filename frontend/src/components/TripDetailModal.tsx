@@ -736,7 +736,7 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
               ?? (trip.durationMinutes != null ? new Date(new Date(ensureUtc(trip.createdAt)).getTime() + trip.durationMinutes * 60000).toISOString() : null);
             const reasonLabels: Record<string, string> = {
               CLIENT: 'Client', RESTAURANT: 'Restaurant',
-              GAS: 'Carburant', OFFICE: 'Bureau', OTHER: 'Autre',
+              GAS: 'Carburant', OFFICE: 'Bureau', OTHER: 'Pause',
             };
             type TimelineEvent = {
               type: 'start' | 'stop' | 'idle' | 'end';

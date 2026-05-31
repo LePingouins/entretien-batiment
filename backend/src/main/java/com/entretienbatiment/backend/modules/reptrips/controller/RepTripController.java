@@ -69,6 +69,8 @@ public class RepTripController {
     @Autowired
     private UploadPaths uploadPaths;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Value("${google.routes.api.key:}")
     private String googleRoutesApiKey;
 
@@ -240,6 +242,12 @@ public class RepTripController {
             }
         }
 
+        // Compute durationSeconds for stops from waypoints when trip is completed.
+        if ("COMPLETED".equals(trip.getStatus()) && trip.getWaypointsJson() != null
+                && trip.getWaypointsJson().length() >= 10) {
+            computeStopDurationsFromWaypoints(trip);
+        }
+
         // #9 Suspicious-pattern detection (bitset). Runs on every save so
         // flags stay fresh as data evolves.
         trip.setSuspicionFlags(computeSuspicionFlags(trip));
@@ -272,6 +280,45 @@ public class RepTripController {
      *   <li>bit 5 = ideal_fallback applied (drift was rejected by the cap)</li>
      * </ul>
      */
+    /**
+     * For each stop with lat/lng, scan the trip's waypointsJson to find GPS points
+     * within 100 m of the stop. The time span from first to last clustered point
+     * is saved as durationSeconds. Skips stops that already have a value.
+     */
+    private void computeStopDurationsFromWaypoints(RepTrip trip) {
+        try {
+            JsonNode root = objectMapper.readTree(trip.getWaypointsJson());
+            if (!root.isArray()) return;
+            // Build a flat list of [lat, lng, timestamp_ms]
+            List<double[]> pts = new ArrayList<>();
+            for (JsonNode pt : root) {
+                if (pt.isArray() && pt.size() >= 3) {
+                    pts.add(new double[]{ pt.get(0).asDouble(), pt.get(1).asDouble(), pt.get(2).asDouble() });
+                }
+            }
+            if (pts.isEmpty()) return;
+            final double RADIUS_M = 100.0;
+            for (RepTripStop stop : trip.getStops()) {
+                if (stop.getLat() == null || stop.getLng() == null) continue;
+                if (stop.getDurationSeconds() != null) continue; // already set
+                double first = Double.MAX_VALUE, last = -Double.MAX_VALUE;
+                boolean found = false;
+                for (double[] pt : pts) {
+                    double distM = RepTrip.haversineKm(stop.getLat(), stop.getLng(), pt[0], pt[1]) * 1000.0;
+                    if (distM <= RADIUS_M) {
+                        if (pt[2] < first) first = pt[2];
+                        if (pt[2] > last)  last  = pt[2];
+                        found = true;
+                    }
+                }
+                if (found && (last - first) >= 1000) {
+                    stop.setDurationSeconds((int) Math.round((last - first) / 1000.0));
+                    stopRepository.save(stop);
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
     private int computeSuspicionFlags(RepTrip t) {
         int f = 0;
         if (t.getEndedAt() != null) {
