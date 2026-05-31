@@ -41,13 +41,13 @@ console.log('[PWA] PWAUpdatePrompt mounted v6');
       reg.addEventListener('updatefound', onUpdateFound);
       cleanups.push(() => reg.removeEventListener('updatefound', onUpdateFound));
 
-      // Periodic polling: check for a new SW every 60s while tab is visible
-      const interval = setInterval(() => {
+      // Shared update check — used by both the interval and visibility handler
+      function checkForUpdate() {
         if (!navigator.onLine || document.visibilityState !== 'visible') return;
-        console.log('[PWA] polling for update…');
-        reg.update()
+        console.log('[PWA] checking for update…');
+        reg!.update()
           .then((updatedReg) => {
-            // 1 The new SW can install so quickly (all assets already cached) that
+            // The new SW can install so quickly (all assets already cached) that
             // it moves from "installing" → "waiting" before updatefound fires our
             // listener, leaving reg.installing null and the banner never shown.
             // Checking reg.waiting here catches that race condition.
@@ -59,8 +59,22 @@ console.log('[PWA] PWAUpdatePrompt mounted v6');
             }
           })
           .catch((e) => console.warn('[PWA] reg.update() error:', e));
-      }, 60_000);
+      }
+
+      // Periodic polling every 60s (works well on desktop)
+      const interval = setInterval(checkForUpdate, 60_000);
       cleanups.push(() => clearInterval(interval));
+
+      // On mobile, timers are throttled when backgrounded — check immediately
+      // whenever the page becomes visible again (tab switch, app switch, etc.)
+      function onVisibilityChange() {
+        if (document.visibilityState === 'visible') {
+          console.log('[PWA] page became visible — checking for update');
+          checkForUpdate();
+        }
+      }
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      cleanups.push(() => document.removeEventListener('visibilitychange', onVisibilityChange));
     }
 
     setup();
