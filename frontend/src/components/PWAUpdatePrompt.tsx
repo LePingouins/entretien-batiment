@@ -47,7 +47,7 @@ console.log('[PWA] PWAUpdatePrompt mounted v6');
         console.log('[PWA] polling for update…');
         reg.update()
           .then((updatedReg) => {
-            // The new SW can install so quickly (all assets already cached) that
+            // 1 The new SW can install so quickly (all assets already cached) that
             // it moves from "installing" → "waiting" before updatefound fires our
             // listener, leaving reg.installing null and the banner never shown.
             // Checking reg.waiting here catches that race condition.
