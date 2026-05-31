@@ -670,9 +670,10 @@ export const STORE_PROFILES: StoreProfile[] = [
       /\btip\s+suggestion\b/i,
       /\bcaissier\b/i,
       /\bshift\s*\d/i,
-      // "Total (avec Pourboire)" lines repeat the final grand total including tip;
-      // keep only "Total (ICI)" (pre-tip total) and the plain Pourboire line.
-      /total\s*\(avec\s+pourboire\)/i,
+      // "Total (avec Pourboire)" lines contain the grand total but confuse
+      // the generic parser into using it as the subtotal fallback.
+      // OCR often renders the "T" as "[" or "l", so match loosely.
+      /[tl\[]otal\s*\(avec\s+pourboire\)/i,
     ],
     override: (cleanedText, _ctx, base) => {
       const result: PartialFields = {};
@@ -682,50 +683,56 @@ export const STORE_PROFILES: StoreProfile[] = [
       //   Sous-total   17,48$
       //   TPS (5%)      0,87$
       //   TVQ (9,975%)  1,74$
-      //   Total (ICI)  20,09$   ← pre-tip total
+      //   Total (ICI)  20,09$   ← pre-tip total (before tip)
       //   Pourboire     2,00$
       //   Total (avec Pourboire) 22,09$
       //
-      // The generic parser may grab "Total (ICI)" as the subtotal because it
-      // appears before "Total (avec Pourboire)" and misses the true subtotal
-      // when OCR spaces out the digits (e.g. "17 48" or "17 464").
-      // Override: if we see a "Total (ICI)" line, use it as the authoritative
-      // pre-tip total, then re-derive subtotal from taxes.
-      for (const line of lines) {
-        if (/total\s*\(\s*ici\s*\)/i.test(line)) {
-          const v = lastPriceOf(line);
-          if ((v ?? 0) > 0) result.total = v!.toFixed(2);
-        }
-        // Capture Pourboire / Tip on its own line.
-        if (!result.tip && /^\s*pourboire\b/i.test(line)) {
-          const v = lastPriceOf(line);
-          if ((v ?? 0) > 0) result.tip = v!.toFixed(2);
+      // OCR often renders the leading "T" of "Total" as "[" or "l", so we
+      // detect the "(ICI)" parenthetical on its own rather than requiring
+      // "total" to be present on the line.
+      let iciTotal: number | null = null;
+      let iciLineIndex = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (/\(\s*ici\s*\)/i.test(lines[i])) {
+          const v = lastPriceOf(lines[i]);
+          if ((v ?? 0) > 0) { iciTotal = v!; iciLineIndex = i; break; }
         }
       }
 
-      // If base missed the subtotal but we have tps + tvq + ICI total,
-      // derive: subtotal = total(ICI) - tps - tvq.
-      const iciTotal = result.total ? parseFloat(result.total) : null;
-      const tpsV = parseFloat(base.tps ?? '0');
-      const tvqV = parseFloat(base.tvq ?? '0');
-      if (
-        iciTotal !== null &&
-        !isNaN(iciTotal) &&
-        (tpsV > 0 || tvqV > 0) &&
-        (!base.subtotal || Math.abs(parseFloat(base.subtotal) - iciTotal) < 0.10)
-      ) {
-        const derived = Math.round((iciTotal - tpsV - tvqV) * 100) / 100;
-        if (derived > 0) result.subtotal = derived.toFixed(2);
+      if (iciTotal !== null) {
+        // Back-calculate TPS / TVQ from the ICI pre-tip total using QC rates.
+        // We back-calc rather than relying on base.tps / base.tvq because OCR
+        // often mangles the TPS/TVQ labels (e.g. "BCI" instead of "TPS") and
+        // the generic parser falls back to a rate-split on (total − subtotal)
+        // which produces wrong values when the subtotal is itself misidentified.
+        const QC_TPS  = 0.05;
+        const QC_TVQ  = 0.09975;
+        const divisor = 1 + QC_TPS + QC_TVQ; // 1.14975
+        const tpsCents = Math.round(iciTotal * QC_TPS  / divisor * 100) / 100;
+        const tvqCents = Math.round(iciTotal * QC_TVQ  / divisor * 100) / 100;
+        // Subtotal = ICI − tps − tvq (avoids double-rounding vs. the POS system).
+        const sub = Math.round((iciTotal - tpsCents - tvqCents) * 100) / 100;
+        if (sub > 0) {
+          result.subtotal = sub.toFixed(2);
+          result.tps      = tpsCents.toFixed(2);
+          result.tvq      = tvqCents.toFixed(2);
+        }
+
+        // Find tip: the first plausible small positive amount in the lines
+        // immediately after the ICI line, skipping card / payment tail lines.
+        for (let i = iciLineIndex + 1; i < Math.min(iciLineIndex + 6, lines.length); i++) {
+          const line = lines[i];
+          if (/carte|cr[eé]dit|visa|interac|monnaie|montant|approu/i.test(line)) break;
+          const v = lastPriceOf(line);
+          if ((v ?? 0) > 0 && v! < iciTotal * 0.5) {
+            result.tip = v!.toFixed(2);
+            break;
+          }
+        }
       }
 
-      // Final total should include the tip.
-      if (result.tip && result.total) {
-        const grand = Math.round(
-          (parseFloat(result.total) + parseFloat(result.tip)) * 100
-        ) / 100;
-        result.total = grand.toFixed(2);
-      }
-
+      // Do NOT override base.total — the generic parser correctly picks it up
+      // from the "Montant: xx.xx" payment-echo line.
       return result;
     },
   },
