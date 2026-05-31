@@ -32,6 +32,50 @@ public class RepresentantExcelExportService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
+    /** GL imputation code attached to all kilométrage reimbursements. */
+    private static final String KILOMETRAGE_GL_CODE = "6152";
+
+    /**
+     * Maps the canonical category id (stored in `Expense.description` by the
+     * frontend dropdown) to the human-readable French label that the Excel
+     * "LISTE DE CHOIX / NATURE" column expects, and to the GL imputation code
+     * the accounting team uses when categorising costs.
+     *
+     * Keep this in sync with `frontend/src/lib/expenseCategories.ts`.
+     */
+    private static final java.util.Map<String, String[]> CATEGORY_BY_ID = java.util.Map.ofEntries(
+        java.util.Map.entry("REPAS",              new String[] {"Repas",                                       "7158"}),
+        java.util.Map.entry("ESSENCE",            new String[] {"Essence",                                     "5210"}),
+        java.util.Map.entry("FRAIS_DEPLACEMENT",  new String[] {"Frais déplacement (stationnement, taxis…)",   "6152"}),
+        java.util.Map.entry("HEBERGEMENT",        new String[] {"Hébergement",                                 "7156"}),
+        java.util.Map.entry("FRAIS_BUREAU",       new String[] {"Frais de bureau",                             "7200"}),
+        java.util.Map.entry("FOURNITURE_BUREAU",  new String[] {"Fourniture de bureau",                        "7205"}),
+        java.util.Map.entry("FRAIS_INFORMATIQUE", new String[] {"Frais informatique",                          "7380"}),
+        java.util.Map.entry("DEPENSES_ENTREPOT",  new String[] {"Dépenses d’entrepôt",                         "5400"}),
+        java.util.Map.entry("CELLULAIRE",         new String[] {"Cellulaire",                                  "7330"}),
+        java.util.Map.entry("AUTRES",             new String[] {"Autres",                                      "555555"})
+    );
+
+    /** Order of rows in the "Sommaire des coûts (hors taxes)" block. */
+    private static final String[] SUMMARY_CODES = {
+        "5210", "7150", "7156", "7158", "7200", "7205", "7380",
+        "6152", "5400", "555555", "7330"
+    };
+
+    private static String categoryLabel(String description) {
+        if (description == null) return "";
+        String[] cat = CATEGORY_BY_ID.get(description);
+        return cat == null ? description : cat[0];
+    }
+
+    private static String resolveImputation(String description, String fallback) {
+        if (description != null) {
+            String[] cat = CATEGORY_BY_ID.get(description);
+            if (cat != null) return cat[1];
+        }
+        return fallback == null ? "" : fallback;
+    }
+
     public byte[] build(AppUser user, List<RepTrip> trips, List<Expense> expenses,
                         LocalDate startDate, LocalDate endDate) {
         try (XSSFWorkbook wb = new XSSFWorkbook();
@@ -91,7 +135,7 @@ public class RepresentantExcelExportService {
                 tr.createCell(5).setCellValue("");
                 tr.createCell(6).setCellValue(t.getTotalKm() == null ? 0 : t.getTotalKm());
                 tr.createCell(7).setCellValue("QC"); // default
-                tr.createCell(8).setCellValue(""); // GL code — manual
+                tr.createCell(8).setCellValue(KILOMETRAGE_GL_CODE);
                 Cell sub = tr.createCell(9);
                 sub.setCellValue(t.getReimbursementCents() == null ? 0 : t.getReimbursementCents() / 100.0);
                 sub.setCellStyle(money);
@@ -134,15 +178,21 @@ public class RepresentantExcelExportService {
             }
 
             long totSub = 0, totTps = 0, totTvq = 0, totTvh = 0, totTip = 0, totAll = 0;
+            // Subtotal-only ("hors taxes") accumulator per GL code, used for
+            // the Sommaire block on the right-hand side of the sheet.
+            java.util.Map<String, Long> summaryByCode = new java.util.HashMap<>();
+            // Kilométrage subtotals always count toward GL 6152.
+            summaryByCode.merge(KILOMETRAGE_GL_CODE, totalReimb, Long::sum);
             int eidx = 1;
             for (Expense e : expenses) {
                 Row er = sheet.createRow(row++);
+                String code = resolveImputation(e.getDescription(), e.getImputationCode());
                 er.createCell(0).setCellValue(eidx++);
                 er.createCell(1).setCellValue(e.getDate() == null ? "" : e.getDate().format(DATE_FMT));
                 er.createCell(2).setCellValue(orEmpty(e.getSupplier()));
-                er.createCell(3).setCellValue(orEmpty(e.getDescription()));
+                er.createCell(3).setCellValue(categoryLabel(e.getDescription()));
                 er.createCell(7).setCellValue(orEmpty(e.getProvince()));
-                er.createCell(8).setCellValue(orEmpty(e.getImputationCode()));
+                er.createCell(8).setCellValue(code);
                 writeMoney(er, 9,  e.getSubtotalCents(), money);
                 writeMoney(er, 10, e.getTpsCents(),      money);
                 writeMoney(er, 11, e.getTvqCents(),      money);
@@ -156,6 +206,10 @@ public class RepresentantExcelExportService {
                 totTvh += nz(e.getTvhCents());
                 totTip += nz(e.getTipCents());
                 totAll += nz(e.getTotalCents());
+
+                if (code != null && !code.isEmpty()) {
+                    summaryByCode.merge(code, nz(e.getSubtotalCents()), Long::sum);
+                }
             }
 
             // ── Phone allowance: $70.00 per calendar month ───────────────────────────
@@ -178,13 +232,14 @@ public class RepresentantExcelExportService {
                 pr.createCell(0).setCellValue(eidx++);
                 pr.createCell(1).setCellValue(monthStart.format(DateTimeFormatter.ofPattern("yyyy-MM")));
                 pr.createCell(2).setCellValue("Forfait t\u00e9l\u00e9phonique");
-                pr.createCell(3).setCellValue("Allocation mensuelle");
+                pr.createCell(3).setCellValue("Cellulaire");
                 pr.createCell(7).setCellValue("");
-                pr.createCell(8).setCellValue("");
+                pr.createCell(8).setCellValue("7330");
                 writeMoney(pr,  9, PHONE_CENTS, money); // sous-total
                 writeMoney(pr, 14, PHONE_CENTS, money); // total (no taxes)
                 totSub += PHONE_CENTS;
                 totAll += PHONE_CENTS;
+                summaryByCode.merge("7330", PHONE_CENTS, Long::sum);
             }
 
             // Expense totals row
@@ -206,8 +261,42 @@ public class RepresentantExcelExportService {
             grand.setCellValue((totalReimb + totAll) / 100.0);
             grand.setCellStyle(money);
 
+            // ── Sommaire des coûts (hors taxes) ─────────────────────────────
+            // Block placed on the right-hand side (cols Q/R) so it stays
+            // aligned with the title regardless of how many trip / expense
+            // rows precede it.
+            final int summaryColCode  = 16; // Q
+            final int summaryColValue = 17; // R
+            int summaryRow = 4;             // sits below the NOM / DATE block
+
+            Row sumTitle = sheet.getRow(summaryRow);
+            if (sumTitle == null) sumTitle = sheet.createRow(summaryRow);
+            Cell sumTitleCell = sumTitle.createCell(summaryColCode);
+            sumTitleCell.setCellValue("Sommaire des coûts (hors taxes)");
+            sumTitleCell.setCellStyle(boldStyle(wb, 11));
+            sheet.addMergedRegion(new CellRangeAddress(summaryRow, summaryRow,
+                    summaryColCode, summaryColValue));
+            summaryRow++;
+
+            for (String code : SUMMARY_CODES) {
+                Row sr = sheet.getRow(summaryRow);
+                if (sr == null) sr = sheet.createRow(summaryRow);
+                Cell codeCell = sr.createCell(summaryColCode);
+                codeCell.setCellValue(code);
+                codeCell.setCellStyle(header);
+                long cents = summaryByCode.getOrDefault(code, 0L);
+                Cell amountCell = sr.createCell(summaryColValue);
+                if (cents == 0L) {
+                    amountCell.setCellValue("-");
+                } else {
+                    amountCell.setCellValue(cents / 100.0);
+                    amountCell.setCellStyle(money);
+                }
+                summaryRow++;
+            }
+
             // Auto-size columns
-            for (int i = 0; i < 15; i++) sheet.autoSizeColumn(i);
+            for (int i = 0; i < 18; i++) sheet.autoSizeColumn(i);
 
             wb.write(baos);
             return baos.toByteArray();

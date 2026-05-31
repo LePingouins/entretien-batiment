@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '../context/LangContext';
+import { expenseCategoryLabel } from '../lib/expenseCategories';
 import { useToast } from '../context/ToastContext';
 import {
   listRepresentants,
@@ -444,7 +445,7 @@ const AdminRepresentantsPage: React.FC = () => {
                           <tr>
                             <th className="px-3 py-2 text-left">Date</th>
                             <th className="px-3 py-2 text-left">{lang === 'fr' ? 'Fournisseur' : 'Supplier'}</th>
-                            <th className="px-3 py-2 text-left">{lang === 'fr' ? 'Description' : 'Description'}</th>
+                            <th className="px-3 py-2 text-left">{lang === 'fr' ? 'Catégorie' : 'Category'}</th>
                             <th className="px-3 py-2 text-right">Total</th>
                             <th className="px-3 py-2 text-center">{lang === 'fr' ? 'Photos' : 'Photos'}</th>
                             <th className="px-3 py-2 text-center">Status</th>
@@ -461,7 +462,7 @@ const AdminRepresentantsPage: React.FC = () => {
                             >
                               <td className="px-3 py-1.5 whitespace-nowrap">{e.date}</td>
                               <td className="px-3 py-1.5">{e.supplier || '—'}</td>
-                              <td className="px-3 py-1.5">{e.description || '—'}</td>
+                              <td className="px-3 py-1.5">{e.description ? expenseCategoryLabel(e.description, lang as 'fr' | 'en') : '—'}</td>
                               <td className="px-3 py-1.5 text-right whitespace-nowrap">{fmtMoney(e.totalCents)}</td>
                               <td className="px-3 py-1.5 text-center" onClick={(ev) => ev.stopPropagation()}>
                                 {e.receipts.length === 0 ? (
@@ -623,8 +624,8 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
               <div className="text-surface-900 dark:text-white">{expense.imputationCode || '—'}</div>
             </div>
             <div className="sm:col-span-2">
-              <div className="text-surface-500 text-xs">{lang === 'fr' ? 'Description' : 'Description'}</div>
-              <div className="text-surface-900 dark:text-white whitespace-pre-wrap">{expense.description || '—'}</div>
+              <div className="text-surface-500 text-xs">{lang === 'fr' ? 'Catégorie' : 'Category'}</div>
+              <div className="text-surface-900 dark:text-white whitespace-pre-wrap">{expense.description ? expenseCategoryLabel(expense.description, lang as 'fr' | 'en') : '—'}</div>
             </div>
           </div>
 

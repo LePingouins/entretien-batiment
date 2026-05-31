@@ -16,6 +16,7 @@ import {
 } from '../lib/api';
 import type { Expense, ExpenseRequest, ExpenseStatus } from '../types/api';
 import { parseReceipt, PROVINCE_TAXES, type ParsedReceipt } from '../lib/receiptParsers';
+import { EXPENSE_CATEGORIES, expenseCategoryById, expenseCategoryLabel } from '../lib/expenseCategories';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -585,13 +586,29 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
               />
             </label>
             <label className="text-sm sm:col-span-2">
-              <div className="text-surface-600 dark:text-surface-300 mb-1">{lang === 'fr' ? 'Description' : 'Description'}</div>
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+              <div className="text-surface-600 dark:text-surface-300 mb-1">{lang === 'fr' ? 'Catégorie' : 'Category'}</div>
+              <select
+                value={EXPENSE_CATEGORIES.some(c => c.id === description) ? description : ''}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setDescription(id);
+                  const cat = expenseCategoryById(id);
+                  if (cat) setImputation(cat.code);
+                }}
                 className="w-full px-3 py-2 rounded border border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-900 dark:text-white"
-              />
+              >
+                <option value="">{lang === 'fr' ? '— Choisir une catégorie —' : '— Select a category —'}</option>
+                {EXPENSE_CATEGORIES.map(c => (
+                  <option key={c.id} value={c.id}>{lang === 'fr' ? c.fr : c.en}</option>
+                ))}
+              </select>
+              {description && !EXPENSE_CATEGORIES.some(c => c.id === description) && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  {lang === 'fr'
+                    ? `Ancienne description : « ${description} » — choisissez une catégorie pour la remplacer.`
+                    : `Legacy description: "${description}" — pick a category to replace it.`}
+                </div>
+              )}
             </label>
             <label className="text-sm">
               <div className="text-surface-600 dark:text-surface-300 mb-1">Province</div>
@@ -778,7 +795,7 @@ const RepExpensesPage: React.FC = () => {
   const handleDelete = async (e: Expense) => {
     const ok = await confirm({
       title: lang === 'fr' ? 'Supprimer cette dépense ?' : 'Delete this expense?',
-      message: e.supplier || e.description || (lang === 'fr' ? 'Dépense' : 'Expense'),
+      message: e.supplier || expenseCategoryLabel(e.description, lang as 'fr' | 'en') || (lang === 'fr' ? 'Dépense' : 'Expense'),
       confirmLabel: lang === 'fr' ? 'Supprimer' : 'Delete',
     });
     if (!ok) return;
@@ -828,7 +845,7 @@ const RepExpensesPage: React.FC = () => {
                     </div>
                     <div className="text-xs text-surface-500">{e.date}</div>
                     {e.description && (
-                      <div className="text-sm text-surface-600 dark:text-surface-300 truncate">{e.description}</div>
+                      <div className="text-sm text-surface-600 dark:text-surface-300 truncate">{expenseCategoryLabel(e.description, lang as 'fr' | 'en')}</div>
                     )}
                   </div>
                   <div className="text-right shrink-0">
@@ -865,7 +882,7 @@ const RepExpensesPage: React.FC = () => {
                 <tr>
                   <th className="px-3 py-2 text-left">{lang === 'fr' ? 'Date' : 'Date'}</th>
                   <th className="px-3 py-2 text-left">{lang === 'fr' ? 'Fournisseur' : 'Supplier'}</th>
-                  <th className="px-3 py-2 text-left">{lang === 'fr' ? 'Description' : 'Description'}</th>
+                  <th className="px-3 py-2 text-left">{lang === 'fr' ? 'Catégorie' : 'Category'}</th>
                   <th className="px-3 py-2 text-right">Total</th>
                   <th className="px-3 py-2 text-center">{lang === 'fr' ? 'Photos' : 'Photos'}</th>
                   <th className="px-3 py-2 text-center">Status</th>
@@ -877,7 +894,7 @@ const RepExpensesPage: React.FC = () => {
                   <tr key={e.id} className="border-t border-surface-200 dark:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-800/40">
                     <td className="px-3 py-2 whitespace-nowrap">{e.date}</td>
                     <td className="px-3 py-2">{e.supplier || '—'}</td>
-                    <td className="px-3 py-2">{e.description || '—'}</td>
+                    <td className="px-3 py-2">{e.description ? expenseCategoryLabel(e.description, lang as 'fr' | 'en') : '—'}</td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">{fmtMoney(e.totalCents)}</td>
                     <td className="px-3 py-2 text-center">{e.receipts.length}</td>
                     <td className="px-3 py-2 text-center">{statusBadge(e.status)}</td>
