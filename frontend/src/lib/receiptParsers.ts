@@ -834,9 +834,11 @@ export const parseReceipt = (text: string, ctx: ParseContext = {}): ParsedReceip
   };
 };
 
-/** Canadian tax rates by province code — used for client-side auto-calc. */
+/** Canadian tax rates by province code — used for client-side auto-calc.
+ * An entry with an empty object ({}) means the province is explicitly non-taxable. */
 export const PROVINCE_TAXES: Record<string, { tps?: number; tvq?: number; tvh?: number }> = {
-  QC: { tps: 0.05,  tvq: 0.09975 },
+  QC:          { tps: 0.05,  tvq: 0.09975 },
+  'NON TAX-QC': {},                               // QC — Non-taxable
   ON: { tvh: 0.13 },
   NS: { tvh: 0.15 },
   NB: { tvh: 0.15 },

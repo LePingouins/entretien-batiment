@@ -261,9 +261,9 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
     if (!isFinite(sub) || sub <= 0 || !province) return;
     const rates = PROVINCE_TAXES[province.toUpperCase().trim()];
     if (!rates) return;
-    if (rates.tps !== undefined) setTps((sub * rates.tps).toFixed(2));
-    if (rates.tvq !== undefined) setTvq((sub * rates.tvq).toFixed(2));
-    if (rates.tvh !== undefined) setTvh((sub * rates.tvh).toFixed(2));
+    if (rates.tps !== undefined) setTps((sub * rates.tps).toFixed(2)); else setTps('');
+    if (rates.tvq !== undefined) setTvq((sub * rates.tvq).toFixed(2)); else setTvq('');
+    if (rates.tvh !== undefined) setTvh((sub * rates.tvh).toFixed(2)); else setTvh('');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subtotal, province, linked]);
 
@@ -627,6 +627,9 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
               >
                 <optgroup label={lang === 'fr' ? 'TPS + TVQ' : 'GST + QST'}>
                   <option value="QC">QC — Québec</option>
+                </optgroup>
+                <optgroup label={lang === 'fr' ? 'Non taxable' : 'Non-taxable'}>
+                  <option value="Non tax-QC">QC — Non taxable</option>
                 </optgroup>
                 <optgroup label={lang === 'fr' ? 'TVH 13%' : 'HST 13%'}>
                   <option value="ON">ON — Ontario</option>
