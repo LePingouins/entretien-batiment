@@ -546,7 +546,7 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
                         className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded-full text-xs flex items-center justify-center"
                         aria-label="Delete receipt"
                       >
-                        \u00D7
+                        ×
                       </button>
                     </div>
                   );

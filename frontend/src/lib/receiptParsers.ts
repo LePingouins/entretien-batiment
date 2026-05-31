@@ -670,7 +670,64 @@ export const STORE_PROFILES: StoreProfile[] = [
       /\btip\s+suggestion\b/i,
       /\bcaissier\b/i,
       /\bshift\s*\d/i,
+      // "Total (avec Pourboire)" lines repeat the final grand total including tip;
+      // keep only "Total (ICI)" (pre-tip total) and the plain Pourboire line.
+      /total\s*\(avec\s+pourboire\)/i,
     ],
+    override: (cleanedText, _ctx, base) => {
+      const result: PartialFields = {};
+      const lines = cleanedText.split('\n').map(l => l.trim()).filter(Boolean);
+
+      // Subway QC / many QC restaurants print:
+      //   Sous-total   17,48$
+      //   TPS (5%)      0,87$
+      //   TVQ (9,975%)  1,74$
+      //   Total (ICI)  20,09$   ← pre-tip total
+      //   Pourboire     2,00$
+      //   Total (avec Pourboire) 22,09$
+      //
+      // The generic parser may grab "Total (ICI)" as the subtotal because it
+      // appears before "Total (avec Pourboire)" and misses the true subtotal
+      // when OCR spaces out the digits (e.g. "17 48" or "17 464").
+      // Override: if we see a "Total (ICI)" line, use it as the authoritative
+      // pre-tip total, then re-derive subtotal from taxes.
+      for (const line of lines) {
+        if (/total\s*\(\s*ici\s*\)/i.test(line)) {
+          const v = lastPriceOf(line);
+          if ((v ?? 0) > 0) result.total = v!.toFixed(2);
+        }
+        // Capture Pourboire / Tip on its own line.
+        if (!result.tip && /^\s*pourboire\b/i.test(line)) {
+          const v = lastPriceOf(line);
+          if ((v ?? 0) > 0) result.tip = v!.toFixed(2);
+        }
+      }
+
+      // If base missed the subtotal but we have tps + tvq + ICI total,
+      // derive: subtotal = total(ICI) - tps - tvq.
+      const iciTotal = result.total ? parseFloat(result.total) : null;
+      const tpsV = parseFloat(base.tps ?? '0');
+      const tvqV = parseFloat(base.tvq ?? '0');
+      if (
+        iciTotal !== null &&
+        !isNaN(iciTotal) &&
+        (tpsV > 0 || tvqV > 0) &&
+        (!base.subtotal || Math.abs(parseFloat(base.subtotal) - iciTotal) < 0.10)
+      ) {
+        const derived = Math.round((iciTotal - tpsV - tvqV) * 100) / 100;
+        if (derived > 0) result.subtotal = derived.toFixed(2);
+      }
+
+      // Final total should include the tip.
+      if (result.tip && result.total) {
+        const grand = Math.round(
+          (parseFloat(result.total) + parseFloat(result.tip)) * 100
+        ) / 100;
+        result.total = grand.toFixed(2);
+      }
+
+      return result;
+    },
   },
   {
     id: 'CHOCOLATERIE_SPECIALTY',
