@@ -23,7 +23,6 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   { id: 'FOURNITURE_BUREAU',    code: '7205',   fr: 'Fourniture de bureau',                        en: 'Office supplies' },
   { id: 'FRAIS_INFORMATIQUE',   code: '7380',   fr: 'Frais informatique',                          en: 'IT expenses' },
   { id: 'DEPENSES_ENTREPOT',    code: '5400',   fr: 'Dépenses d\u2019entrepôt',                    en: 'Warehouse expenses' },
-  { id: 'CELLULAIRE',           code: '7330',   fr: 'Cellulaire',                                  en: 'Cellphone' },
   { id: 'AUTRES',               code: '555555', fr: 'Autres',                                      en: 'Other' },
 ];
 

@@ -155,7 +155,9 @@ const runClientOcr = async (source: File | Blob): Promise<string> => {
 const applyParsed = (
   parsed: ParsedReceipt,
   setters: { setSubtotal: (v:string)=>void; setTps: (v:string)=>void; setTvq: (v:string)=>void;
-             setTvh: (v:string)=>void; setTip: (v:string)=>void; setTotal: (v:string)=>void }
+             setTvh: (v:string)=>void; setTip: (v:string)=>void; setTotal: (v:string)=>void;
+             setSupplier: (v:string)=>void },
+  currentSupplier: string,
 ) => {
   if (parsed.subtotal) setters.setSubtotal(parsed.subtotal);
   if (parsed.tps)      setters.setTps(parsed.tps);
@@ -163,6 +165,8 @@ const applyParsed = (
   if (parsed.tvh)      setters.setTvh(parsed.tvh);
   if (parsed.tip)      setters.setTip(parsed.tip);
   if (parsed.total)    setters.setTotal(parsed.total);
+  // Only auto-fill supplier when the user hasn't already typed one — never overwrite manual input.
+  if (parsed.supplier && !currentSupplier.trim()) setters.setSupplier(parsed.supplier);
 };
 
 const dollarsToCents = (s: string): number | undefined => {
@@ -235,7 +239,7 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
     setTotal(isFinite(n) && n > MAX_TOTAL ? MAX_TOTAL.toFixed(2) : v);
   };
 
-  const setters = { setSubtotal, setTps, setTvq, setTvh, setTip, setTotal: setTotalCapped };
+  const setters = { setSubtotal, setTps, setTvq, setTvh, setTip, setTotal: setTotalCapped, setSupplier };
 
   // Skip auto-calc effects on initial mount (avoid overwriting loaded values)
   const taxCalcMounted   = useRef(false);
@@ -297,6 +301,10 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
     const totalNum = parseFloat(total);
     if (!total || !isFinite(totalNum) || totalNum <= 0) {
       addToast(lang === 'fr' ? 'Le montant total est requis' : 'Total amount is required', 'error');
+      return;
+    }
+    if (!current || current.receipts.length === 0) {
+      addToast(lang === 'fr' ? 'Au moins une photo (reçu) est requise' : 'At least one receipt photo is required', 'error');
       return;
     }
     try {
@@ -405,7 +413,7 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
       // OCR-parsed total (e.g. Dollarama: 14.12 + auto 0.71 + auto 1.41 = 16.24,
       // but the receipt actually says 16.22).
       skipNextTotalCalc.current = parsed.total ? 2 : 1;
-      applyParsed(parsed, setters);
+      applyParsed(parsed, setters, supplier);
       if (Object.values(parsed).some(v => v)) {
         addToast(lang === 'fr' ? 'Champs remplis depuis la facture' : 'Fields filled from receipt', 'success');
         confirm({

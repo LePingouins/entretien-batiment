@@ -27,6 +27,8 @@ export type ParsedReceipt = {
   tip: string;
   total: string;
   noTax: boolean;
+  /** Detected supplier/merchant name (e.g. "Dollarama"). Empty string if unknown. */
+  supplier: string;
   /** Profile id that matched, e.g. 'UNIPRIX' or 'DEFAULT'. */
   profileId: string;
   /** Human-readable label for UI debug. */
@@ -42,6 +44,12 @@ export type StoreProfile = {
   detect: RegExp[];
   /** Lines matching any pattern here are removed before generic parsing. */
   ignore?: RegExp[];
+  /**
+   * Canonical supplier/merchant name shown to the user. May be a string for
+   * single-brand profiles, or a function for multi-brand profiles that picks
+   * the actual brand from the OCR text.
+   */
+  supplier?: string | ((text: string) => string | undefined);
   /**
    * Optional override hook — runs *after* the generic parser on the cleaned text.
    * Return only the fields you want to overwrite. Empty strings are ignored.
@@ -444,6 +452,7 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'UNIPRIX',
     label: 'Uniprix',
+    supplier: 'Uniprix',
     detect: [/\buniprix\b/i, /\buni.?prix\b/i],
     ignore: [
       ...IGNORE_PAYMENT_TAIL,
@@ -454,6 +463,7 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'DOLLARAMA',
     label: 'Dollarama',
+    supplier: 'Dollarama',
     detect: [/\bdollarama\b/i],
     ignore: [
       ...IGNORE_PAYMENT_TAIL,
@@ -464,6 +474,7 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'KANDJU',
     label: 'Kandju',
+    supplier: 'KandJu',
     // Cover common OCR misreads of the brand (K/R, J/I, U/V, etc.).
     // Also match by known-stable identifiers: store address and CRA GST number
     // (1812413904) which appear consistently on every receipt even when the
@@ -478,6 +489,7 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'COSTCO',
     label: 'Costco',
+    supplier: 'Costco',
     detect: [/\bcostco\b/i, /\bcostco\s+wholesale\b/i],
     ignore: [
       ...IGNORE_PAYMENT_TAIL,
@@ -492,6 +504,7 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'CANADIAN_TIRE',
     label: 'Canadian Tire',
+    supplier: 'Canadian Tire',
     detect: [/\bcanadian\s+tire\b/i, /\bcdn\s+tire\b/i, /\bpneus\s+canadien/i],
     ignore: [
       ...IGNORE_PAYMENT_TAIL,
@@ -505,6 +518,7 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'HOME_DEPOT',
     label: 'Home Depot',
+    supplier: 'Home Depot',
     detect: [/\bhome\s*depot\b/i, /\bthe\s+home\s+depot\b/i],
     ignore: [
       ...IGNORE_PAYMENT_TAIL,
@@ -515,6 +529,7 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'RONA',
     label: 'Rona',
+    supplier: (text: string) => /\br[ée]no[\-\s]?d[ée]p[ôo]t\b/i.test(text) ? 'Réno-Dépôt' : 'Rona',
     detect: [/\brona\b/i, /\brona\s+inc\b/i, /\bréno[\-\s]?dépôt\b/i, /\breno[\-\s]?depot\b/i],
     ignore: [
       ...IGNORE_PAYMENT_TAIL,
@@ -525,6 +540,7 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'WALMART',
     label: 'Walmart',
+    supplier: 'Walmart',
     detect: [/\bwal[\-\s]?mart\b/i],
     ignore: [
       ...IGNORE_PAYMENT_TAIL,
@@ -536,6 +552,15 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'GROCERY_QC',
     label: 'Metro / IGA / Provigo',
+    supplier: (text: string) => {
+      const t = text.toLowerCase();
+      if (/\bsuper\s*c\b/.test(t)) return 'Super C';
+      if (/\bprovigo\b/.test(t))   return 'Provigo';
+      if (/\bmaxi\b/.test(t))      return 'Maxi';
+      if (/\biga\b/.test(t))       return 'IGA';
+      if (/\bmetro\b/.test(t))     return 'Metro';
+      return undefined;
+    },
     detect: [/\bmetro\b/i, /\biga\b/i, /\bprovigo\b/i, /\bmaxi\b/i, /\bsuper\s*c\b/i],
     ignore: [
       ...IGNORE_PAYMENT_TAIL,
@@ -548,6 +573,17 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'FUEL_CONVENIENCE',
     label: 'Couche-Tard / Petro / Esso / Shell',
+    supplier: (text: string) => {
+      const t = text.toLowerCase();
+      if (/\bcouche[\-\s]?tard\b/.test(t)) return 'Couche-Tard';
+      if (/\bpetro[\-\s]?canada\b/.test(t)) return 'Petro-Canada';
+      if (/\besso\b/.test(t))     return 'Esso';
+      if (/\bshell\b/.test(t))    return 'Shell';
+      if (/\bultramar\b/.test(t)) return 'Ultramar';
+      if (/\birving\b/.test(t))   return 'Irving';
+      if (/\bcircle\s*k\b/.test(t)) return 'Circle K';
+      return undefined;
+    },
     detect: [
       /\bcouche[\-\s]?tard\b/i,
       /\bpetro[\-\s]?canada\b/i,
@@ -574,6 +610,7 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'BATH_BODY_WORKS',
     label: 'Bath & Body Works',
+    supplier: 'Bath & Body Works',
     // OCR severely mangles the cursive header. We deliberately drop \b word
     // boundaries here because real captures look like "hatnandbodyworks.ca",
     // "PROMI NADES ST BRUNG", "bodyworks" jammed against neighbouring words.
@@ -591,6 +628,20 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'RESTAURANT_FOOD',
     label: 'Restaurant / Café (Tim, Subway, Poulet Rouge…)',
+    supplier: (text: string) => {
+      const t = text.toLowerCase();
+      if (/\btim\s*horton/.test(t))      return 'Tim Hortons';
+      if (/\bsubway\b/.test(t))          return 'Subway';
+      if (/\bpoulet\s+rouge\b/.test(t))  return 'Poulet Rouge';
+      if (/\bmcdonald'?s?\b/.test(t))    return "McDonald's";
+      if (/\bst[\-\s]?hubert\b/.test(t)) return 'St-Hubert';
+      if (/\bharvey'?s?\b/.test(t))      return "Harvey's";
+      if (/\bcora\b/.test(t))            return 'Cora';
+      if (/\bnormandin\b/.test(t))       return 'Normandin';
+      if (/\bvalentine\b/.test(t))       return 'Valentine';
+      if (/\bchez\s+ashton\b/.test(t))   return 'Chez Ashton';
+      return undefined; // fall back to generic header detection
+    },
     detect: [
       /\btim\s*horton/i,
       /\bsubway\b/i,
@@ -624,6 +675,10 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'CHOCOLATERIE_SPECIALTY',
     label: 'Chocolaterie / Spécialité',
+    supplier: (text: string) => {
+      if (/\bla\s+cabosse\b/i.test(text)) return 'La Cabosse';
+      return undefined; // fall back to header detection
+    },
     detect: [
       /\bchocolaterie\b/i,
       /\bla\s+cabosse\b/i,
@@ -636,6 +691,14 @@ export const STORE_PROFILES: StoreProfile[] = [
   {
     id: 'LODGING_PARKING',
     label: 'Motel / Hotel / Parking',
+    supplier: (text: string) => {
+      const t = text.toLowerCase();
+      if (/\bindigo\b/.test(t))           return 'Indigo';
+      if (/\bimpark\b/.test(t))           return 'Impark';
+      if (/\beasypark\b/.test(t))         return 'EasyPark';
+      if (/\bprecise\s*parklink\b/.test(t)) return 'Precise ParkLink';
+      return undefined; // fall back to header detection (hotel name varies)
+    },
     detect: [
       /\bmotel\b/i,
       /\bhotel\b/i,
@@ -702,6 +765,35 @@ const mergeTruthy = (base: PartialFields, over: PartialFields): PartialFields =>
 });
 
 /**
+ * Heuristic supplier name extractor for the DEFAULT profile (and as fallback
+ * for multi-brand profiles whose `supplier()` returned undefined). Picks the
+ * first non-noise header line, cleans OCR garbage, and Title-Cases it.
+ */
+const SUPPLIER_NOISE = /receipt|reçu|facture|invoice|bill|copy|copie|merci|thank\s*you|welcome|bienvenue|tps|tvq|tvh|gst|hst|qst|sous[\-\s]?total|subtotal|total|montant|amount|paiement|payment|cash|comptant|debit|d[ée]bit|credit|cr[ée]dit|visa|mastercard|interac|amex|approved|approuv[ée]|terminal|transaction|caisse|cashier|caissier|operator|store|magasin|mall|centre|tel\.|t[ée]l|www\.|http|address|adresse|québec|quebec|ontario|canada|qc\b|on\b|nb\b|ns\b/i;
+
+const extractSupplierFromHeader = (text: string): string | undefined => {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  // Look at the first ~8 lines: receipts almost always print the merchant name there.
+  for (const raw of lines.slice(0, 8)) {
+    // Strip non-letter junk so all-symbol lines (barcodes, dashes) skip
+    const letters = raw.replace(/[^A-Za-zÀ-ÿ]/g, '');
+    if (letters.length < 3) continue;
+    if (/\d{4,}/.test(raw)) continue;        // long digit runs = phone/store-id/postal
+    if (SUPPLIER_NOISE.test(raw)) continue;
+    // Drop trailing punctuation, normalize whitespace, Title Case mostly-uppercase shouting
+    const cleaned = raw.replace(/[^\p{L}\p{N}\s&'\-.]/gu, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleaned) continue;
+    const upperRatio = cleaned.replace(/[^A-Za-z]/g, '').split('').filter(c => c === c.toUpperCase()).length /
+                       Math.max(1, cleaned.replace(/[^A-Za-z]/g, '').length);
+    const out = upperRatio > 0.7
+      ? cleaned.toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase())
+      : cleaned;
+    return out.length > 60 ? out.slice(0, 60).trim() : out;
+  }
+  return undefined;
+};
+
+/**
  * Top-level entry point. Detects the store, filters retailer-specific noise,
  * runs the generic parser, then layers any profile-specific overrides.
  */
@@ -717,6 +809,17 @@ export const parseReceipt = (text: string, ctx: ParseContext = {}): ParsedReceip
   const overrides = profile?.override ? profile.override(cleaned, ctx, base) : {};
   const merged = mergeTruthy(base, overrides);
 
+  // Supplier resolution: profile-supplied name first, then generic header heuristic.
+  let supplier = '';
+  if (profile?.supplier) {
+    supplier = (typeof profile.supplier === 'function'
+      ? profile.supplier(text)
+      : profile.supplier) ?? '';
+  }
+  if (!supplier) {
+    supplier = extractSupplierFromHeader(text) ?? '';
+  }
+
   return {
     subtotal: merged.subtotal ?? '',
     tps: merged.tps ?? '',
@@ -725,6 +828,7 @@ export const parseReceipt = (text: string, ctx: ParseContext = {}): ParsedReceip
     tip: merged.tip ?? '',
     total: merged.total ?? '',
     noTax: merged.noTax ?? false,
+    supplier,
     profileId,
     profileLabel,
   };
