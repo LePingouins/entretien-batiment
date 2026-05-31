@@ -47,6 +47,8 @@ const RepLayout: React.FC = () => {
   const tripsLabel = t.repTripsNav || (lang === 'fr' ? 'Kilométrage' : 'Mileage');
   const expensesLabel = t.expensesNav || (lang === 'fr' ? 'Dépenses' : 'Expenses');
 
+  const [navOpen, setNavOpen] = React.useState(false);
+
   return (
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
       <div
@@ -63,6 +65,13 @@ const RepLayout: React.FC = () => {
         >
           <div className="w-full px-4 sm:px-6 py-2.5 flex justify-between items-center gap-2">
             <div className="flex items-center gap-3">
+              <button className="sm:hidden p-2 rounded-lg focus:outline-none" aria-label="Open navigation" onClick={() => setNavOpen(o => !o)}>
+                <span className="block w-6 h-6">
+                  <span className={`block h-0.5 w-full bg-current mb-1 transition-all ${navOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+                  <span className={`block h-0.5 w-full bg-current mb-1 transition-all ${navOpen ? 'opacity-0' : ''}`}></span>
+                  <span className={`block h-0.5 w-full bg-current transition-all ${navOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+                </span>
+              </button>
               <img src="/logo.png" alt="Horizon Nature" className="h-8 sm:h-9 w-auto" />
               <span
                 className={`font-bold text-base sm:text-lg tracking-tight ${
@@ -73,7 +82,8 @@ const RepLayout: React.FC = () => {
               </span>
             </div>
 
-            <nav className="flex items-center gap-1 sm:gap-2">
+            {/* Desktop nav — hidden on mobile */}
+            <nav className="hidden sm:flex items-center gap-1 sm:gap-2">
               <Link to="/rep/rep-trips" className={linkCls(path.endsWith('/rep-trips'))}>
                 {tripsLabel}
               </Link>
@@ -120,7 +130,46 @@ const RepLayout: React.FC = () => {
                 {t.logout}
               </button>
             </nav>
+
+            {/* Mobile: always-visible utilities */}
+            <div className="flex sm:hidden items-center gap-1">
+              <button
+                onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+                className={`px-2 py-1.5 rounded-lg text-xs font-medium ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-800' : 'text-surface-600 hover:bg-surface-100'}`}
+                aria-label="Toggle language"
+              >
+                {lang === 'fr' ? 'EN' : 'FR'}
+              </button>
+              <button
+                onClick={() => setColorScheme(colorScheme === 'dark' ? 'default' : 'dark')}
+                className={`px-2 py-1.5 rounded-lg text-xs font-medium ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-800' : 'text-surface-600 hover:bg-surface-100'}`}
+                aria-label="Toggle theme"
+              >
+                {colorScheme === 'dark' ? '☀️' : '🌙'}
+              </button>
+            </div>
           </div>
+
+          {/* Mobile nav panel */}
+          {navOpen && (
+            <div className={`sm:hidden border-t px-4 py-2 flex flex-col gap-0.5 text-sm ${colorScheme === 'dark' ? 'border-surface-700 bg-surface-900' : 'border-surface-200 bg-white'}`}>
+              <Link to="/rep/rep-trips" onClick={() => setNavOpen(false)} className={linkCls(path.endsWith('/rep-trips'))}>
+                {tripsLabel}
+              </Link>
+              <Link to="/rep/expenses" onClick={() => setNavOpen(false)} className={linkCls(path.endsWith('/expenses'))}>
+                {expensesLabel}
+              </Link>
+              <div className={`my-1 h-px ${colorScheme === 'dark' ? 'bg-surface-700' : 'bg-surface-200'}`} />
+              <BugReportButton />
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full w-fit ${colorScheme === 'dark' ? 'bg-surface-800 text-surface-400' : 'bg-surface-100 text-surface-500'}`}>{roleLabel}</span>
+              <button
+                onClick={handleLogout}
+                className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors text-left ${colorScheme === 'dark' ? 'text-surface-400 hover:text-red-400 hover:bg-surface-800' : 'text-surface-500 hover:text-red-600 hover:bg-red-50'}`}
+              >
+                {t.logout}
+              </button>
+            </div>
+          )}
         </header>
 
         <main className="flex-1 w-full">
