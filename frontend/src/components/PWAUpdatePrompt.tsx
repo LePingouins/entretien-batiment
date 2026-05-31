@@ -8,7 +8,7 @@ export function PWAUpdatePrompt() {
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
-console.log('[PWA] PWAUpdatePrompt mounted v5');
+console.log('[PWA] PWAUpdatePrompt mounted v6');
 
     const cleanups: (() => void)[] = [];
 
@@ -46,7 +46,18 @@ console.log('[PWA] PWAUpdatePrompt mounted v5');
         if (!navigator.onLine || document.visibilityState !== 'visible') return;
         console.log('[PWA] polling for update…');
         reg.update()
-          .then(() => console.log('[PWA] reg.update() resolved — no new SW found'))
+          .then((updatedReg) => {
+            // The new SW can install so quickly (all assets already cached) that
+            // it moves from "installing" → "waiting" before updatefound fires our
+            // listener, leaving reg.installing null and the banner never shown.
+            // Checking reg.waiting here catches that race condition.
+            if (updatedReg?.waiting) {
+              console.log('[PWA] reg.update() found waiting SW — showing banner');
+              setWaitingSW(updatedReg.waiting);
+            } else {
+              console.log('[PWA] reg.update() resolved — no new SW found');
+            }
+          })
           .catch((e) => console.warn('[PWA] reg.update() error:', e));
       }, 60_000);
       cleanups.push(() => clearInterval(interval));
