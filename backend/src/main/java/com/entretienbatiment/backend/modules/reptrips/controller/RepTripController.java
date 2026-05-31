@@ -285,13 +285,13 @@ public class RepTripController {
         if (t.getWaypointsJson() == null || t.getWaypointsJson().length() < 10) f |= 4;
         if (t.getTotalKm() != null && t.getTotalKm() > 0
                 && Math.abs(t.getTotalKm() - Math.round(t.getTotalKm())) < 0.01) f |= 8;
-        if (t.getTotalKm() != null && t.getUserId() != null) {
+        if (t.getTotalKm() != null && t.getTotalKm() >= 150 && t.getUserId() != null) {
             try {
                 LocalDate from = (t.getDate() != null ? t.getDate() : LocalDate.now()).minusDays(90);
                 Double sum = tripRepository.sumKmForUserBetween(t.getUserId(), from,
                         t.getDate() != null ? t.getDate() : LocalDate.now());
-                // Rough proxy: more than 1/5 of last 90 days in a single trip.
-                if (sum != null && sum > 0 && t.getTotalKm() > sum / 5.0) f |= 16;
+                // Flag only if the trip is unusually large: >150 km AND more than 1/3 of last 90 days.
+                if (sum != null && sum > 0 && t.getTotalKm() > sum / 3.0) f |= 16;
             } catch (Exception ignored) {}
         }
         if ("ideal_fallback".equals(t.getDistanceSource())) f |= 32;

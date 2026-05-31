@@ -742,10 +742,11 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
               type: 'start' | 'stop' | 'idle' | 'end';
               time: string | null;
               label: string;
+              reason?: string;
               sublabel?: string;
               coord: [number, number] | null;
               notes?: string;
-              // idle-only fields
+              // idle/stop fields
               resumeTime?: string;
               durationMs?: number;
             };
@@ -755,15 +756,24 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                 sublabel: trip.startAddress,
                 coord: polyline.length >= 1 ? polyline[0] : hasStartCoords ? [trip.startLat!, trip.startLng!] : null,
               },
-              ...trip.stops.map(s => ({
-                type: 'stop' as const, time: ensureUtc(s.stoppedAt),
-                label: reasonLabels[s.reason] ?? s.reason,
-                sublabel: s.address, notes: s.notes,
-                coord: (s.lat != null && s.lng != null ? [s.lat, s.lng] : null) as [number, number] | null,
-                durationMs: (s.lat != null && s.lng != null)
-                  ? computeStopDuration(waypoints, s.lat, s.lng) ?? undefined
-                  : undefined,
-              })),
+              ...trip.stops.map(s => {
+                const computedMs = (s.lat != null && s.lng != null)
+                  ? computeStopDuration(waypoints, s.lat, s.lng)
+                  : null;
+                const durationMs = computedMs ?? (s.durationSeconds != null ? s.durationSeconds * 1000 : undefined);
+                const resumeTime = durationMs != null
+                  ? new Date(new Date(ensureUtc(s.stoppedAt)).getTime() + durationMs).toISOString()
+                  : undefined;
+                return {
+                  type: 'stop' as const, time: ensureUtc(s.stoppedAt),
+                  label: 'Arrêt',
+                  reason: reasonLabels[s.reason] ?? s.reason,
+                  sublabel: s.address, notes: s.notes,
+                  coord: (s.lat != null && s.lng != null ? [s.lat, s.lng] : null) as [number, number] | null,
+                  durationMs,
+                  resumeTime,
+                };
+              }),
               ...filteredIdlePeriods.map((idle, idx) => ({
                 type: 'idle' as const,
                 time: new Date(idle.startTime).toISOString(),
@@ -827,6 +837,11 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                             <div className="flex items-center gap-2 flex-wrap">
                               {event.time && <span className={`text-xs font-semibold ${timeClass}`}>{fmtTime(event.time)}</span>}
                               <span className="text-xs font-medium">{event.label}</span>
+                              {event.reason && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full ${isDark ? 'bg-surface-700 text-surface-300' : 'bg-slate-100 text-slate-600'}`}>
+                                  {event.reason}
+                                </span>
+                              )}
                               {event.type === 'idle' && event.durationMs != null && (
                                 <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${isDark ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700'}`}>
                                   {formatDurationMs(event.durationMs)}
@@ -840,7 +855,7 @@ const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose
                               {event.coord && <span className={`text-xs ${isDark ? 'text-surface-500' : 'text-slate-400'}`}>🗺️</span>}
                             </div>
                             {event.sublabel && <p className={`text-xs mt-0.5 ${sub}`}>{event.sublabel}</p>}
-                            {event.type === 'idle' && event.resumeTime && (
+                            {(event.type === 'idle' || event.type === 'stop') && event.resumeTime && (
                               <p className={`text-xs mt-0.5 ${sub}`}>
                                 Reprise à {fmtTime(event.resumeTime)}
                               </p>
