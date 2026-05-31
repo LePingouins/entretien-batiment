@@ -319,7 +319,7 @@ const AdminLayout: React.FC = () => {
                 ]}
               />
             )}
-            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS') || canAccess('REPRESENTANTS')) && (
+            {(canAccess('MILEAGE') || canAccess('ANALYTICS') || canAccess('REP_TRIPS') || canAccess('REPRESENTANTS') || (role === 'DEVELOPPER' && canAccess('REP_EXPENSES'))) && (
               <NavDropdown
                 isDark={colorScheme === 'dark'}
                 label={lang === 'fr' ? 'Opérations' : 'Operations'}
@@ -332,6 +332,7 @@ const AdminLayout: React.FC = () => {
                   ...(canAccess('REP_TRIPS') ? [{ label: (t.repTripsAdminTitle || 'Admin Trajets'), path: '/admin/admin-trips', isActive: window.location.pathname.includes('/admin/admin-trips') }] : []),
                   ...(canAccess('REP_TRIPS') ? [{ label: lang === 'fr' ? 'Paramètres trajets' : 'Trip Settings', path: '/admin/trip-settings', isActive: window.location.pathname.includes('/admin/trip-settings') }] : []),
                   ...(canAccess('REPRESENTANTS') ? [{ label: t.representantsNav || (lang === 'fr' ? 'Représentants' : 'Representatives'), path: '/admin/representants', isActive: window.location.pathname.includes('/admin/representants') }] : []),
+                  ...(role === 'DEVELOPPER' && canAccess('REP_EXPENSES') ? [{ label: lang === 'fr' ? 'Mes dépenses' : 'My Expenses', path: pagePath('REP_EXPENSES'), isActive: window.location.pathname.includes('/admin/expenses') }] : []),
                 ]}
               />
             )}
