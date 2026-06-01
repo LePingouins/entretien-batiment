@@ -78,6 +78,11 @@ public class RepresentantExcelExportService {
 
     public byte[] build(AppUser user, List<RepTrip> trips, List<Expense> expenses,
                         LocalDate startDate, LocalDate endDate) {
+        return build(user, trips, expenses, startDate, endDate, false);
+    }
+
+    public byte[] build(AppUser user, List<RepTrip> trips, List<Expense> expenses,
+                        LocalDate startDate, LocalDate endDate, boolean includePhoneAllowance) {
         try (XSSFWorkbook wb = new XSSFWorkbook();
              ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
@@ -213,19 +218,19 @@ public class RepresentantExcelExportService {
             }
 
             // ── Phone allowance: $70.00 per calendar month ───────────────────────────
-            // Included once per month on the report whose period covers the FIRST half
-            // of that month (days 1-15).  On a standard bi-weekly schedule the
-            // second period (days 16-end) therefore never carries a duplicate charge.
+            // Included only when the admin explicitly opts in via the export
+            // checkbox (different reps get paid the allowance on different
+            // schedules, so we no longer auto-detect it from the date range).
+            // When opted in, one row is added per calendar month overlapping
+            // the selected period.
             final long PHONE_CENTS = 7_000L; // $70.00
             List<LocalDate> phoneMonths = new ArrayList<>();
-            LocalDate cur = startDate.withDayOfMonth(1);
-            while (!cur.isAfter(endDate)) {
-                LocalDate halfEnd = cur.withDayOfMonth(15);
-                // Include this month when its first half (1st-15th) overlaps the range
-                if (!halfEnd.isBefore(startDate) && !cur.isAfter(endDate)) {
+            if (includePhoneAllowance) {
+                LocalDate cur = startDate.withDayOfMonth(1);
+                while (!cur.isAfter(endDate)) {
                     phoneMonths.add(cur);
+                    cur = cur.plusMonths(1);
                 }
-                cur = cur.plusMonths(1);
             }
             for (LocalDate monthStart : phoneMonths) {
                 Row pr = sheet.createRow(row++);

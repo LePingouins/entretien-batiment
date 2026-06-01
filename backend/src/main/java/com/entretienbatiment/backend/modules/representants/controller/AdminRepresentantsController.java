@@ -113,14 +113,15 @@ public class AdminRepresentantsController {
     @GetMapping("/{userId}/export")
     public ResponseEntity<byte[]> export(@PathVariable Long userId,
                                          @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-                                         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+                                         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                                         @RequestParam(name = "includePhone", defaultValue = "false") boolean includePhone) {
         AppUser u = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
 
         List<RepTrip> trips = tripRepository.findByUserIdAndDateBetween(userId, startDate, endDate);
         List<Expense> expenses = expenseRepository.findByUserIdAndDateBetweenOrderByDateAscIdAsc(userId, startDate, endDate);
 
-        byte[] xlsx = excelService.build(u, trips, expenses, startDate, endDate);
+        byte[] xlsx = excelService.build(u, trips, expenses, startDate, endDate, includePhone);
         String filename = "compte-de-depenses-" + u.getEmail().replace('@', '_') + "-" + startDate + "_" + endDate + ".xlsx";
 
         return ResponseEntity.ok()

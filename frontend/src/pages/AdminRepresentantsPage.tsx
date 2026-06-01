@@ -57,6 +57,7 @@ const AdminRepresentantsPage: React.FC = () => {
   const [profileLoading, setProfileLoading] = useState(false);
   const [startDate, setStartDate] = useState<string>(isoMonthsAgo(3));
   const [endDate, setEndDate]     = useState<string>(todayIso());
+  const [includePhone, setIncludePhone] = useState<boolean>(false);
   const [updatingExpense, setUpdatingExpense] = useState<number | null>(null);
   const [updatingTrip, setUpdatingTrip] = useState<number | null>(null);
   const [selectedTrip, setSelectedTrip] = useState<RepTrip | null>(null);
@@ -214,14 +215,14 @@ const AdminRepresentantsPage: React.FC = () => {
 
   const handleDownload = async () => {
     if (selectedId == null) return;
-    const qs = new URLSearchParams({ startDate, endDate });
+    const qs = new URLSearchParams({ startDate, endDate, includePhone: String(includePhone) });
     const path = `/api/admin/representants/${selectedId}/export?${qs}`;
     await downloadSecureFile(path, `representant-${selectedId}-${startDate}-${endDate}.xlsx`);
   };
 
   const handleDownloadCsv = async () => {
     if (selectedId == null) return;
-    const qs = new URLSearchParams({ startDate, endDate });
+    const qs = new URLSearchParams({ startDate, endDate, includePhone: String(includePhone) });
     const path = `/api/admin/representants/${selectedId}/export-csv?${qs}`;
     await downloadSecureFile(path, `representant-${selectedId}-${startDate}-${endDate}.csv`);
   };
@@ -322,9 +323,18 @@ const AdminRepresentantsPage: React.FC = () => {
                       );
                     })}
                   </div>
+                  <label className="ml-auto flex items-center gap-2 text-sm text-surface-700 dark:text-surface-200 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={includePhone}
+                      onChange={(e) => setIncludePhone(e.target.checked)}
+                      className="h-4 w-4 rounded border-surface-300 dark:border-surface-600 text-brand-600 focus:ring-brand-500"
+                    />
+                    {lang === 'fr' ? 'Inclure forfait cellulaire ($70/mois)' : 'Include phone allowance ($70/mo)'}
+                  </label>
                   <button
                     onClick={handleDownload}
-                    className="ml-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium"
                   >
                     {lang === 'fr' ? '📥 Télécharger Excel' : '📥 Download Excel'}
                   </button>
