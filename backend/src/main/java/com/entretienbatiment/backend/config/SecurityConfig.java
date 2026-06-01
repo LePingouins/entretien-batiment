@@ -78,8 +78,7 @@ public class SecurityConfig {
             "http://10.0.0.109:4173",
             "http://10.0.0.109:5173",
             "https://entretien-batiment.com",
-            "https://www.entretien-batiment.com",
-            "https://violate-sprint-commode.ngrok-free.dev"
+            "https://www.entretien-batiment.com"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));

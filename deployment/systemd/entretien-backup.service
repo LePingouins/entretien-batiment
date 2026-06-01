@@ -1,0 +1,17 @@
+[Unit]
+Description=Entretien Postgres Backup
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+Environment=RETENTION_DAYS=14
+Environment=DB_CONTAINER=entretien-db
+Environment=DB_USER=entretien_user
+Environment=DB_NAME=entretien
+ExecStart=/root/entretien-batiment/scripts/pg_backup.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Local development overrides — automatically merged by Docker Compose.
+# This file is NOT deployed to production; it exists only in the dev workspace.
+#
+# Exposes the Postgres port on the host so you can connect with DBeaver,
+# psql, or other local DB tools. In production the DB port is internal-only.
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+  db:
+    ports:
+      - "5433:5432"
