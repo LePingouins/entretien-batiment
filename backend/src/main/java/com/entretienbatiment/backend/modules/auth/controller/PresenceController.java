@@ -1,7 +1,5 @@
 package com.entretienbatiment.backend.modules.auth.controller;
 
-import com.entretienbatiment.backend.modules.auth.model.AppUser;
-import com.entretienbatiment.backend.modules.auth.model.Role;
 import com.entretienbatiment.backend.modules.auth.repository.AppUserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;

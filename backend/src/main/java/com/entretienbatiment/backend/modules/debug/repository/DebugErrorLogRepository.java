@@ -24,6 +24,11 @@ public interface DebugErrorLogRepository extends JpaRepository<DebugErrorLog, Lo
 
     void deleteAllByFingerprint(String fingerprint);
 
+    // Convenience method to delete entries older than given timestamp
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(value = "delete from debug_error_log where occurred_at < :cutoff", nativeQuery = true)
+    void deleteOlderThan(@org.springframework.data.repository.query.Param("cutoff") java.time.Instant cutoff);
+
     @Query(value = """
             select
                 fingerprint as fingerprint,

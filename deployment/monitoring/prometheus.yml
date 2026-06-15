@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'entretien-backend'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['backend:8080']
+
+# Add other scrape jobs (e.g., node_exporter, cadvisor) as needed

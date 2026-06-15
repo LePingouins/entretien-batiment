@@ -1,7 +1,6 @@
 package com.entretienbatiment.backend.modules.expenses.controller;
 
 import com.entretienbatiment.backend.modules.auth.model.AppUser;
-import com.entretienbatiment.backend.modules.auth.model.Role;
 import com.entretienbatiment.backend.modules.auth.repository.AppUserRepository;
 import com.entretienbatiment.backend.modules.expenses.dto.ExpenseRequest;
 import com.entretienbatiment.backend.modules.expenses.model.Expense;
@@ -10,7 +9,6 @@ import com.entretienbatiment.backend.modules.expenses.repository.ExpenseReceiptR
 import com.entretienbatiment.backend.modules.expenses.repository.ExpenseRepository;
 import com.entretienbatiment.backend.modules.files.config.UploadPaths;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;

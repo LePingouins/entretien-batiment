@@ -126,6 +126,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // ✅ allow preflight
                 .requestMatchers("/api/health").permitAll()
+                // Actuator endpoints: allow health/info publicly, keep others admin-only
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/**").hasRole("ADMIN")
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/ws-notifications/**").permitAll()
                 // Make files endpoint authenticated

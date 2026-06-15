@@ -21,6 +21,12 @@ repositories {
 dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Metrics: Micrometer + Prometheus
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    // Sentry for error reporting (DSN via env var SENTRY_DSN)
+    implementation 'io.sentry:sentry-spring-boot-starter:6.27.0'
 
     // JWT (JJWT)
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
@@ -40,6 +46,8 @@ dependencies {
     // Apache POI — Excel (.xlsx) export for representant reports
     implementation 'org.apache.poi:poi-ooxml:5.3.0'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    // In-memory DB for tests to avoid requiring Postgres during unit tests
+    testImplementation 'com.h2database:h2'
     testImplementation 'org.springframework.boot:spring-boot-starter-flyway-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
@@ -48,6 +56,8 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // Provide required env var for admin seeder during tests to avoid startup errors
+    environment 'SEED_ADMIN_PASSWORD', 'test-admin-password-please-change'
 }
 
 // Load .env from project root into bootRun environment
