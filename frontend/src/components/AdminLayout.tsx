@@ -19,19 +19,19 @@ const COLOR_SCHEME_OPTIONS: Array<{ value: ColorSchemeType; label: string; icon:
 ];
 
 const AdminLayout: React.FC = () => {
-  const { logout, role } = useAuth();
+  const { logout, role, accessToken } = useAuth();
   const navigate = useNavigate();
   const { canAccess } = usePageAccess();
   const [showSettings, setShowSettings] = React.useState(false);
   const [remindersEnabled, setRemindersEnabled] = React.useState(false);
 
   React.useEffect(() => {
-    if (showSettings) {
+    if (showSettings && accessToken) {
       getCurrentUser().then(user => {
         setRemindersEnabled(user.remindersEnabled !== false);
       }).catch(err => console.error('Failed to fetch user settings', err));
     }
-  }, [showSettings]);
+  }, [showSettings, accessToken]);
 
   const handleReminderToggle = async (enabled: boolean) => {
     setRemindersEnabled(enabled);
@@ -146,10 +146,11 @@ const AdminLayout: React.FC = () => {
 
   // Heartbeat — keeps last_active_at fresh so the Dev Insights "Online Now" panel works
   React.useEffect(() => {
+    if (!accessToken) return;
     postPresencePing().catch(() => {});
     const interval = setInterval(() => postPresencePing().catch(() => {}), 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [accessToken]);
 
   // Sticky nav: use CSS sticky for reliable behavior on all devices including mobile Chrome
 

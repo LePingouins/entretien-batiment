@@ -64,7 +64,9 @@ api.interceptors.response.use(
     // Some backends return 403 for expired tokens
     const status = error.response?.status;
     const isLoginRequest = originalRequest.url?.includes('/api/auth/login');
-    const shouldRefresh = (status === 401 || status === 403) && !originalRequest._retry && !isLoginRequest;
+    const hasStoredToken = !!getStoredAccessToken();
+    const hasAuthHeader = !!originalRequest?.headers?.Authorization || !!originalRequest?.headers?.authorization;
+    const shouldRefresh = (status === 401 || status === 403) && !originalRequest._retry && !isLoginRequest && (hasStoredToken || hasAuthHeader);
     
     if (shouldRefresh) {
       if (isRefreshing) {
