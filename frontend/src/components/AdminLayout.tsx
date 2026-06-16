@@ -162,6 +162,7 @@ const AdminLayout: React.FC = () => {
     if (canAccess('WORK_ORDERS')) items.push({ label: t.workOrders, path: pagePath('WORK_ORDERS'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
     if (canAccess('URGENT_WORK_ORDERS')) items.push({ label: t.urgentWorkOrders || 'Urgent Work Orders', path: pagePath('URGENT_WORK_ORDERS'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
     if (canAccess('ARCHIVE')) items.push({ label: t.archive, path: pagePath('ARCHIVE'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
+    items.push({ label: t.preventiveNav || 'Entretien préventif', path: '/admin/preventive-maintenance', group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
     if (canAccess('MILEAGE')) items.push({ label: t.mileage, path: pagePath('MILEAGE'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('ANALYTICS')) items.push({ label: t.analyticsTitle || 'Analytics', path: pagePath('ANALYTICS'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('REP_TRIPS')) items.push({ label: t.repTripsNav || 'Rep Trips', path: pagePath('REP_TRIPS'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
@@ -210,9 +211,10 @@ const AdminLayout: React.FC = () => {
                 isDark={colorScheme === 'dark'}
                 label={t.workOrders}
                 items={[
-                  ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('WORK_ORDERS'), isActive: window.location.pathname.includes(pagePath('WORK_ORDERS')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') }] : []),
+                  ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('WORK_ORDERS'), isActive: window.location.pathname.includes(pagePath('WORK_ORDERS')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') && !window.location.pathname.includes('preventive') }] : []),
                   ...(canAccess('URGENT_WORK_ORDERS') ? [{ label: t.urgentWorkOrders || 'Urgent', path: pagePath('URGENT_WORK_ORDERS'), isActive: window.location.pathname.includes(pagePath('URGENT_WORK_ORDERS')) }] : []),
                   ...(canAccess('ARCHIVE') ? [{ label: t.archive, path: pagePath('ARCHIVE'), isActive: window.location.pathname.includes(pagePath('ARCHIVE')) }] : []),
+                  { label: t.preventiveNav || 'Entretien préventif', path: '/admin/preventive-maintenance', isActive: window.location.pathname.includes('/admin/preventive-maintenance') },
                 ]}
               />
             )}
@@ -313,9 +315,10 @@ const AdminLayout: React.FC = () => {
                 isMobileOpen
                 onItemClick={() => setNavOpen(false)}
                 items={[
-                  ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('WORK_ORDERS'), isActive: window.location.pathname.includes(pagePath('WORK_ORDERS')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') }] : []),
+                  ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('WORK_ORDERS'), isActive: window.location.pathname.includes(pagePath('WORK_ORDERS')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') && !window.location.pathname.includes('preventive') }] : []),
                   ...(canAccess('URGENT_WORK_ORDERS') ? [{ label: t.urgentWorkOrders || 'Urgent', path: pagePath('URGENT_WORK_ORDERS'), isActive: window.location.pathname.includes(pagePath('URGENT_WORK_ORDERS')) }] : []),
                   ...(canAccess('ARCHIVE') ? [{ label: t.archive, path: pagePath('ARCHIVE'), isActive: window.location.pathname.includes(pagePath('ARCHIVE')) }] : []),
+                  { label: t.preventiveNav || 'Entretien préventif', path: '/admin/preventive-maintenance', isActive: window.location.pathname.includes('/admin/preventive-maintenance') },
                 ]}
               />
             )}

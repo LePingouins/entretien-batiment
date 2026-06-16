@@ -43,6 +43,7 @@ const RepExpensesPage             = lazy(() => import('../pages/RepExpensesPage'
 const AdminTripsPage              = lazy(() => import('../pages/AdminTripsPage'));
 const AdminTripSettingsPage       = lazy(() => import('../pages/AdminTripSettingsPage'));
 const AdminRepresentantsPage      = lazy(() => import('../pages/AdminRepresentantsPage'));
+const PreventiveMaintenancePage   = lazy(() => import('../pages/PreventiveMaintenancePage'));
 
 /** Shown while a lazy page chunk is being downloaded */
 const PageLoader = () => (
@@ -240,6 +241,14 @@ const router = createBrowserRouter([
                   <RequirePageAccess pageKey="REPRESENTANTS">
                     <AdminRepresentantsPage />
                   </RequirePageAccess>
+                ),
+              },
+              {
+                path: 'preventive-maintenance',
+                element: (
+                  <Suspense fallback={<PageLoader />}>
+                    <PreventiveMaintenancePage />
+                  </Suspense>
                 ),
               },
               {

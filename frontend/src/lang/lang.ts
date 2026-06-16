@@ -784,6 +784,24 @@ export const en = {
   pageAccessRepresentants: 'Representatives',
   pageExplanationRepresentants: 'Browse representatives, see their trips and expenses, export Excel reports.',
   adminUsersRoleRepresentant: 'Representative',
+
+  // ─── Entretien Préventif ─────────────────────────────────────
+  preventiveNav: 'Preventive Maintenance',
+  preventiveTitle: 'Entretien préventif',
+  preventiveTodo: 'Tasks to do',
+  preventiveDone: 'Completed tasks',
+  preventiveMarkDone: 'Mark as done',
+  preventiveUndo: 'Undo',
+  preventiveFreqMonthly: 'Monthly',
+  preventiveFreqQuarterly: 'Every 3 months',
+  preventiveFreqSemiAnnual: 'Twice a year',
+  preventiveFreqYearly: 'Yearly',
+  preventiveFreqWeekly: 'Weekly',
+  preventiveFreqDaily: 'Daily',
+  preventiveCompletedOn: 'Completed on',
+  preventiveBy: 'by',
+  preventiveNoTasks: 'No tasks',
+  preventiveDueAgainIn: 'Due again in',
 };
 
 export const fr = {
@@ -1564,5 +1582,23 @@ export const fr = {
   pageAccessRepresentants: 'Représentants',
   pageExplanationRepresentants: 'Consultez les représentants, voyez leurs trajets et dépenses, exportez les rapports Excel.',
   adminUsersRoleRepresentant: 'Représentant',
+
+  // ─── Entretien Préventif ─────────────────────────────────────
+  preventiveNav: 'Entretien préventif',
+  preventiveTitle: 'Entretien préventif',
+  preventiveTodo: 'Tâche à faire',
+  preventiveDone: 'Tâche complétée',
+  preventiveMarkDone: 'Marquer comme fait',
+  preventiveUndo: 'Annuler',
+  preventiveFreqMonthly: 'Mensuel',
+  preventiveFreqQuarterly: 'Tous les 3 mois',
+  preventiveFreqSemiAnnual: '2 fois par année',
+  preventiveFreqYearly: 'Annuel',
+  preventiveFreqWeekly: 'Hebdomadaire',
+  preventiveFreqDaily: 'Quotidien',
+  preventiveCompletedOn: 'Complété le',
+  preventiveBy: 'par',
+  preventiveNoTasks: 'Aucune tâche',
+  preventiveDueAgainIn: 'À refaire le',
 };
 

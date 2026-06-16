@@ -717,3 +717,20 @@ export interface JobStatus {
   recentBackups: string[];
   lastBackupSizeBytes: number;
 }
+
+// ─── Preventive Maintenance ─────────────────────────────────────────────────
+
+export type TaskFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'YEARLY';
+export type TaskSite = 'INEWA' | 'HORIZON_NATURE';
+
+export interface PreventiveTaskResponse {
+  id: number;
+  name: string;
+  frequency: TaskFrequency;
+  site: TaskSite;
+  displayOrder: number;
+  isDue: boolean;
+  lastCompletedAt?: string;
+  lastCompletionId?: number;
+  lastCompletedByEmail?: string;
+}

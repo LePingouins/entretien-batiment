@@ -1182,3 +1182,21 @@ export function representantCsvExportUrl(userId: number, startDate: string, endD
   const qs = new URLSearchParams({ startDate, endDate });
   return `${base}?${qs.toString()}`;
 }
+
+// --- Preventive Maintenance API -------------------------------------------
+
+import type { PreventiveTaskResponse } from '../types/api';
+
+export async function getPreventiveTasks(): Promise<PreventiveTaskResponse[]> {
+  const res = await api.get<PreventiveTaskResponse[]>('/api/preventive-tasks');
+  return res.data;
+}
+
+export async function completePreventiveTask(taskId: number): Promise<PreventiveTaskResponse> {
+  const res = await api.post<PreventiveTaskResponse>(`/api/preventive-tasks/${taskId}/complete`);
+  return res.data;
+}
+
+export async function uncompletePreventiveTask(taskId: number, completionId: number): Promise<void> {
+  await api.delete(`/api/preventive-tasks/${taskId}/completions/${completionId}`);
+}
