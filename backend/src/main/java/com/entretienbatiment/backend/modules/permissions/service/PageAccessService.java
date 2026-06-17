@@ -39,7 +39,7 @@ public class PageAccessService {
     public static final String PAGE_INVENTORY = "INVENTORY";
     public static final String PAGE_INVENTORY_PRODUCTS = "INVENTORY_PRODUCTS";
     public static final String PAGE_SUBSCRIPTIONS = "SUBSCRIPTIONS";
-    public static final String PAGE_REP_TRIPS    = "REP_TRIPS";
+    public static final String PAGE_REP_TRIPS = "REP_TRIPS";
     public static final String PAGE_REP_EXPENSES = "REP_EXPENSES";
     public static final String PAGE_REPRESENTANTS = "REPRESENTANTS";
     public static final String PAGE_PREVENTIVE_MAINTENANCE = "PREVENTIVE_MAINTENANCE";
@@ -58,8 +58,8 @@ public class PageAccessService {
             PAGE_SUBSCRIPTIONS,
             PAGE_REP_TRIPS,
             PAGE_REP_EXPENSES,
-                PAGE_REPRESENTANTS,
-                PAGE_PREVENTIVE_MAINTENANCE
+            PAGE_REPRESENTANTS,
+            PAGE_PREVENTIVE_MAINTENANCE
     );
 
     private static final Map<Role, Set<String>> DEFAULT_ALLOWED_BY_ROLE = defaultAllowedByRole();
@@ -396,29 +396,30 @@ public class PageAccessService {
         Map<Role, Set<String>> defaults = new EnumMap<>(Role.class);
 
         defaults.put(Role.ADMIN, Set.of(
-                PAGE_DASHBOARD,
-                PAGE_WORK_ORDERS,
-                PAGE_URGENT_WORK_ORDERS,
-                PAGE_MILEAGE,
-                PAGE_ARCHIVE,
-                PAGE_ANALYTICS,
-                PAGE_USERS,
-                PAGE_NOTIFICATIONS,
-                PAGE_INVENTORY,
-                PAGE_INVENTORY_PRODUCTS,
-                PAGE_SUBSCRIPTIONS,
-                PAGE_REP_TRIPS,
-                PAGE_REP_EXPENSES,
-                PAGE_REPRESENTANTS
+            PAGE_DASHBOARD,
+            PAGE_WORK_ORDERS,
+            PAGE_URGENT_WORK_ORDERS,
+            PAGE_MILEAGE,
+            PAGE_ARCHIVE,
+            PAGE_ANALYTICS,
+            PAGE_USERS,
+            PAGE_NOTIFICATIONS,
+            PAGE_INVENTORY,
+            PAGE_INVENTORY_PRODUCTS,
+            PAGE_SUBSCRIPTIONS,
+            PAGE_REP_TRIPS,
+            PAGE_REP_EXPENSES,
+            PAGE_REPRESENTANTS,
+            PAGE_PREVENTIVE_MAINTENANCE
         ));
 
         defaults.put(Role.DEVELOPPER, defaults.get(Role.ADMIN));
 
         defaults.put(Role.TECH, Set.of(
-                PAGE_DASHBOARD,
-                PAGE_WORK_ORDERS,
-                PAGE_URGENT_WORK_ORDERS,
-                PAGE_MILEAGE,
+            PAGE_DASHBOARD,
+            PAGE_WORK_ORDERS,
+            PAGE_URGENT_WORK_ORDERS,
+            PAGE_MILEAGE,
             PAGE_NOTIFICATIONS,
             PAGE_PREVENTIVE_MAINTENANCE
         ));
