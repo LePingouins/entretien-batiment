@@ -46,12 +46,13 @@ const PAGE_KEY_ORDER: PageKey[] = [
   'REP_TRIPS',
   'REP_EXPENSES',
   'REPRESENTANTS',
+  'PREVENTIVE_MAINTENANCE',
 ];
 
 const FALLBACK_ALLOWED_BY_ROLE: Record<UserRole, PageKey[]> = {
-  ADMIN: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS', 'REP_TRIPS', 'REP_EXPENSES', 'REPRESENTANTS'],
-  DEVELOPPER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS', 'REP_TRIPS', 'REP_EXPENSES', 'REPRESENTANTS'],
-  TECH: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS'],
+  ADMIN: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS', 'REP_TRIPS', 'REP_EXPENSES', 'REPRESENTANTS', 'PREVENTIVE_MAINTENANCE'],
+  DEVELOPPER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS', 'REP_TRIPS', 'REP_EXPENSES', 'REPRESENTANTS', 'PREVENTIVE_MAINTENANCE'],
+  TECH: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS', 'PREVENTIVE_MAINTENANCE'],
   WORKER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS'],
   REPRESENTANT: ['REP_TRIPS', 'REP_EXPENSES'],
 };
@@ -352,6 +353,8 @@ const AdminUsersPage: React.FC = () => {
         return t.pageAccessRepExpenses || 'Dépenses (Reps)';
       case 'REPRESENTANTS':
         return t.pageAccessRepresentants || 'Représentants';
+      case 'PREVENTIVE_MAINTENANCE':
+        return t.pageAccessPreventiveMaintenance || 'Entretien préventif';
       default:
         return pageKey;
     }
@@ -369,6 +372,7 @@ const AdminUsersPage: React.FC = () => {
     t.pageAccessRepTrips,
     t.pageAccessRepExpenses,
     t.pageAccessRepresentants,
+    t.pageAccessPreventiveMaintenance,
   ]);
 
   const updatePageRoleRule = (pageKey: PageKey, field: 'admin' | 'tech' | 'worker' | 'representant', value: boolean) => {

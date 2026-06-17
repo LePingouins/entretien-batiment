@@ -42,6 +42,7 @@ public class PageAccessService {
     public static final String PAGE_REP_TRIPS    = "REP_TRIPS";
     public static final String PAGE_REP_EXPENSES = "REP_EXPENSES";
     public static final String PAGE_REPRESENTANTS = "REPRESENTANTS";
+    public static final String PAGE_PREVENTIVE_MAINTENANCE = "PREVENTIVE_MAINTENANCE";
 
     private static final List<String> MANAGED_PAGE_KEYS = List.of(
             PAGE_DASHBOARD,
@@ -57,7 +58,8 @@ public class PageAccessService {
             PAGE_SUBSCRIPTIONS,
             PAGE_REP_TRIPS,
             PAGE_REP_EXPENSES,
-            PAGE_REPRESENTANTS
+                PAGE_REPRESENTANTS,
+                PAGE_PREVENTIVE_MAINTENANCE
     );
 
     private static final Map<Role, Set<String>> DEFAULT_ALLOWED_BY_ROLE = defaultAllowedByRole();
@@ -417,7 +419,8 @@ public class PageAccessService {
                 PAGE_WORK_ORDERS,
                 PAGE_URGENT_WORK_ORDERS,
                 PAGE_MILEAGE,
-                PAGE_NOTIFICATIONS
+            PAGE_NOTIFICATIONS,
+            PAGE_PREVENTIVE_MAINTENANCE
         ));
 
         defaults.put(Role.WORKER, Set.of(

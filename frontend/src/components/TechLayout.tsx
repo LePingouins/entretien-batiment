@@ -141,7 +141,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     navigate('/login');
   };
 
-  const pagePath = React.useCallback((segment: '' | 'work-orders' | 'urgent-work-orders' | 'mileage' | 'archive' | 'analytics' | 'documents' | 'shopping-list' | 'inventory' | 'inventory/products' | 'rep-trips') => {
+  const pagePath = React.useCallback((segment: '' | 'work-orders' | 'urgent-work-orders' | 'mileage' | 'archive' | 'analytics' | 'documents' | 'shopping-list' | 'inventory' | 'inventory/products' | 'rep-trips' | 'preventive-maintenance') => {
     return segment ? `${basePath}/${segment}` : basePath;
   }, [basePath]);
 
@@ -167,6 +167,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
     if (canAccess('WORK_ORDERS')) items.push({ label: t.workOrders, path: pagePath('work-orders'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
     if (canAccess('URGENT_WORK_ORDERS')) items.push({ label: t.urgentWorkOrders || 'Urgent Work Orders', path: pagePath('urgent-work-orders'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
     if (canAccess('ARCHIVE')) items.push({ label: t.archive, path: pagePath('archive'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
+    if (canAccess('PREVENTIVE_MAINTENANCE')) items.push({ label: t.preventiveNav || 'Entretien préventif', path: pagePath('preventive-maintenance'), group: lang === 'fr' ? 'Bons de travail' : 'Work Orders' });
     if (canAccess('MILEAGE')) items.push({ label: t.mileage, path: pagePath('mileage'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('ANALYTICS')) items.push({ label: t.analyticsTitle || 'Analytics', path: pagePath('analytics'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('REP_TRIPS')) items.push({ label: t.repTripsNav || 'Kilométrage Reps', path: pagePath('rep-trips'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
@@ -210,6 +211,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
                   ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('work-orders'), isActive: window.location.pathname.includes(pagePath('work-orders')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') }] : []),
                   ...(canAccess('URGENT_WORK_ORDERS') ? [{ label: t.urgentWorkOrders || 'Urgent', path: pagePath('urgent-work-orders'), isActive: window.location.pathname.includes(pagePath('urgent-work-orders')) }] : []),
                   ...(canAccess('ARCHIVE') ? [{ label: t.archive, path: pagePath('archive'), isActive: window.location.pathname.includes(pagePath('archive')) }] : []),
+                  ...(canAccess('PREVENTIVE_MAINTENANCE') ? [{ label: t.preventiveNav || 'Entretien préventif', path: pagePath('preventive-maintenance'), isActive: window.location.pathname.includes(pagePath('preventive-maintenance')) }] : []),
                 ]}
               />
             )}
@@ -295,6 +297,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
                   ...(canAccess('WORK_ORDERS') ? [{ label: t.workOrders, path: pagePath('work-orders'), isActive: window.location.pathname.includes(pagePath('work-orders')) && !window.location.pathname.includes('urgent') && !window.location.pathname.includes('archive') }] : []),
                   ...(canAccess('URGENT_WORK_ORDERS') ? [{ label: t.urgentWorkOrders || 'Urgent', path: pagePath('urgent-work-orders'), isActive: window.location.pathname.includes(pagePath('urgent-work-orders')) }] : []),
                   ...(canAccess('ARCHIVE') ? [{ label: t.archive, path: pagePath('archive'), isActive: window.location.pathname.includes(pagePath('archive')) }] : []),
+                  ...(canAccess('PREVENTIVE_MAINTENANCE') ? [{ label: t.preventiveNav || 'Entretien préventif', path: pagePath('preventive-maintenance'), isActive: window.location.pathname.includes(pagePath('preventive-maintenance')) }] : []),
                 ]}
               />
             )}

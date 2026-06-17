@@ -246,9 +246,11 @@ const router = createBrowserRouter([
               {
                 path: 'preventive-maintenance',
                 element: (
-                  <Suspense fallback={<PageLoader />}>
-                    <PreventiveMaintenancePage />
-                  </Suspense>
+                  <RequirePageAccess pageKey="PREVENTIVE_MAINTENANCE">
+                    <Suspense fallback={<PageLoader />}>
+                      <PreventiveMaintenancePage />
+                    </Suspense>
+                  </RequirePageAccess>
                 ),
               },
               {
@@ -399,6 +401,16 @@ const router = createBrowserRouter([
                   </RequirePageAccess>
                 ),
               },
+              {
+                path: 'preventive-maintenance',
+                element: (
+                  <RequirePageAccess pageKey="PREVENTIVE_MAINTENANCE">
+                    <Suspense fallback={<PageLoader />}>
+                      <PreventiveMaintenancePage />
+                    </Suspense>
+                  </RequirePageAccess>
+                ),
+              },
             ],
           },
         ],
@@ -520,6 +532,16 @@ const router = createBrowserRouter([
                 element: (
                   <RequirePageAccess pageKey="REP_TRIPS">
                     <RepTripsPage />
+                  </RequirePageAccess>
+                ),
+              },
+              {
+                path: 'preventive-maintenance',
+                element: (
+                  <RequirePageAccess pageKey="PREVENTIVE_MAINTENANCE">
+                    <Suspense fallback={<PageLoader />}>
+                      <PreventiveMaintenancePage />
+                    </Suspense>
                   </RequirePageAccess>
                 ),
               },

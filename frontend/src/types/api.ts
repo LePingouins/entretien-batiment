@@ -101,7 +101,8 @@ export type PageKey =
   | 'SUBSCRIPTIONS'
   | 'REP_TRIPS'
   | 'REP_EXPENSES'
-  | 'REPRESENTANTS';
+  | 'REPRESENTANTS'
+  | 'PREVENTIVE_MAINTENANCE';
 
 export type AccessOverrideState = 'DEFAULT' | 'ALLOW' | 'DENY';
 
