@@ -14,6 +14,7 @@ export const PAGE_KEYS: PageKey[] = [
   'REP_TRIPS',
   'REP_EXPENSES',
   'REPRESENTANTS',
+  'PREVENTIVE_MAINTENANCE',
 ];
 
 const PAGE_SEGMENTS: Record<PageKey, string> = {
@@ -31,6 +32,7 @@ const PAGE_SEGMENTS: Record<PageKey, string> = {
   REP_TRIPS: 'rep-trips',
   REP_EXPENSES: 'expenses',
   REPRESENTANTS: 'representants',
+  PREVENTIVE_MAINTENANCE: 'preventive-maintenance',
 };
 
 const ADMIN_FALLBACK_ORDER: PageKey[] = [
@@ -40,12 +42,14 @@ const ADMIN_FALLBACK_ORDER: PageKey[] = [
   'URGENT_WORK_ORDERS',
   'MILEAGE',
   'NOTIFICATIONS',
+  'PREVENTIVE_MAINTENANCE',
   'ARCHIVE',
   'ANALYTICS',
   'INVENTORY',
   'INVENTORY_PRODUCTS',
   'REP_TRIPS',
   'REPRESENTANTS',
+  'PREVENTIVE_MAINTENANCE',
 ];
 
 const NON_ADMIN_FALLBACK_ORDER: PageKey[] = [
@@ -54,12 +58,14 @@ const NON_ADMIN_FALLBACK_ORDER: PageKey[] = [
   'URGENT_WORK_ORDERS',
   'MILEAGE',
   'NOTIFICATIONS',
+  'PREVENTIVE_MAINTENANCE',
   'ARCHIVE',
   'ANALYTICS',
   'USERS',
   'INVENTORY',
   'INVENTORY_PRODUCTS',
   'REP_TRIPS',
+  'PREVENTIVE_MAINTENANCE',
 ];
 
 const REPRESENTANT_FALLBACK_ORDER: PageKey[] = [
