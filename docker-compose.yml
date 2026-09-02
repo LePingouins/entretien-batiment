@@ -6,6 +6,8 @@ services:
       POSTGRES_DB: entretien
       POSTGRES_USER: entretien_user
       POSTGRES_PASSWORD: entretien_pass
+    ports:
+      - "127.0.0.1:5434:5432"
     volumes:
       - entretien_pgdata:/var/lib/postgresql/data
 
