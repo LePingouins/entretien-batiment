@@ -8,6 +8,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.lepingouin.entretientrajets",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Trajets utilise votre position pour enregistrer votre trajet.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Trajets utilise votre position en arrière-plan pour enregistrer votre trajet même lorsque vous utilisez d'autres applications.",
@@ -48,6 +49,8 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Trajets utilise votre position en arrière-plan pour enregistrer votre trajet.",
+          "locationWhenInUsePermission": "Trajets utilise votre position pour enregistrer votre trajet.",
+          "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
         }

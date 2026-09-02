@@ -202,9 +202,11 @@ export async function startLocationTracking(): Promise<void> {
   const already = await Location.hasStartedLocationUpdatesAsync(WAYPOINT_TASK);
   if (already) return;
   await Location.startLocationUpdatesAsync(WAYPOINT_TASK, {
-    accuracy: Location.Accuracy.High,
+    accuracy: Location.Accuracy.BestForNavigation,
     timeInterval: 30_000,
     distanceInterval: 100,
+    activityType: Location.ActivityType.AutomotiveNavigation,
+    pausesUpdatesAutomatically: false,
     showsBackgroundLocationIndicator: true,
     foregroundService: {
       notificationTitle: 'Trajet en cours',

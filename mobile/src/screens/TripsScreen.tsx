@@ -145,12 +145,10 @@ export default function TripsScreen({ onLogout }: Props) {
 
   const loadData = useCallback(async () => {
     try {
-      const [fetchedTrips, storedTripId, storedStart] = await Promise.all([
-        getMyTrips(),
+      const [storedTripId, storedStart] = await Promise.all([
         getActiveTripId(),
         getActiveTripStart(),
       ]);
-      setTrips(fetchedTrips);
       setActiveTripId(storedTripId);
       setActiveTripStart(storedStart);
       if (storedTripId && storedStart) {
@@ -158,9 +156,13 @@ export default function TripsScreen({ onLogout }: Props) {
         const wps = await getWaypoints(storedTripId);
         setWaypointCount(wps.length);
       }
-    } catch (err: any) {
-      const detail = err?.message ?? String(err);
-      Alert.alert('Erreur réseau', `Impossible de charger les trajets.\n\n${detail}`);
+      try {
+        setTrips(await getMyTrips());
+      } catch {
+        // Active trip state and GPS points remain available offline.
+      }
+    } catch {
+      Alert.alert('Erreur', 'Impossible de restaurer le trajet enregistré sur cet appareil.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -431,6 +433,23 @@ export default function TripsScreen({ onLogout }: Props) {
     doEndTrip();
   }
 
+  async function cancelEndTrip() {
+    setEndConfirmVisible(false);
+    setPreSubmitVisible(false);
+    setPendingEnd(null);
+    setPreSubmitData(null);
+    if (!activeTripId) return;
+    try {
+      if (IS_EXPO_GO) {
+        await startForegroundTracking(activeTripId);
+      } else {
+        await startLocationTracking();
+      }
+    } catch {
+      Alert.alert('Localisation', 'Impossible de reprendre le suivi GPS. Relancez le trajet avant de continuer.');
+    }
+  }
+
   // Race a promise against a timeout. Resolves null instead of throwing
   // so the end-trip flow can fall back gracefully when GPS is unavailable
   // (e.g. user forgot to stop a test trip indoors with no fix).
@@ -489,7 +508,7 @@ export default function TripsScreen({ onLogout }: Props) {
           'Aucune position GPS',
           'Impossible d\'obtenir une position. Voulez-vous quand même terminer le trajet ? La distance sera 0 km et vous pourrez l\'ajuster manuellement plus tard.',
           [
-            { text: 'Annuler', style: 'cancel' },
+            { text: 'Annuler', style: 'cancel', onPress: () => { cancelEndTrip().catch(() => {}); } },
             {
               text: 'Terminer sans GPS',
               style: 'destructive',
@@ -522,11 +541,12 @@ export default function TripsScreen({ onLogout }: Props) {
         }, 50);
       }
     } catch {
+      await cancelEndTrip();
       Alert.alert(
         'Erreur',
         'Une erreur est survenue. Voulez-vous forcer la fin du trajet ?',
         [
-          { text: 'Annuler', style: 'cancel' },
+          { text: 'Fermer', style: 'cancel' },
           { text: 'Forcer la fin', style: 'destructive', onPress: () => { forceEndTrip().catch(() => {}); } },
         ],
       );
@@ -713,7 +733,10 @@ export default function TripsScreen({ onLogout }: Props) {
       setActiveStops([]);
       setTrips((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     } catch {
-      Alert.alert('Erreur', 'Impossible de terminer le trajet. Réessayez.');
+      Alert.alert(
+        'En attente de connexion',
+        'Le trajet et tous les points GPS restent enregistrés sur cet appareil. Réessayez de soumettre lorsque la connexion revient.',
+      );
     } finally {
       setEndConfirmLoading(false);
     }
@@ -928,7 +951,7 @@ export default function TripsScreen({ onLogout }: Props) {
         visible={endConfirmVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => !endConfirmLoading && setEndConfirmVisible(false)}
+        onRequestClose={() => { if (!endConfirmLoading) cancelEndTrip().catch(() => {}); }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -954,7 +977,7 @@ export default function TripsScreen({ onLogout }: Props) {
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancel}
-                onPress={() => setEndConfirmVisible(false)}
+                onPress={() => { cancelEndTrip().catch(() => {}); }}
                 disabled={endConfirmLoading}
               >
                 <Text style={styles.modalCancelText}>Annuler</Text>
@@ -979,7 +1002,7 @@ export default function TripsScreen({ onLogout }: Props) {
         visible={preSubmitVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => !endConfirmLoading && setPreSubmitVisible(false)}
+        onRequestClose={() => { if (!endConfirmLoading) cancelEndTrip().catch(() => {}); }}
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { maxHeight: '90%' }]}>
