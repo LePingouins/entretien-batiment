@@ -81,6 +81,7 @@ export default function ExpensesScreen({ onLogout }: Props) {
   // Form fields
   const [date, setDate] = useState(todayIso());
   const [supplier, setSupplier] = useState('');
+  // description stores the canonical category id for consistency with backend
   const [description, setDescription] = useState('');
   const [subtotalStr, setSubtotalStr] = useState('');
   const [tpsStr, setTpsStr] = useState('');
@@ -88,6 +89,10 @@ export default function ExpensesScreen({ onLogout }: Props) {
   const [tipStr, setTipStr] = useState('');
   const [totalStr, setTotalStr] = useState('');
   const [notes, setNotes] = useState('');
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+
+  const HOTEL_MAX_CENTS = 13500;
+  const FIXED_MEAL_CENTS: Record<string, number> = { DEJEUNER: 1500, DINER: 2500, SOUPER: 3500 };
 
   // Pending receipt to upload after creation
   const [pendingReceiptUri, setPendingReceiptUri] = useState<string | null>(null);
@@ -123,6 +128,7 @@ export default function ExpensesScreen({ onLogout }: Props) {
     setNotes('');
     setPendingReceiptUri(null);
     setExistingReceipts([]);
+    setCategoryPickerOpen(false);
   }
 
   function openCreate() {
@@ -406,11 +412,30 @@ export default function ExpensesScreen({ onLogout }: Props) {
             </View>
 
             <View>
-              <Text style={styles.fieldLabel}>Description</Text>
+              <Text style={styles.fieldLabel}>Catégorie</Text>
+              <TouchableOpacity onPress={() => setCategoryPickerOpen(v => !v)} style={[styles.input, { justifyContent: 'center' }]}>
+                <Text>{description || '— Choisir une catégorie —'}</Text>
+              </TouchableOpacity>
+              {categoryPickerOpen && (
+                <View style={{ backgroundColor: '#fff', borderRadius: 8, marginTop: 8, padding: 8 }}>
+                  {[
+                    { id: 'DEJEUNER', label: 'Déjeuner' },
+                    { id: 'DINER', label: 'Dîner' },
+                    { id: 'SOUPER', label: 'Souper' },
+                    { id: 'HEBERGEMENT', label: 'Hébergement' },
+                    { id: 'AUTRES', label: 'Autres' },
+                  ].map(opt => (
+                    <TouchableOpacity key={opt.id} onPress={() => { setDescription(opt.id); setCategoryPickerOpen(false); }} style={{ paddingVertical: 8 }}>
+                      <Text>{opt.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Description libre</Text>
               <TextInput
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Détails de l’achat"
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Détails additionnels"
                 placeholderTextColor="#94A3B8"
                 style={[styles.input, { minHeight: 60 }]}
                 multiline
@@ -422,7 +447,19 @@ export default function ExpensesScreen({ onLogout }: Props) {
                 <Text style={styles.fieldLabel}>Sous-total ($)</Text>
                 <TextInput
                   value={subtotalStr}
-                  onChangeText={setSubtotalStr}
+                  onChangeText={(v) => {
+                    // allow editing but clamp above allowed caps
+                    const t = v.replace(',', '.');
+                    const n = Number(t);
+                    if (!Number.isFinite(n)) { setSubtotalStr(v); return; }
+                    const cents = Math.round(n * 100);
+                    if (description === 'HEBERGEMENT') {
+                      if (cents > HOTEL_MAX_CENTS) { setSubtotalStr((HOTEL_MAX_CENTS / 100).toFixed(2)); return; }
+                    }
+                    const fixed = FIXED_MEAL_CENTS[description];
+                    if (fixed !== undefined && cents > fixed) { setSubtotalStr((fixed / 100).toFixed(2)); return; }
+                    setSubtotalStr(v);
+                  }}
                   placeholder="0.00"
                   placeholderTextColor="#94A3B8"
                   style={styles.input}
