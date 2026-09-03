@@ -22,6 +22,10 @@ jobs:
 
   frontend-build:
     runs-on: ubuntu-latest
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js
@@ -35,15 +39,11 @@ jobs:
           npm run build
 
       - name: Setup sentry-cli (if SENTRY_AUTH_TOKEN present)
-        if: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        if: ${{ env.SENTRY_AUTH_TOKEN }}
         uses: getsentry/action-setup-sentry@v1
 
       - name: Create Sentry release and upload sourcemaps
-        if: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        if: ${{ env.SENTRY_AUTH_TOKEN }}
         working-directory: frontend
         run: |
           export SENTRY_RELEASE=${{ github.sha }}
