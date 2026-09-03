@@ -15,7 +15,9 @@ export interface ExpenseCategory {
 }
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
-  { id: 'REPAS',                code: '7158',   fr: 'Repas',                                       en: 'Meals' },
+  { id: 'DEJEUNER',             code: '7158',   fr: 'Déjeuner',                                    en: 'Breakfast' },
+  { id: 'DINER',                code: '7158',   fr: 'Dîner',                                       en: 'Lunch' },
+  { id: 'SOUPER',               code: '7158',   fr: 'Souper',                                      en: 'Dinner' },
   { id: 'ESSENCE',              code: '5210',   fr: 'Essence',                                     en: 'Fuel' },
   { id: 'FRAIS_DEPLACEMENT',    code: '6152',   fr: 'Frais déplacement (stationnement, taxis…)',   en: 'Travel (parking, taxi…)' },
   { id: 'HEBERGEMENT',          code: '7156',   fr: 'Hébergement',                                 en: 'Lodging' },

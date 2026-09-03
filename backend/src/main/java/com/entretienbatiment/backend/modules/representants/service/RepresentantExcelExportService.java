@@ -44,7 +44,9 @@ public class RepresentantExcelExportService {
      * Keep this in sync with `frontend/src/lib/expenseCategories.ts`.
      */
     private static final java.util.Map<String, String[]> CATEGORY_BY_ID = java.util.Map.ofEntries(
-        java.util.Map.entry("REPAS",              new String[] {"Repas",                                       "7158"}),
+        java.util.Map.entry("DEJEUNER",           new String[] {"Déjeuner",                                    "7158"}),
+        java.util.Map.entry("DINER",              new String[] {"Dîner",                                       "7158"}),
+        java.util.Map.entry("SOUPER",             new String[] {"Souper",                                      "7158"}),
         java.util.Map.entry("ESSENCE",            new String[] {"Essence",                                     "5210"}),
         java.util.Map.entry("FRAIS_DEPLACEMENT",  new String[] {"Frais déplacement (stationnement, taxis…)",   "6152"}),
         java.util.Map.entry("HEBERGEMENT",        new String[] {"Hébergement",                                 "7156"}),

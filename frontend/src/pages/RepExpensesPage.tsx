@@ -232,11 +232,38 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
   const [current, setCurrent]           = useState<Expense | null>(expense);
   const [autoCreated, setAutoCreated]   = useState(false);
 
-  // Reimbursement policy: total cannot exceed 201.21 $
-  const MAX_TOTAL = 201.21;
-  const setTotalCapped = (v: string) => {
+  // Per-diem categories have a fixed subtotal (locked, not editable).
+  const FIXED_MEAL_CENTS: Record<string, number> = { DEJEUNER: 1500, DINER: 2500, SOUPER: 3500 };
+  // Lodging has a max reimbursable cap — typing over it clamps down to the cap.
+  const HOTEL_MAX_CENTS = 13500; // $135.00
+
+  const setTotalCapped = (v: string) => { setTotal(v); };
+
+  // Subtotal input handler: clamps lodging to its cap; fixed-meal categories are read-only.
+  const handleSubtotalChange = (v: string) => {
     const n = parseFloat(v);
-    setTotal(isFinite(n) && n > MAX_TOTAL ? MAX_TOTAL.toFixed(2) : v);
+    if (!isFinite(n)) { setSubtotal(v); return; }
+    const cents = Math.round(n * 100);
+    // Lodging: clamp to hotel cap
+    if (description === 'HEBERGEMENT') {
+      if (cents > HOTEL_MAX_CENTS) {
+        setSubtotal((HOTEL_MAX_CENTS / 100).toFixed(2));
+        return;
+      }
+      setSubtotal(v);
+      return;
+    }
+    // Fixed meal categories: allow lower amounts but clamp above per-diem
+    const fixed = FIXED_MEAL_CENTS[description];
+    if (fixed !== undefined) {
+      if (cents > fixed) {
+        setSubtotal((fixed / 100).toFixed(2));
+        return;
+      }
+      setSubtotal(v);
+      return;
+    }
+    setSubtotal(v);
   };
 
   const setters = { setSubtotal, setTps, setTvq, setTvh, setTip, setTotal: setTotalCapped, setSupplier };
@@ -266,6 +293,13 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
     if (rates.tvh !== undefined) setTvh((sub * rates.tvh).toFixed(2)); else setTvh('');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subtotal, province, linked]);
+
+  // When category switches to a fixed per-diem meal, lock the subtotal to its amount.
+  useEffect(() => {
+    const fixed = FIXED_MEAL_CENTS[description];
+    if (fixed !== undefined) setSubtotal(centsToDollars(fixed));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [description]);
 
   // Auto-compute total = sum of all components (only when linked)
   useEffect(() => {
@@ -663,24 +697,32 @@ const ExpenseModal: React.FC<ModalProps> = ({ expense, onClose, onSaved }) => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-            {[
-              { label: lang === 'fr' ? 'Sous-total' : 'Subtotal', value: subtotal, set: setSubtotal },
-              { label: 'TPS', value: tps, set: setTps },
-              { label: 'TVQ', value: tvq, set: setTvq },
-              { label: 'TVH', value: tvh, set: setTvh },
-              { label: lang === 'fr' ? 'Pourboire' : 'Tip', value: tip, set: setTip },
-            ].map((f) => (
-              <label className="text-xs" key={f.label}>
-                <div className="text-surface-600 dark:text-surface-300 mb-1 truncate">{f.label}</div>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={f.value}
-                  onChange={(e) => f.set(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded border border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-900 dark:text-white text-sm"
-                />
-              </label>
-            ))}
+            {(() => {
+              const subtotalLabel = lang === 'fr' ? 'Sous-total' : 'Subtotal';
+              const fields = [
+                { label: subtotalLabel, value: subtotal, set: handleSubtotalChange, key: 'subtotal' },
+                { label: 'TPS', value: tps, set: setTps, key: 'tps' },
+                { label: 'TVQ', value: tvq, set: setTvq, key: 'tvq' },
+                { label: 'TVH', value: tvh, set: setTvh, key: 'tvh' },
+                { label: lang === 'fr' ? 'Pourboire' : 'Tip', value: tip, set: setTip, key: 'tip' },
+              ];
+              return fields.map((f) => (
+                <label className="text-xs" key={f.key}>
+                  <div className="text-surface-600 dark:text-surface-300 mb-1 truncate">{f.label}</div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={f.value}
+                    onChange={(e) => f.set(e.target.value)}
+                    readOnly={false}
+                    className="w-full px-2 py-1.5 rounded border border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-900 dark:text-white text-sm"
+                  />
+                  {f.key === 'subtotal' && description === 'HEBERGEMENT' && (
+                    <div className="text-xs text-surface-400 mt-1">{lang === 'fr' ? 'Max 135.00 $' : 'Max $135.00'}</div>
+                  )}
+                </label>
+              ));
+            })()}
             {/* Total with link/unlink toggle */}
             <div className="text-xs">
               <div className="flex items-center gap-1 text-surface-600 dark:text-surface-300 mb-1">
