@@ -86,3 +86,5 @@ backend/uploads/
 # Uncomment if you don't want to track docker volumes
 # docker-data/
 node_modules
+key 
+key.pub 
