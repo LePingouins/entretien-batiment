@@ -206,6 +206,13 @@ public class AdminRepresentantsController {
         sb.append("GRAND TOTAL (KM + Dépenses):,,,,,,,,,,,");
         sb.append(String.format("%.2f", (totalReimb + totAll) / 100.0)).append("\n");
 
+        // Fixed per-diem amounts (hors taxes et pourboires)
+        sb.append("\nDépenses fixes (hors taxes et pourboires):\n");
+        sb.append("Déjeuner,").append(String.format("%.2f", 15.00)).append("\n");
+        sb.append("Dîner,").append(String.format("%.2f", 25.00)).append("\n");
+        sb.append("Souper,").append(String.format("%.2f", 35.00)).append("\n");
+        sb.append("Hôtel,").append(String.format("%.2f", 135.00)).append("\n");
+
         byte[] csv = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
         String filename = "compte-de-depenses-" + u.getEmail().replace('@', '_') + "-" + startDate + "_" + endDate + ".csv";
         return ResponseEntity.ok()

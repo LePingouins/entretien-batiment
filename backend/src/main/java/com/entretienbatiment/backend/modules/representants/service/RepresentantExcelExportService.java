@@ -224,6 +224,11 @@ public class RepresentantExcelExportService {
             // When opted in, one row is added per calendar month overlapping
             // the selected period.
             final long PHONE_CENTS = 7_000L; // $70.00
+                    // Fixed per-diem amounts (hors taxes et pourboires)
+                    final long BREAKFAST_CENTS = 1_500L; // $15.00
+                    final long LUNCH_CENTS     = 2_500L; // $25.00
+                    final long DINNER_CENTS    = 3_500L; // $35.00
+                    final long HOTEL_CENTS     = 13_500L; // $135.00
             List<LocalDate> phoneMonths = new ArrayList<>();
             if (includePhoneAllowance) {
                 LocalDate cur = startDate.withDayOfMonth(1);
@@ -273,15 +278,56 @@ public class RepresentantExcelExportService {
             final int summaryColCode  = 16; // Q
             final int summaryColValue = 17; // R
             int summaryRow = 4;             // sits below the NOM / DATE block
+                // First, add a small block with fixed per-diem amounts (hors taxes et pourboires)
+                Row fixedTitleRow = sheet.getRow(summaryRow);
+                if (fixedTitleRow == null) fixedTitleRow = sheet.createRow(summaryRow);
+                Cell fixedTitleCell = fixedTitleRow.createCell(summaryColCode);
+                fixedTitleCell.setCellValue("Dépenses fixes (hors taxes et pourboires)");
+                fixedTitleCell.setCellStyle(boldStyle(wb, 11));
+                sheet.addMergedRegion(new CellRangeAddress(summaryRow, summaryRow, summaryColCode, summaryColValue));
+                summaryRow++;
 
-            Row sumTitle = sheet.getRow(summaryRow);
-            if (sumTitle == null) sumTitle = sheet.createRow(summaryRow);
-            Cell sumTitleCell = sumTitle.createCell(summaryColCode);
-            sumTitleCell.setCellValue("Sommaire des coûts (hors taxes)");
-            sumTitleCell.setCellStyle(boldStyle(wb, 11));
-            sheet.addMergedRegion(new CellRangeAddress(summaryRow, summaryRow,
-                    summaryColCode, summaryColValue));
-            summaryRow++;
+                // Write each fixed amount line
+                Row f1 = sheet.getRow(summaryRow);
+                if (f1 == null) f1 = sheet.createRow(summaryRow);
+                f1.createCell(summaryColCode).setCellValue("Déjeuner");
+                Cell fv1 = f1.createCell(summaryColValue);
+                fv1.setCellValue(BREAKFAST_CENTS / 100.0);
+                fv1.setCellStyle(money);
+                summaryRow++;
+
+                Row f2 = sheet.getRow(summaryRow);
+                if (f2 == null) f2 = sheet.createRow(summaryRow);
+                f2.createCell(summaryColCode).setCellValue("Dîner");
+                Cell fv2 = f2.createCell(summaryColValue);
+                fv2.setCellValue(LUNCH_CENTS / 100.0);
+                fv2.setCellStyle(money);
+                summaryRow++;
+
+                Row f3 = sheet.getRow(summaryRow);
+                if (f3 == null) f3 = sheet.createRow(summaryRow);
+                f3.createCell(summaryColCode).setCellValue("Souper");
+                Cell fv3 = f3.createCell(summaryColValue);
+                fv3.setCellValue(DINNER_CENTS / 100.0);
+                fv3.setCellStyle(money);
+                summaryRow++;
+
+                Row f4 = sheet.getRow(summaryRow);
+                if (f4 == null) f4 = sheet.createRow(summaryRow);
+                f4.createCell(summaryColCode).setCellValue("Hôtel");
+                Cell fv4 = f4.createCell(summaryColValue);
+                fv4.setCellValue(HOTEL_CENTS / 100.0);
+                fv4.setCellStyle(money);
+                summaryRow++;
+
+                // Then add the existing Sommaire des coûts title below the fixed block
+                Row sumTitle = sheet.getRow(summaryRow);
+                if (sumTitle == null) sumTitle = sheet.createRow(summaryRow);
+                Cell sumTitleCell = sumTitle.createCell(summaryColCode);
+                sumTitleCell.setCellValue("Sommaire des coûts (hors taxes)");
+                sumTitleCell.setCellStyle(boldStyle(wb, 11));
+                sheet.addMergedRegion(new CellRangeAddress(summaryRow, summaryRow, summaryColCode, summaryColValue));
+                summaryRow++;
 
             for (String code : SUMMARY_CODES) {
                 Row sr = sheet.getRow(summaryRow);
