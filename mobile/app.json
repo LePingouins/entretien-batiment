@@ -1,17 +1,22 @@
 {
   "expo": {
-    "name": "Trajets",
+    "name": "Entretien Bâtiment",
     "slug": "entretien-trajets",
-    "version": "1.0.0",
+    "scheme": "entretien-batiment",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lepingouin.entretientrajets",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Trajets utilise votre position pour enregistrer votre trajet.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Trajets utilise votre position en arrière-plan pour enregistrer votre trajet même lorsque vous utilisez d'autres applications.",
+        "NSLocationWhenInUseUsageDescription": "Entretien Bâtiment utilise votre position pour enregistrer votre trajet.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Entretien Bâtiment utilise votre position en arrière-plan pour enregistrer votre trajet même lorsque vous utilisez d'autres applications.",
         "UIBackgroundModes": [
           "location",
           "fetch"
@@ -19,6 +24,7 @@
       }
     },
     "android": {
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#1D4ED8",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -44,19 +50,34 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Entretien Bâtiment utilise vos photos pour joindre des reçus et des preuves de travail.",
+          "cameraPermission": "Entretien Bâtiment utilise la caméra pour photographier des reçus et des preuves de travail.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Trajets utilise votre position en arrière-plan pour enregistrer votre trajet.",
-          "locationWhenInUsePermission": "Trajets utilise votre position pour enregistrer votre trajet.",
+          "locationAlwaysAndWhenInUsePermission": "Entretien Bâtiment utilise votre position en arrière-plan pour enregistrer votre trajet.",
+          "locationWhenInUsePermission": "Entretien Bâtiment utilise votre position pour enregistrer votre trajet.",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
+      "apiUrl": "https://entretien-batiment.com",
       "eas": {
         "projectId": "800c51cd-503c-47cc-8a39-bfa69a4094d0"
       }

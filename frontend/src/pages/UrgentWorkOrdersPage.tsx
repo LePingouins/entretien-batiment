@@ -928,6 +928,15 @@ function UrgentWorkOrdersPage() {
                 {errors.location && <div className="text-red-500 text-xs">{errors.location.message}</div>}
               </div>
               <div>
+                <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.priority}</label>
+                <select className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`} {...register('priority')}>
+                  {(['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const).map(p => (
+                    <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>{getPriorityLabel(t, p)}</option>
+                  ))}
+                </select>
+                {(errors as Record<string, any>).priority && <div className="text-red-500 text-xs">{(errors as Record<string, any>).priority.message}</div>}
+              </div>
+              <div>
                 <label className={`block font-semibold mb-1 text-sm ${colorScheme === 'dark' ? 'text-surface-400' : 'text-brand-700'}`}>{t.assignedTechnician}</label>
                 <select className={`border rounded-lg px-3 py-2 w-full text-sm focus:ring-2 transition-all duration-200 ${colorScheme === 'dark' ? 'bg-surface-700 border-surface-700 text-surface-100 focus:ring-brand-500' : 'focus:ring-brand-400'}`} {...register('assignedToUserId')}>
                   {!defaultTechnicianId && <option value="" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Default technician (André)</option>}
@@ -1077,7 +1086,11 @@ function UrgentWorkOrdersPage() {
           </div>
           <div>
             <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.location}</label>
-            <input className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('location')} />
+            <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('location')}>
+              <option value="" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>-- {t.selectLocation || 'Select Location'} --</option>
+              <option value="horizon-nature" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Horizon Nature</option>
+              <option value="inewa" className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>Inewa</option>
+            </select>
             {editErrors.location && <div className={styles.errorMsg}>{editErrors.location.message}</div>}
           </div>
           <div>
@@ -1091,7 +1104,14 @@ function UrgentWorkOrdersPage() {
               ))}
             </select>
           </div>
-          {/* No Priority field for UrgentWorkOrders */}
+          <div>
+            <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.priority}</label>
+            <select className={styles.input + ' ' + (colorScheme === 'dark' ? '!bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('priority' as any)}>
+              {(['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const).map(p => (
+                <option key={p} value={p} className={colorScheme === 'dark' ? 'bg-surface-700' : ''}>{getPriorityLabel(t, p)}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className={styles.label + ' ' + (colorScheme === 'dark' ? 'text-surface-400' : '')}>{t.dueDate}</label>
             <input type="date" className={styles.input + ' ' + (colorScheme === 'dark' ? '[color-scheme:dark] !bg-surface-700 !border-surface-700 !text-surface-100 focus:!border-brand-500' : '')} {...editRegister('dueDate' as any)} />

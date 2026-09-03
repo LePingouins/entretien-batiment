@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Brute-force protection on POST /api/auth/login.
+ * Brute-force protection on browser and mobile login endpoints.
  * Limits each IP to MAX_ATTEMPTS within WINDOW_SECONDS before returning 429.
  * The counter resets after WINDOW_SECONDS of no failed attempts.
  */
@@ -30,8 +30,11 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !(HttpMethod.POST.matches(request.getMethod())
-                && "/api/auth/login".equals(request.getServletPath()));
+        if (!HttpMethod.POST.matches(request.getMethod())) {
+            return true;
+        }
+        String path = request.getServletPath();
+        return !("/api/auth/login".equals(path) || "/api/auth/mobile/login".equals(path));
     }
 
     @Override

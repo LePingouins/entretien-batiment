@@ -10,14 +10,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { login } from '../lib/api';
-import { saveToken } from '../lib/storage';
 
 interface Props {
-  onLoginSuccess: () => void;
+  onLogin: (email: string, password: string, rememberMe: boolean) => Promise<void>;
 }
 
-export default function LoginScreen({ onLoginSuccess }: Props) {
+export default function LoginScreen({ onLogin }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [stayLoggedIn, setStayLoggedIn] = useState(true);
@@ -30,9 +28,7 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
     }
     setLoading(true);
     try {
-      const token = await login(email.trim().toLowerCase(), password, stayLoggedIn);
-      await saveToken(token);
-      onLoginSuccess();
+      await onLogin(email.trim().toLowerCase(), password, stayLoggedIn);
     } catch (err: any) {
       const msg =
         err?.response?.status === 401
@@ -50,8 +46,8 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>Trajets</Text>
-        <Text style={styles.subtitle}>Enregistrement de kilométrage</Text>
+        <Text style={styles.title}>Entretien Bâtiment</Text>
+        <Text style={styles.subtitle}>Portail mobile des opérations</Text>
 
         <TextInput
           style={styles.input}
@@ -107,13 +103,13 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F4F7F5',
     justifyContent: 'center',
     padding: 24,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 8,
     padding: 28,
     shadowColor: '#000',
     shadowOpacity: 0.08,
@@ -124,7 +120,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1D4ED8',
+    color: '#176B4D',
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -138,7 +134,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 10,
+    borderRadius: 7,
     paddingHorizontal: 16,
     paddingVertical: 13,
     fontSize: 16,
@@ -146,8 +142,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   button: {
-    backgroundColor: '#1D4ED8',
-    borderRadius: 10,
+    backgroundColor: '#176B4D',
+    borderRadius: 7,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 6,
@@ -178,8 +174,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#1D4ED8',
-    borderColor: '#1D4ED8',
+    backgroundColor: '#176B4D',
+    borderColor: '#176B4D',
   },
   checkmark: {
     color: '#fff',

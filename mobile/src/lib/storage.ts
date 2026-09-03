@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const ACTIVE_TRIP_ID_KEY = 'active_trip_id';
 const ACTIVE_TRIP_START_KEY = 'active_trip_start';
 const ACTIVE_TRIP_METHOD_KEY = 'active_trip_method';
@@ -12,15 +13,33 @@ const PLANNED_END_KEY = 'planned_end_address';
 // ─── JWT Token ────────────────────────────────────────────────────────────────
 
 export async function saveToken(token: string): Promise<void> {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await SecureStore.setItemAsync(TOKEN_KEY, token, {
+    keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+  });
+}
+
+export async function saveSession(accessToken: string, refreshToken: string): Promise<void> {
+  await Promise.all([
+    saveToken(accessToken),
+    SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken, {
+      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    }),
+  ]);
 }
 
 export async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync(TOKEN_KEY);
 }
 
+export async function getRefreshToken(): Promise<string | null> {
+  return SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+}
+
 export async function clearToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await Promise.all([
+    SecureStore.deleteItemAsync(TOKEN_KEY),
+    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+  ]);
 }
 
 // ─── Active Trip ──────────────────────────────────────────────────────────────

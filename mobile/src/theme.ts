@@ -1,0 +1,16 @@
+export const colors = {
+  background: '#F4F7F5',
+  surface: '#FFFFFF',
+  surfaceMuted: '#E9EFEC',
+  border: '#D6E0DB',
+  text: '#17211C',
+  textMuted: '#607068',
+  primary: '#176B4D',
+  primaryPressed: '#10543B',
+  blue: '#2563EB',
+  teal: '#0F766E',
+  amber: '#B45309',
+  red: '#C2413B',
+  green: '#15803D',
+  charcoal: '#33413A',
+} as const;

@@ -9,6 +9,8 @@ import com.entretienbatiment.backend.modules.auth.service.AuthService;
 import com.entretienbatiment.backend.modules.auth.util.CookieUtil;
 import com.entretienbatiment.backend.modules.auth.dto.LoginRequest;
 import com.entretienbatiment.backend.modules.auth.dto.LoginResponse;
+import com.entretienbatiment.backend.modules.auth.dto.MobileRefreshRequest;
+import com.entretienbatiment.backend.modules.auth.dto.MobileTokenResponse;
 import com.entretienbatiment.backend.modules.audit.service.AuditLogService;
 
 
@@ -42,6 +44,14 @@ public class AuthController {
         return new LoginResponse(result.accessToken());
     }
 
+    @PostMapping("/mobile/login")
+    public MobileTokenResponse mobileLogin(@RequestBody LoginRequest req, HttpServletRequest request) {
+        AuthService.LoginResult result = authService.login(req.email(), req.password(), req.rememberMeEnabled());
+        auditLogService.logWithUser("LOGIN", result.userId(), result.email(), result.role(),
+                null, null, null, null, request);
+        return new MobileTokenResponse(result.accessToken(), result.refreshTokenValue());
+    }
+
     @PostMapping("/refresh")
     public LoginResponse refresh(HttpServletRequest request, HttpServletResponse res) {
         String cookieValue = readCookie(request, cookieUtil.getCookieName());
@@ -51,6 +61,12 @@ public class AuthController {
         return new LoginResponse(result.accessToken());
     }
 
+    @PostMapping("/mobile/refresh")
+    public MobileTokenResponse mobileRefresh(@RequestBody MobileRefreshRequest req) {
+        AuthService.RefreshResult result = authService.refresh(req.refreshToken());
+        return new MobileTokenResponse(result.accessToken(), result.refreshTokenValue());
+    }
+
     @PostMapping("/logout")
     public void logout(HttpServletRequest request, HttpServletResponse res) {
         // Log before revoking so the SecurityContext still holds user info
@@ -58,6 +74,12 @@ public class AuthController {
         String cookieValue = readCookie(request, cookieUtil.getCookieName());
         authService.logout(cookieValue);
         cookieUtil.clearRefreshCookie(res);
+    }
+
+    @PostMapping("/mobile/logout")
+    public void mobileLogout(@RequestBody MobileRefreshRequest req, HttpServletRequest request) {
+        auditLogService.log("LOGOUT", null, null, null, null, request);
+        authService.logout(req.refreshToken());
     }
 
     private String readCookie(HttpServletRequest request, String name) {
