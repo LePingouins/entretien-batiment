@@ -46,6 +46,7 @@ interface Props {
   urgent?: boolean;
   mode?: 'create' | 'edit';
   saving: boolean;
+  titleOverride?: string;
   initialValue?: Partial<Omit<OrderFormValue, 'photos' | 'invoice' | 'removeAttachment' | 'removeInvoice'>>;
   existing?: OrderFormExisting;
   onClose: () => void;
@@ -64,7 +65,7 @@ const PRIORITIES: Array<{ value: WorkOrderPriority; labelKey: 'priorityLow' | 'p
   { value: 'URGENT', labelKey: 'priorityUrgent' },
 ];
 
-export default function OrderFormModal({ visible, urgent = false, mode = 'create', saving, initialValue, existing, onClose, onSubmit }: Props) {
+export default function OrderFormModal({ visible, urgent = false, mode = 'create', saving, titleOverride, initialValue, existing, onClose, onSubmit }: Props) {
   const { t } = useLang();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -136,9 +137,9 @@ export default function OrderFormModal({ visible, urgent = false, mode = 'create
     });
   }
 
-  const heading = mode === 'edit'
+  const heading = titleOverride ?? (mode === 'edit'
     ? (urgent ? t.editUrgentWorkOrder : t.editWorkOrder)
-    : (urgent ? t.newUrgentWorkOrder : t.newWorkOrder);
+    : (urgent ? t.newUrgentWorkOrder : t.newWorkOrder));
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>

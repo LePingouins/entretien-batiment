@@ -24,6 +24,8 @@ import type {
   MyPageAccessResponse,
   PageResponse,
   PreventiveTask,
+  ProjectBoardTask,
+  ProjectBoardTaskInput,
   ShoppingListResponse,
   Subscription,
   SubscriptionInput,
@@ -365,6 +367,68 @@ export async function updateUrgentWorkOrder(
     return res.data;
   }
   const res = await api.patch<UrgentWorkOrder>(`/api/urgent-work-orders/${id}`, input);
+  return res.data;
+}
+
+export async function getProjectBoardTasks(params?: {
+  status?: WorkOrderStatus;
+  q?: string;
+  location?: string;
+}): Promise<ProjectBoardTask[]> {
+  const res = await api.get<ProjectBoardTask[]>('/api/project-board', { params });
+  return res.data;
+}
+
+export async function getProjectBoardTask(id: number): Promise<ProjectBoardTask> {
+  const res = await api.get<ProjectBoardTask>(`/api/project-board/${id}`);
+  return res.data;
+}
+
+export async function createProjectBoardTask(input: ProjectBoardTaskInput, files?: WorkOrderFileOptions): Promise<ProjectBoardTask> {
+  if (hasFileChanges(files)) {
+    const form = new FormData();
+    form.append('title', input.title);
+    form.append('description', input.description);
+    form.append('location', input.location);
+    form.append('priority', input.priority);
+    if (input.status) form.append('status', input.status);
+    if (input.dueDate) form.append('dueDate', input.dueDate.length === 10 ? `${input.dueDate}T00:00:00` : input.dueDate);
+    if (input.assignedToUserId != null) form.append('assignedToUserId', String(input.assignedToUserId));
+    files?.photos?.forEach((photo) => appendFile(form, 'files', photo));
+    if (files?.invoice) appendFile(form, 'invoiceFiles', files.invoice);
+    const res = await api.post<ProjectBoardTask>('/api/project-board', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  }
+  const res = await api.post<ProjectBoardTask>('/api/project-board', input);
+  return res.data;
+}
+
+export async function updateProjectBoardTask(
+  id: number,
+  input: Partial<ProjectBoardTaskInput>,
+  files?: WorkOrderFileOptions,
+): Promise<ProjectBoardTask> {
+  if (hasFileChanges(files)) {
+    const form = new FormData();
+    if (input.title !== undefined) form.append('title', input.title);
+    if (input.description !== undefined) form.append('description', input.description);
+    if (input.location !== undefined) form.append('location', input.location);
+    if (input.priority !== undefined) form.append('priority', input.priority);
+    if (input.status !== undefined) form.append('status', input.status);
+    if (input.dueDate) form.append('dueDate', input.dueDate.length === 10 ? `${input.dueDate}T00:00:00` : input.dueDate);
+    if (input.assignedToUserId != null) form.append('assignedToUserId', String(input.assignedToUserId));
+    if (files?.removeAttachment) form.append('removeAttachment', 'true');
+    if (files?.removeInvoice) form.append('removeInvoice', 'true');
+    files?.photos?.forEach((photo) => appendFile(form, 'files', photo));
+    if (files?.invoice) appendFile(form, 'invoiceFiles', files.invoice);
+    const res = await api.patch<ProjectBoardTask>(`/api/project-board/${id}`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  }
+  const res = await api.patch<ProjectBoardTask>(`/api/project-board/${id}`, input);
   return res.data;
 }
 

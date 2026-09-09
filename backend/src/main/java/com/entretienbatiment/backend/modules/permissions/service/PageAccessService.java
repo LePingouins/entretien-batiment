@@ -43,6 +43,8 @@ public class PageAccessService {
     public static final String PAGE_REP_EXPENSES = "REP_EXPENSES";
     public static final String PAGE_REPRESENTANTS = "REPRESENTANTS";
     public static final String PAGE_PREVENTIVE_MAINTENANCE = "PREVENTIVE_MAINTENANCE";
+    /** Exclusive to the MANAGER role — not part of the admin role/user override matrix. */
+    public static final String PAGE_PROJECT_BOARD = "PROJECT_BOARD";
 
     private static final List<String> MANAGED_PAGE_KEYS = List.of(
             PAGE_DASHBOARD,
@@ -81,11 +83,14 @@ public class PageAccessService {
     @Transactional(readOnly = true)
     public List<PageAccessEntryDto> getCurrentUserPageAccess(Authentication authentication) {
         AppUser user = requireAuthenticatedUser(authentication);
-        return toPageEntries(resolveEffectiveAccess(
+        List<PageAccessEntryDto> entries = new ArrayList<>(toPageEntries(resolveEffectiveAccess(
                 effectiveAccessRole(user.getRole()),
                 loadStoredRoleRules(),
                 mapOverridesByPage(userPageAccessOverrideRepository.findByUserId(user.getId()))
-        ));
+        )));
+        // PROJECT_BOARD is exclusive to MANAGER (and DEVELOPPER for testing) and bypasses the admin role/override matrix entirely.
+        entries.add(new PageAccessEntryDto(PAGE_PROJECT_BOARD, user.getRole() == Role.MANAGER || user.getRole() == Role.DEVELOPPER));
+        return entries;
     }
 
     @Transactional(readOnly = true)
@@ -217,6 +222,15 @@ public class PageAccessService {
         }
 
         String pageKey = rawPageKey.trim().toUpperCase(Locale.ROOT);
+
+        if (pageKey.equals(PAGE_PROJECT_BOARD)) {
+            // Exclusive to MANAGER (and DEVELOPPER for testing) — bypasses the admin role/override matrix entirely.
+            return userRepository.findByEmailIgnoreCase(authentication.getName())
+                .filter(AppUser::isEnabled)
+                .map(user -> user.getRole() == Role.MANAGER || user.getRole() == Role.DEVELOPPER)
+                .orElse(false);
+        }
+
         if (!MANAGED_PAGE_KEYS.contains(pageKey)) {
             return false;
         }

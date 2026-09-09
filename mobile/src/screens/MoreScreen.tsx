@@ -34,6 +34,7 @@ type MoreNavigation = CompositeNavigationProp<
 const ROLE_LABELS = {
   ADMIN: 'Administrateur',
   DEVELOPPER: 'Développeur',
+  MANAGER: 'Chef de projet',
   TECH: 'Technicien',
   WORKER: 'Employé',
   REPRESENTANT: 'Représentant',
@@ -43,7 +44,7 @@ export default function MoreScreen() {
   const navigation = useNavigation<MoreNavigation>();
   const { user, canAccess, signOut } = useAuth();
   const { lang, setLang, t } = useLang();
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>

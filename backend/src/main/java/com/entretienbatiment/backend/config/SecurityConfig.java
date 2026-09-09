@@ -53,6 +53,9 @@ public class SecurityConfig {
             if (u.getRole() == Role.DEVELOPPER) {
                 // DEVELOPPER keeps its own role while inheriting ADMIN permissions.
                 builder.roles(Role.DEVELOPPER.name(), Role.ADMIN.name());
+            } else if (u.getRole() == Role.MANAGER) {
+                // MANAGER keeps its own role while inheriting ADMIN permissions.
+                builder.roles(Role.MANAGER.name(), Role.ADMIN.name());
             } else {
                 builder.roles(u.getRole().name());
             }

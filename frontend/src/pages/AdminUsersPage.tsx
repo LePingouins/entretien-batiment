@@ -30,7 +30,7 @@ import {
   updateAdminUserRole,
 } from '../lib/api';
 
-const ROLE_OPTIONS: UserRole[] = ['ADMIN', 'TECH', 'WORKER', 'REPRESENTANT'];
+const ROLE_OPTIONS: UserRole[] = ['ADMIN', 'MANAGER', 'TECH', 'WORKER', 'REPRESENTANT'];
 
 const PAGE_KEY_ORDER: PageKey[] = [
   'DASHBOARD',
@@ -52,6 +52,7 @@ const PAGE_KEY_ORDER: PageKey[] = [
 const FALLBACK_ALLOWED_BY_ROLE: Record<UserRole, PageKey[]> = {
   ADMIN: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS', 'REP_TRIPS', 'REP_EXPENSES', 'REPRESENTANTS', 'PREVENTIVE_MAINTENANCE'],
   DEVELOPPER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS', 'REP_TRIPS', 'REP_EXPENSES', 'REPRESENTANTS', 'PREVENTIVE_MAINTENANCE'],
+  MANAGER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'ARCHIVE', 'ANALYTICS', 'USERS', 'NOTIFICATIONS', 'INVENTORY', 'INVENTORY_PRODUCTS', 'REP_TRIPS', 'REP_EXPENSES', 'REPRESENTANTS', 'PREVENTIVE_MAINTENANCE', 'PROJECT_BOARD'],
   TECH: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS', 'PREVENTIVE_MAINTENANCE'],
   WORKER: ['DASHBOARD', 'WORK_ORDERS', 'URGENT_WORK_ORDERS', 'MILEAGE', 'NOTIFICATIONS'],
   REPRESENTANT: ['REP_TRIPS', 'REP_EXPENSES'],
@@ -152,10 +153,11 @@ const AdminUsersPage: React.FC = () => {
   const roleLabel = React.useCallback((role: UserRole): string => {
     if (role === 'ADMIN') return t.adminUsersRoleAdmin || 'Admin';
     if (role === 'DEVELOPPER') return t.adminUsersRoleDevelopper || 'Developper';
+    if (role === 'MANAGER') return t.adminUsersRoleManager || 'Project Manager';
     if (role === 'TECH') return t.adminUsersRoleTech || 'Technician';
     if (role === 'REPRESENTANT') return t.adminUsersRoleRepresentant || 'Représentant';
     return t.adminUsersRoleWorker || 'Worker';
-  }, [t.adminUsersRoleAdmin, t.adminUsersRoleDevelopper, t.adminUsersRoleTech, t.adminUsersRoleWorker, t.adminUsersRoleRepresentant]);
+  }, [t.adminUsersRoleAdmin, t.adminUsersRoleDevelopper, t.adminUsersRoleManager, t.adminUsersRoleTech, t.adminUsersRoleWorker, t.adminUsersRoleRepresentant]);
 
   const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -321,6 +323,7 @@ const AdminUsersPage: React.FC = () => {
     }
 
     if (role === 'ADMIN' || role === 'DEVELOPPER') return rule.admin;
+    if (role === 'MANAGER') return rule.admin;
     if (role === 'TECH') return rule.tech;
     return rule.worker;
   }, [pageRoleRules]);

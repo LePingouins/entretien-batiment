@@ -67,8 +67,8 @@ const AdminLayout: React.FC = () => {
   };
 
   const { lang, setLang, t } = useLang();
-  const roleLabel = role ? (({ ADMIN: t.adminUsersRoleAdmin, DEVELOPPER: t.adminUsersRoleDevelopper, TECHNICIEN: t.adminUsersRoleTech, WORKER: t.adminUsersRoleWorker, REPRESENTANT: t.adminUsersRoleRepresentant } as Record<string, string | undefined>)[role] ?? role) : '';
-  const pagePath = React.useCallback((pageKey: 'DASHBOARD' | 'WORK_ORDERS' | 'URGENT_WORK_ORDERS' | 'MILEAGE' | 'ANALYTICS' | 'USERS' | 'ARCHIVE' | 'REP_TRIPS' | 'REP_EXPENSES') => {
+  const roleLabel = role ? (({ ADMIN: t.adminUsersRoleAdmin, DEVELOPPER: t.adminUsersRoleDevelopper, MANAGER: t.adminUsersRoleManager, TECHNICIEN: t.adminUsersRoleTech, WORKER: t.adminUsersRoleWorker, REPRESENTANT: t.adminUsersRoleRepresentant } as Record<string, string | undefined>)[role] ?? role) : '';
+  const pagePath = React.useCallback((pageKey: 'DASHBOARD' | 'WORK_ORDERS' | 'URGENT_WORK_ORDERS' | 'MILEAGE' | 'ANALYTICS' | 'USERS' | 'ARCHIVE' | 'REP_TRIPS' | 'REP_EXPENSES' | 'PROJECT_BOARD') => {
     return getRolePagePath(role, pageKey);
   }, [role]);
   // Add/remove dark class on body for dark mode
@@ -172,6 +172,7 @@ const AdminLayout: React.FC = () => {
     if (canAccess('REPRESENTANTS')) items.push({ label: t.representantsNav || (lang === 'fr' ? 'Représentants' : 'Representatives'), path: '/admin/representants', group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (role === 'DEVELOPPER' && canAccess('REP_EXPENSES')) items.push({ label: lang === 'fr' ? 'Mes dépenses' : 'My Expenses', path: pagePath('REP_EXPENSES'), group: lang === 'fr' ? 'Opérations' : 'Operations' });
     if (canAccess('USERS')) items.push({ label: t.adminUsersNav || 'Users', path: pagePath('USERS'), group: lang === 'fr' ? 'Administration' : 'Administration' });
+    if (canAccess('PROJECT_BOARD')) items.push({ label: t.projectBoardNav || 'Project Board', path: pagePath('PROJECT_BOARD'), group: lang === 'fr' ? 'Administration' : 'Administration' });
     items.push({ label: t.documentsPage || 'Documents', path: '/admin/documents', group: lang === 'fr' ? 'Ressources' : 'Resources' });
     items.push({ label: t.shoppingList || 'Shopping List', path: '/admin/shopping-list', group: lang === 'fr' ? 'Ressources' : 'Resources' });
     if (canAccess('INVENTORY')) items.push({ label: t.invSessionsTitle || 'Inventory', path: '/admin/inventory', group: lang === 'fr' ? 'Ressources' : 'Resources' });
@@ -247,6 +248,9 @@ const AdminLayout: React.FC = () => {
             />
             {canAccess('USERS') && (
               <Link to={pagePath('USERS')} className={linkCls(window.location.pathname.includes(pagePath('USERS')))}>{t.adminUsersNav || 'Users'}</Link>
+            )}
+            {canAccess('PROJECT_BOARD') && (
+              <Link to={pagePath('PROJECT_BOARD')} className={linkCls(window.location.pathname.includes(pagePath('PROJECT_BOARD')))}>{t.projectBoardNav || 'Project Board'}</Link>
             )}
             {role === 'DEVELOPPER' && (
               <NavDropdown
@@ -355,6 +359,9 @@ const AdminLayout: React.FC = () => {
             />
             {canAccess('USERS') && (
               <Link to={pagePath('USERS')} onClick={() => setNavOpen(false)} className={linkCls(window.location.pathname.includes(pagePath('USERS')))}>{t.adminUsersNav || 'Users'}</Link>
+            )}
+            {canAccess('PROJECT_BOARD') && (
+              <Link to={pagePath('PROJECT_BOARD')} onClick={() => setNavOpen(false)} className={linkCls(window.location.pathname.includes(pagePath('PROJECT_BOARD')))}>{t.projectBoardNav || 'Project Board'}</Link>
             )}
             {role === 'DEVELOPPER' && (
               <>

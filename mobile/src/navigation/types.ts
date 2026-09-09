@@ -2,6 +2,7 @@ export type RootStackParamList = {
   Main: undefined;
   WorkOrderDetail: { id: number };
   UrgentWorkOrderDetail: { id: number };
+  ProjectBoardTaskDetail: { id: number };
   Notifications: undefined;
   Trips: undefined;
   Expenses: undefined;
@@ -19,6 +20,7 @@ export type MainTabParamList = {
   Home: undefined;
   Orders: undefined;
   Urgent: undefined;
+  ProjectBoard: undefined;
   TripsTab: undefined;
   ExpensesTab: undefined;
   More: undefined;

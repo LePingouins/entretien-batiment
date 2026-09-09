@@ -380,6 +380,126 @@ export async function unarchiveUrgentWorkOrder(id: number): Promise<void> {
   await api.patch(`/api/urgent-work-orders/${id}/unarchive`);
 }
 
+// --- Project Board API (MANAGER-exclusive, same 5 statuses as Work Orders) ---
+import type { ProjectBoardTaskResponse } from '../types/api';
+
+export async function getProjectBoardTasks(params?: {
+  q?: string;
+  status?: string;
+  location?: string;
+  assignedToUserId?: string;
+}): Promise<ProjectBoardTaskResponse[]> {
+  const p: any = {};
+  if (params?.q) p.q = params.q;
+  if (params?.status) p.status = params.status;
+  if (params?.location) p.location = params.location;
+  if (params?.assignedToUserId) p.assignedToUserId = params.assignedToUserId;
+  const res = await api.get<ProjectBoardTaskResponse[]>('/api/project-board', { params: p });
+  return res.data;
+}
+
+export async function createProjectBoardTask(payload: {
+  title: string;
+  description: string;
+  location: string;
+  dueDate?: string;
+  priority?: string;
+  assignedToUserId?: number | string | null;
+  files?: File[];
+  invoiceFiles?: File[];
+}): Promise<ProjectBoardTaskResponse> {
+  const hasFiles = (payload.files && payload.files.length > 0) || (payload.invoiceFiles && payload.invoiceFiles.length > 0);
+  if (hasFiles) {
+    const formData = new FormData();
+    formData.append('title', payload.title);
+    formData.append('description', payload.description);
+    formData.append('location', payload.location);
+    if (payload.dueDate) {
+      formData.append('dueDate', payload.dueDate.length === 10 ? payload.dueDate + 'T00:00:00' : payload.dueDate);
+    }
+    if (payload.priority) formData.append('priority', payload.priority);
+    if (payload.assignedToUserId !== undefined && payload.assignedToUserId !== null && payload.assignedToUserId !== '') {
+      formData.append('assignedToUserId', String(payload.assignedToUserId));
+    }
+    payload.files?.forEach((file) => formData.append('files', file));
+    payload.invoiceFiles?.forEach((file) => formData.append('invoiceFiles', file));
+    const res = await api.post('/api/project-board', formData);
+    return res.data;
+  }
+  const res = await api.post('/api/project-board', {
+    title: payload.title,
+    description: payload.description,
+    location: payload.location,
+    dueDate: payload.dueDate ? (payload.dueDate.length === 10 ? payload.dueDate + 'T00:00:00' : payload.dueDate) : undefined,
+    priority: payload.priority,
+    assignedToUserId: payload.assignedToUserId !== undefined && payload.assignedToUserId !== null && payload.assignedToUserId !== '' ? payload.assignedToUserId : undefined,
+  });
+  return res.data;
+}
+
+export async function updateProjectBoardTask(
+  id: number,
+  data: Partial<{
+    title: string;
+    description: string;
+    location: string;
+    status: string;
+    dueDate?: string;
+    priority?: string;
+    assignedToUserId?: number | string | null;
+    removeAttachment?: boolean;
+    files?: File[];
+    invoiceFiles?: File[];
+    removeInvoice?: boolean;
+  }>
+): Promise<ProjectBoardTaskResponse> {
+  const hasFiles = !!data.files && data.files.length > 0;
+  const hasInvoiceFiles = !!data.invoiceFiles && data.invoiceFiles.length > 0;
+  const mustUseMultipart = hasFiles || data.removeAttachment === true || hasInvoiceFiles || data.removeInvoice === true;
+
+  if (mustUseMultipart) {
+    const formData = new FormData();
+    if (data.title !== undefined) formData.append('title', data.title);
+    if (data.description !== undefined) formData.append('description', data.description);
+    if (data.location !== undefined) formData.append('location', data.location);
+    if (data.dueDate !== undefined) formData.append('dueDate', data.dueDate.length === 10 ? data.dueDate + 'T00:00:00' : data.dueDate);
+    if (data.priority !== undefined) formData.append('priority', data.priority);
+    if (data.status !== undefined) formData.append('status', data.status);
+    if (data.assignedToUserId !== undefined) {
+      formData.append('assignedToUserId', data.assignedToUserId === null || data.assignedToUserId === '' ? '' : String(data.assignedToUserId));
+    }
+    if (data.removeAttachment === true) formData.append('removeAttachment', 'true');
+    if (data.removeInvoice === true) formData.append('removeInvoice', 'true');
+    data.files?.forEach((file) => formData.append('files', file));
+    data.invoiceFiles?.forEach((file) => formData.append('invoiceFiles', file));
+    const res = await api.patch(`/api/project-board/${id}`, formData);
+    return res.data;
+  }
+  const res = await api.patch<ProjectBoardTaskResponse>(`/api/project-board/${id}`, data);
+  return res.data;
+}
+
+export async function deleteProjectBoardTask(id: number): Promise<void> {
+  await api.delete(`/api/project-board/${id}`);
+}
+
+export async function archiveProjectBoardTask(id: number): Promise<void> {
+  await api.patch(`/api/project-board/${id}/archive`);
+}
+
+export async function unarchiveProjectBoardTask(id: number): Promise<void> {
+  await api.patch(`/api/project-board/${id}/unarchive`);
+}
+
+export async function reorderProjectBoardTasks(status: string, orderedIds: number[]): Promise<void> {
+  await api.patch('/api/project-board/reorder', { status, orderedIds });
+}
+
+export async function moveProjectBoardTask(id: number, newStatus: string, newIndex: number): Promise<ProjectBoardTaskResponse> {
+  const res = await api.patch<ProjectBoardTaskResponse>(`/api/project-board/${id}/move`, { newStatus, newIndex });
+  return res.data;
+}
+
 export async function getArchivedMileageEntries(params?: {
   q?: string;
   startDate?: string;

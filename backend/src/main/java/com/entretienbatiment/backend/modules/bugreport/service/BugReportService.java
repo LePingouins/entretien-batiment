@@ -174,7 +174,7 @@ public class BugReportService {
         }
 
         if (actorIsAdmin) {
-            List<Long> adminUserIds = new ArrayList<>(userRepository.findByRoleIn(Set.of(Role.ADMIN, Role.DEVELOPPER)).stream()
+            List<Long> adminUserIds = new ArrayList<>(userRepository.findByRoleIn(Set.of(Role.ADMIN, Role.DEVELOPPER, Role.MANAGER)).stream()
                     .map(AppUser::getId)
                     .filter(Objects::nonNull)
                     .distinct()

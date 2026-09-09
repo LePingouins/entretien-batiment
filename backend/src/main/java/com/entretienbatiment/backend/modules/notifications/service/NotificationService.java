@@ -190,7 +190,7 @@ public class NotificationService {
     }
 
     public void notifyAdmins(String title, String message, String href, String source, Long bugReportId) {
-        List<AppUser> admins = userRepository.findByRoleIn(Set.of(Role.ADMIN, Role.DEVELOPPER));
+        List<AppUser> admins = userRepository.findByRoleIn(Set.of(Role.ADMIN, Role.DEVELOPPER, Role.MANAGER));
         for (AppUser admin : admins) {
             if (!admin.isEnabled() || admin.getRole() == null) {
                 continue;

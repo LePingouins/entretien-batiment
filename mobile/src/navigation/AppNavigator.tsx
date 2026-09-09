@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Bell, ClipboardList, Ellipsis, House, MapPinned, ReceiptText, Siren } from 'lucide-react-native';
+import { Bell, ClipboardList, Ellipsis, House, KanbanSquare, MapPinned, ReceiptText, Siren } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import type { MainTabParamList, RootStackParamList } from './types';
 import { colors } from '../theme';
@@ -11,6 +11,8 @@ import WorkOrdersScreen from '../screens/WorkOrdersScreen';
 import WorkOrderDetailScreen from '../screens/WorkOrderDetailScreen';
 import UrgentWorkOrdersScreen from '../screens/UrgentWorkOrdersScreen';
 import UrgentWorkOrderDetailScreen from '../screens/UrgentWorkOrderDetailScreen';
+import ProjectBoardScreen from '../screens/ProjectBoardScreen';
+import ProjectBoardTaskDetailScreen from '../screens/ProjectBoardTaskDetailScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import TripsScreen from '../screens/TripsScreen';
 import ExpensesScreen from '../screens/ExpensesScreen';
@@ -56,6 +58,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
         <Stack.Screen name="WorkOrderDetail" component={WorkOrderDetailScreen} options={{ title: 'Bon de travail' }} />
         <Stack.Screen name="UrgentWorkOrderDetail" component={UrgentWorkOrderDetailScreen} options={{ title: 'Urgence' }} />
+        <Stack.Screen name="ProjectBoardTaskDetail" component={ProjectBoardTaskDetailScreen} options={{ title: 'Tâche' }} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
         <Stack.Screen name="Mileage" component={MileageScreen} options={{ title: 'Kilométrage' }} />
         <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ title: 'Statistiques' }} />
@@ -106,6 +109,7 @@ function MainTabs() {
         <>
           {canAccess('WORK_ORDERS') ? <Tab.Screen name="Orders" component={WorkOrdersScreen} options={{ title: 'Bons', tabBarIcon: icon(ClipboardList) }} /> : null}
           {canAccess('URGENT_WORK_ORDERS') ? <Tab.Screen name="Urgent" component={UrgentWorkOrdersScreen} options={{ title: 'Urgences', tabBarIcon: icon(Siren) }} /> : null}
+          {canAccess('PROJECT_BOARD') ? <Tab.Screen name="ProjectBoard" component={ProjectBoardScreen} options={{ title: 'Projets', tabBarIcon: icon(KanbanSquare) }} /> : null}
         </>
       )}
       <Tab.Screen name="More" component={MoreScreen} options={{ title: 'Plus', tabBarIcon: icon(Ellipsis) }} />

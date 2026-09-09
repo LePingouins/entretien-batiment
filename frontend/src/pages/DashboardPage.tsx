@@ -303,7 +303,7 @@ function AdminBroadcastControls() {
     setOpen(false);
   };
 
-  if (role !== 'ADMIN' && role !== 'DEVELOPPER') return null;
+  if (role !== 'ADMIN' && role !== 'DEVELOPPER' && role !== 'MANAGER') return null;
 
   return (
     <div className="flex items-center gap-2">

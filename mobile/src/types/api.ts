@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'DEVELOPPER' | 'TECH' | 'WORKER' | 'REPRESENTANT';
+export type UserRole = 'ADMIN' | 'DEVELOPPER' | 'MANAGER' | 'TECH' | 'WORKER' | 'REPRESENTANT';
 
 export type PageKey =
   | 'DASHBOARD'
@@ -15,7 +15,8 @@ export type PageKey =
   | 'REP_TRIPS'
   | 'REP_EXPENSES'
   | 'REPRESENTANTS'
-  | 'PREVENTIVE_MAINTENANCE';
+  | 'PREVENTIVE_MAINTENANCE'
+  | 'PROJECT_BOARD';
 
 export interface MobileTokenResponse {
   accessToken: string;
@@ -110,6 +111,38 @@ export interface UrgentWorkOrder {
 }
 
 export interface UrgentWorkOrderInput {
+  title: string;
+  description: string;
+  location: string;
+  priority: WorkOrderPriority;
+  status?: WorkOrderStatus;
+  dueDate?: string | null;
+  assignedToUserId?: number | null;
+}
+
+// --- Project Board (MANAGER-exclusive, same 5 statuses as Work Orders) ---
+export interface ProjectBoardTask {
+  id: number;
+  title: string;
+  description: string;
+  location: string;
+  priority: WorkOrderPriority;
+  status: WorkOrderStatus;
+  createdByUserId: number;
+  createdByName?: string | null;
+  assignedToUserId?: number | null;
+  assignedToName?: string | null;
+  dueDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  attachmentFilename?: string | null;
+  attachmentDownloadUrl?: string | null;
+  invoiceFilename?: string | null;
+  invoiceDownloadUrl?: string | null;
+  archived: boolean;
+}
+
+export interface ProjectBoardTaskInput {
   title: string;
   description: string;
   location: string;

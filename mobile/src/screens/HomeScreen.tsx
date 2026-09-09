@@ -19,6 +19,7 @@ type HomeNavigation = CompositeNavigationProp<
 const ROLE_LABELS = {
   ADMIN: 'Administration',
   DEVELOPPER: 'Développement',
+  MANAGER: 'Chef de projet',
   TECH: 'Technique',
   WORKER: 'Opérations',
   REPRESENTANT: 'Représentation',

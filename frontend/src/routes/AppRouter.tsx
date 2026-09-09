@@ -44,6 +44,7 @@ const AdminTripsPage              = lazy(() => import('../pages/AdminTripsPage')
 const AdminTripSettingsPage       = lazy(() => import('../pages/AdminTripSettingsPage'));
 const AdminRepresentantsPage      = lazy(() => import('../pages/AdminRepresentantsPage'));
 const PreventiveMaintenancePage   = lazy(() => import('../pages/PreventiveMaintenancePage'));
+const ProjectBoardPage            = lazy(() => import('../pages/ProjectBoardPage'));
 
 /** Shown while a lazy page chunk is being downloaded */
 const PageLoader = () => (
@@ -67,7 +68,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'no-access',
-        element: <ProtectedRoute allowedRoles={['ADMIN', 'DEVELOPPER', 'TECH', 'WORKER', 'REPRESENTANT']} />,
+        element: <ProtectedRoute allowedRoles={['ADMIN', 'DEVELOPPER', 'MANAGER', 'TECH', 'WORKER', 'REPRESENTANT']} />,
         children: [
           {
             index: true,
@@ -77,7 +78,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'admin',
-        element: <ProtectedRoute allowedRoles={['ADMIN', 'DEVELOPPER']} />,
+        element: <ProtectedRoute allowedRoles={['ADMIN', 'DEVELOPPER', 'MANAGER']} />,
         children: [
           {
             path: '',
@@ -250,6 +251,14 @@ const router = createBrowserRouter([
                     <Suspense fallback={<PageLoader />}>
                       <PreventiveMaintenancePage />
                     </Suspense>
+                  </RequirePageAccess>
+                ),
+              },
+              {
+                path: 'project-board',
+                element: (
+                  <RequirePageAccess pageKey="PROJECT_BOARD">
+                    <ProjectBoardPage />
                   </RequirePageAccess>
                 ),
               },

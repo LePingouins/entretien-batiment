@@ -8,8 +8,8 @@ import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme';
 import { EmptyState, ErrorState, LoadingState } from '../components/ScreenState';
 
-const ROLES: UserRole[] = ['ADMIN', 'TECH', 'WORKER', 'REPRESENTANT'];
-const ROLE_LABELS: Record<UserRole, string> = { ADMIN: 'Admin', DEVELOPPER: 'Développeur', TECH: 'Technicien', WORKER: 'Employé', REPRESENTANT: 'Représentant' };
+const ROLES: UserRole[] = ['ADMIN', 'MANAGER', 'TECH', 'WORKER', 'REPRESENTANT'];
+const ROLE_LABELS: Record<UserRole, string> = { ADMIN: 'Admin', DEVELOPPER: 'Développeur', MANAGER: 'Chef de projet', TECH: 'Technicien', WORKER: 'Employé', REPRESENTANT: 'Représentant' };
 
 export default function AdminUsersScreen() {
   const { user: currentUser } = useAuth();

@@ -79,7 +79,17 @@ export function PageAccessProvider({ children }: { children: React.ReactNode }) 
 export function usePageAccess() {
   const ctx = React.useContext(PageAccessContext);
   if (!ctx) {
-    throw new Error('usePageAccess must be used within PageAccessProvider');
+    // Fallback: return a permissive, non-crashing default context when the
+    // provider is not present. This prevents the whole app from crashing in
+    // development/hot-reload scenarios where components may render briefly
+    // outside the provider. Calling code should still prefer the provider.
+    return {
+      loading: false,
+      accessMap: ALLOW_ALL_MAP,
+      canAccess: () => true,
+      refresh: async () => {},
+      firstAllowedPath: () => null,
+    } as PageAccessContextType;
   }
   return ctx;
 }

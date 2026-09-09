@@ -64,7 +64,7 @@ function MapFlyTo({ coord }: { coord: [number, number] | null }) {
 
 const TripDetailModal: React.FC<TripDetailModalProps> = ({ trip, isDark, onClose, onUpdate }) => {
   const auth = useAuth();
-  const isAdmin = auth?.role === 'ADMIN' || auth?.role === 'DEVELOPPER';
+  const isAdmin = auth?.role === 'ADMIN' || auth?.role === 'DEVELOPPER' || auth?.role === 'MANAGER';
 
   // Admin edit state
   const [editing, setEditing] = useState(false);

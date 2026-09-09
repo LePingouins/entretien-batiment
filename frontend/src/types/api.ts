@@ -69,7 +69,7 @@ export interface PageResponse<T> {
   size: number;
 }
 
-export type UserRole = 'ADMIN' | 'DEVELOPPER' | 'TECH' | 'WORKER' | 'REPRESENTANT';
+export type UserRole = 'ADMIN' | 'DEVELOPPER' | 'MANAGER' | 'TECH' | 'WORKER' | 'REPRESENTANT';
 
 export interface AdminUserResponse {
   id: number;
@@ -102,7 +102,8 @@ export type PageKey =
   | 'REP_TRIPS'
   | 'REP_EXPENSES'
   | 'REPRESENTANTS'
-  | 'PREVENTIVE_MAINTENANCE';
+  | 'PREVENTIVE_MAINTENANCE'
+  | 'PROJECT_BOARD';
 
 export type AccessOverrideState = 'DEFAULT' | 'ALLOW' | 'DENY';
 
@@ -211,6 +212,33 @@ export interface UrgentWorkOrderRequest {
   location: string;
   assignedToUserId?: number | string | null;
   files?: FileList | File[];
+}
+
+// --- Project Board Types (MANAGER-exclusive, same 5 statuses as Work Orders) ---
+export interface ProjectBoardTaskResponse {
+  id: number;
+  title: string;
+  description: string;
+  location: string;
+  priority: WorkOrderPriority;
+  status: WorkOrderStatus;
+  createdByUserId: number;
+  createdByName?: string;
+  assignedToUserId?: number;
+  assignedToName?: string;
+  requestedDate?: string;
+  dueDate: string;
+  createdAt: string;
+  updatedAt: string;
+  attachmentFilename?: string;
+  attachmentContentType?: string;
+  attachmentDownloadUrl?: string;
+  invoiceFilename?: string;
+  invoiceContentType?: string;
+  invoiceDownloadUrl?: string;
+  sortIndex?: number;
+  archived: boolean;
+  archivedAt?: string;
 }
 
 // --- Mileage Types ---

@@ -33,9 +33,11 @@ const PAGE_SEGMENTS: Record<PageKey, string> = {
   REP_EXPENSES: 'expenses',
   REPRESENTANTS: 'representants',
   PREVENTIVE_MAINTENANCE: 'preventive-maintenance',
+  PROJECT_BOARD: 'project-board',
 };
 
 const ADMIN_FALLBACK_ORDER: PageKey[] = [
+  'PROJECT_BOARD',
   'USERS',
   'DASHBOARD',
   'WORK_ORDERS',
@@ -74,7 +76,7 @@ const REPRESENTANT_FALLBACK_ORDER: PageKey[] = [
 ];
 
 export function getRoleBasePath(role: UserRole | null | undefined): '/admin' | '/tech' | '/worker' | '/rep' {
-  if (role === 'ADMIN' || role === 'DEVELOPPER') return '/admin';
+  if (role === 'ADMIN' || role === 'DEVELOPPER' || role === 'MANAGER') return '/admin';
   if (role === 'WORKER') return '/worker';
   if (role === 'REPRESENTANT') return '/rep';
   return '/tech';
@@ -93,5 +95,5 @@ export function getRolePagePath(role: UserRole | null | undefined, pageKey: Page
 
 export function getRoleFallbackOrder(role: UserRole | null | undefined): PageKey[] {
   if (role === 'REPRESENTANT') return REPRESENTANT_FALLBACK_ORDER;
-  return role === 'ADMIN' || role === 'DEVELOPPER' ? ADMIN_FALLBACK_ORDER : NON_ADMIN_FALLBACK_ORDER;
+  return role === 'ADMIN' || role === 'DEVELOPPER' || role === 'MANAGER' ? ADMIN_FALLBACK_ORDER : NON_ADMIN_FALLBACK_ORDER;
 }
