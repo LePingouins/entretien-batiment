@@ -1,9 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CurrentUser, PageKey } from '../types/api';
 
 const TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';
+const OFFLINE_LOGIN_KEY = 'offline_login_verifier';
 const ACTIVE_TRIP_ID_KEY = 'active_trip_id';
 const ACTIVE_TRIP_START_KEY = 'active_trip_start';
 const ACTIVE_TRIP_METHOD_KEY = 'active_trip_method';
@@ -21,6 +23,13 @@ let waypointWrite: Promise<void> = Promise.resolve();
 export interface CachedAuth {
   user: CurrentUser;
   access: Partial<Record<PageKey, boolean>>;
+}
+
+interface OfflineLoginVerifier {
+  email: string;
+  salt: string;
+  passwordHash: string;
+  expiresAt: number;
 }
 
 export interface PendingTripStart {
@@ -109,13 +118,64 @@ export async function getRefreshToken(): Promise<string | null> {
   return SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
 }
 
-export async function clearToken(): Promise<void> {
+export async function clearSessionTokens(): Promise<void> {
   await Promise.all([
     SecureStore.deleteItemAsync(TOKEN_KEY),
     SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+  ]);
+}
+
+export async function clearToken(): Promise<void> {
+  await Promise.all([
+    clearSessionTokens(),
+    SecureStore.deleteItemAsync(OFFLINE_LOGIN_KEY),
     AsyncStorage.removeItem(CACHED_AUTH_KEY),
     clearApiCache(),
   ]);
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function offlinePasswordHash(email: string, password: string, salt: string): Promise<string> {
+  return Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    `${salt}:${email.trim().toLowerCase()}:${password}`,
+  );
+}
+
+export async function saveOfflineLogin(email: string, password: string): Promise<void> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const salt = bytesToHex(await Crypto.getRandomBytesAsync(16));
+  const passwordHash = await offlinePasswordHash(normalizedEmail, password, salt);
+  const verifier: OfflineLoginVerifier = {
+    email: normalizedEmail,
+    salt,
+    passwordHash,
+    expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+  };
+  await SecureStore.setItemAsync(OFFLINE_LOGIN_KEY, JSON.stringify(verifier), {
+    keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+  });
+}
+
+export async function clearOfflineLogin(): Promise<void> {
+  await SecureStore.deleteItemAsync(OFFLINE_LOGIN_KEY);
+}
+
+export async function verifyOfflineLogin(email: string, password: string): Promise<boolean> {
+  const value = await SecureStore.getItemAsync(OFFLINE_LOGIN_KEY);
+  if (!value) return false;
+  try {
+    const verifier = JSON.parse(value) as OfflineLoginVerifier;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (verifier.expiresAt < Date.now() || verifier.email !== normalizedEmail) return false;
+    return await offlinePasswordHash(normalizedEmail, password, verifier.salt) === verifier.passwordHash;
+  } catch {
+    await clearOfflineLogin();
+    return false;
+  }
 }
 
 export async function clearCachedAuthData(): Promise<void> {

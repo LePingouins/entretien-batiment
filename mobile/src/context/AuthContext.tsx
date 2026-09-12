@@ -12,11 +12,13 @@ import {
 import {
   claimLegacyActiveTrip,
   clearCachedAuthData,
-  clearToken,
+  clearOfflineLogin,
   getCachedAuth,
   getToken,
   saveCachedAuth,
+  saveOfflineLogin,
   saveSession,
+  verifyOfflineLogin,
 } from '../lib/storage';
 import type { CurrentUser, PageKey } from '../types/api';
 
@@ -90,9 +92,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const removeNetworkListener = NetInfo.addEventListener((state) => {
       if (state.isConnected && state.isInternetReachable !== false) {
-        void getCachedAuth().then((cached) => (
-          cached ? syncPendingTrips(cached.user.id) : undefined
-        )).catch(() => undefined);
+        void Promise.all([getCachedAuth(), getToken()]).then(([cached, token]) => {
+          if (!cached) return;
+          if (!token) {
+            setUser(null);
+            setAccess({});
+            setStatus('guest');
+            return;
+          }
+          return syncPendingTrips(cached.user.id);
+        }).catch(() => undefined);
       }
     });
     return () => {
@@ -102,10 +111,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function signIn(email: string, password: string, rememberMe: boolean): Promise<void> {
-    const session = await loginRequest(email, password, rememberMe);
+    const restoreOfflineUser = async (): Promise<boolean> => {
+      const cached = await getCachedAuth();
+      const verified = cached
+        && cached.user.email.trim().toLowerCase() === email.trim().toLowerCase()
+        && await verifyOfflineLogin(email, password);
+      if (!cached || !verified) return false;
+      await claimLegacyActiveTrip(cached.user.id);
+      setUser(cached.user);
+      setAccess(cached.access);
+      setStatus('authenticated');
+      return true;
+    };
+
+    const networkState = await NetInfo.fetch().catch(() => null);
+    if (networkState?.isConnected === false || networkState?.isInternetReachable === false) {
+      if (await restoreOfflineUser()) return;
+      throw new Error('Offline login is not available for this account');
+    }
+
+    let session;
+    try {
+      session = await loginRequest(email, password, rememberMe);
+    } catch (error) {
+      if (!isNetworkError(error)) throw error;
+      if (await restoreOfflineUser()) return;
+      throw error;
+    }
     await clearCachedAuthData();
     await saveSession(session.accessToken, session.refreshToken);
     await loadAuthenticatedUser();
+    if (rememberMe) {
+      await saveOfflineLogin(email, password);
+    } else {
+      await clearOfflineLogin();
+    }
   }
 
   async function signOut(): Promise<void> {

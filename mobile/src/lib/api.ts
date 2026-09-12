@@ -1,9 +1,11 @@
 import axios, { AxiosError } from 'axios';
+import NetInfo from '@react-native-community/netinfo';
 import { BASE_URL } from './config';
 import {
   getToken,
   getRefreshToken,
   saveSession,
+  clearSessionTokens,
   clearToken,
   Waypoint,
   getActiveTripId,
@@ -271,7 +273,7 @@ export async function logout(): Promise<void> {
       await api.post('/api/auth/mobile/logout', { refreshToken });
     }
   } finally {
-    await clearToken();
+    await clearSessionTokens();
   }
 }
 
@@ -699,6 +701,12 @@ export async function startTrip(payload: {
     distanceMethod: payload.distanceMethod ?? 'GPS',
   };
   const startedAt = new Date().toISOString();
+  const networkState = await NetInfo.fetch().catch(() => null);
+  if (networkState?.isConnected === false || networkState?.isInternetReachable === false) {
+    const localId = -Date.now();
+    await queuePendingTripStart(localId, startPayload, startedAt);
+    return createLocalTrip(localId, startPayload, startedAt, 'IN_PROGRESS');
+  }
   try {
     const res = await api.post<RepTrip>('/api/rep-trips', startPayload);
     await queuePendingTripStart(res.data.id, startPayload, startedAt, res.data.id);
@@ -765,7 +773,12 @@ export async function endTrip(
 }
 
 export function isNetworkError(error: unknown): boolean {
-  return axios.isAxiosError(error) && !error.response;
+  if (axios.isAxiosError(error)) {
+    return !error.response
+      || ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT'].includes(error.code ?? '')
+      || [408, 502, 503, 504].includes(error.response?.status ?? 0);
+  }
+  return error instanceof TypeError && /network|fetch|connection/i.test(error.message);
 }
 
 function createLocalTrip(
