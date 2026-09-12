@@ -1,5 +1,6 @@
-import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, AppState, Platform, StyleSheet, View } from 'react-native';
+import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LoginScreen from './src/screens/LoginScreen';
@@ -9,6 +10,21 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { colors } from './src/theme';
 
 export default function App() {
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const hideSystemNavigation = async () => {
+      await NavigationBar.setVisibilityAsync('hidden');
+      await NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => undefined);
+    };
+
+    void hideSystemNavigation().catch(() => undefined);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void hideSystemNavigation().catch(() => undefined);
+    });
+    return () => subscription.remove();
+  }, []);
+
   return (
     <SafeAreaProvider>
       <LangProvider>

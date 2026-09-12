@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthResponse, UserRole } from '../types/api';
-import { clearStoredAuth, getStoredAuth, setStoredAuth } from '../lib/authStorage';
+import { clearApiResponseCache, clearStoredAuth, getStoredAuth, setStoredAuth } from '../lib/authStorage';
 
 interface AuthContextType {
   accessToken: string | null;
   role: UserRole | null;
   userId: number | null;
-  login: (data: AuthResponse, rememberMe: boolean) => void;
+  login: (data: AuthResponse, rememberMe: boolean) => Promise<void>;
   logout: () => void;
 }
 
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const login = (data: AuthResponse, rememberMe: boolean) => {
+  const login = async (data: AuthResponse, rememberMe: boolean) => {
     const { accessToken } = data;
     // Decode JWT to extract role and userId
     function decodeJwt(token: string) {
@@ -60,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const decodedRole = decoded.role || '';
     const decodedUserId = decoded.sub || '';
     
+    await clearApiResponseCache();
     setAccessToken(accessToken);
     setRole(parseRole(decodedRole));
     setUserId(Number(decodedUserId) || null);
@@ -73,6 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole(null);
     setUserId(null);
     clearStoredAuth();
+    void clearApiResponseCache();
     window.dispatchEvent(new Event('auth-storage-update'));
   };
 

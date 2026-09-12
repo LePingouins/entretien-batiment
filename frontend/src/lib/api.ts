@@ -12,7 +12,7 @@ export async function reorderUrgentWorkOrders(status: string, orderedIds: number
   await api.patch('/api/urgent-work-orders/reorder', { status, orderedIds });
 }
 import axios from 'axios';
-import { clearStoredAuth, getRememberMePreference, getStoredAccessToken, getStoredAuth, setStoredAuth } from './authStorage';
+import { clearApiResponseCache, clearStoredAuth, getRememberMePreference, getStoredAccessToken, getStoredAuth, setStoredAuth } from './authStorage';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '',
@@ -102,6 +102,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         clearStoredAuth();
+        await clearApiResponseCache();
         window.dispatchEvent(new Event('auth-storage-update'));
         window.location.href = '/login';
         return Promise.reject(refreshError);

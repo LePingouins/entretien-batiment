@@ -6,6 +6,23 @@ import {
   saveSession,
   clearToken,
   Waypoint,
+  getActiveTripId,
+  getPendingTrips,
+  getWaypoints,
+  migrateWaypoints,
+  queuePendingTripCompletion,
+  queuePendingTripPhoto,
+  queuePendingTripStart,
+  queuePendingTripStop,
+  acknowledgePendingTripPhoto,
+  acknowledgePendingTripStop,
+  markPendingTripCompletionSynced,
+  removePendingTripIfFinished,
+  replaceActiveTripId,
+  setPendingTripServerId,
+  getCachedAuth,
+  getApiCache,
+  saveApiCache,
 } from './storage';
 import type {
   CurrentUser,
@@ -41,6 +58,7 @@ import type {
 
 const api = axios.create({
   baseURL: BASE_URL,
+  timeout: 10_000,
   headers: {
     // Bypass the ngrok browser-warning interstitial for non-browser clients
     'ngrok-skip-browser-warning': 'true',
@@ -51,6 +69,16 @@ type SessionExpiredListener = () => void;
 
 const sessionExpiredListeners = new Set<SessionExpiredListener>();
 let refreshPromise: Promise<string> | null = null;
+let pendingTripsSyncPromise: Promise<RepTrip[]> | null = null;
+let pendingTripsSyncOwner: number | null = null;
+
+function apiCacheKey(url?: string, params?: unknown): string {
+  return `${url ?? ''}?${JSON.stringify(params ?? {})}`;
+}
+
+function isOfflineCacheableUrl(url?: string): boolean {
+  return url !== '/api/users/me' && url !== '/api/page-access/me';
+}
 
 export function onSessionExpired(listener: SessionExpiredListener): () => void {
   sessionExpiredListeners.add(listener);
@@ -86,9 +114,26 @@ api.interceptors.request.use(async (config) => {
 });
 
 api.interceptors.response.use(
-  (res) => res,
+  async (res) => {
+    if (res.config.method?.toLowerCase() === 'get' && isOfflineCacheableUrl(res.config.url)) {
+      await saveApiCache(apiCacheKey(res.config.url, res.config.params), res.data).catch(() => undefined);
+    }
+    return res;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as (typeof error.config & { _retry?: boolean });
+    if (!error.response && originalRequest?.method?.toLowerCase() === 'get' && isOfflineCacheableUrl(originalRequest.url)) {
+      const cached = await getApiCache(apiCacheKey(originalRequest.url, originalRequest.params));
+      if (cached !== null) {
+        return {
+          data: cached,
+          status: 200,
+          statusText: 'OK (offline cache)',
+          headers: {},
+          config: originalRequest,
+        };
+      }
+    }
     const isAuthRequest = originalRequest?.url?.includes('/api/auth/mobile/');
     if (error.response?.status !== 401 || !originalRequest || originalRequest._retry || isAuthRequest) {
       return Promise.reject(error);
@@ -105,8 +150,11 @@ api.interceptors.response.use(
       originalRequest.headers.Authorization = `Bearer ${accessToken}`;
       return api.request(originalRequest);
     } catch (refreshError) {
-      await clearToken();
-      notifySessionExpired();
+      const refreshStatus = (refreshError as AxiosError).response?.status;
+      if (refreshStatus === 400 || refreshStatus === 401 || refreshStatus === 403) {
+        await clearToken();
+        notifySessionExpired();
+      }
       return Promise.reject(refreshError);
     }
   }
@@ -188,6 +236,7 @@ export interface RepTrip {
   driverNote?: string | null;
   vehicleId?: number | null;
   locked?: boolean;
+  pendingSync?: boolean;
 }
 
 export interface Vehicle {
@@ -253,6 +302,9 @@ export async function getWorkOrders(params?: {
   const res = await api.get<PageResponse<WorkOrder>>('/api/admin/work-orders', {
     params: { page: 0, size: 100, ...params },
   });
+  await Promise.all(res.data.content.map((order) => (
+    saveApiCache(apiCacheKey(`/api/admin/work-orders/${order.id}`), order)
+  )));
   return res.data;
 }
 
@@ -607,7 +659,27 @@ export async function deleteSubscription(id: number): Promise<void> {
 
 export async function getMyTrips(): Promise<RepTrip[]> {
   const res = await api.get<RepTrip[]>('/api/rep-trips');
-  return res.data;
+  const ownerUserId = (await getCachedAuth())?.user.id;
+  const ownerPending = (await getPendingTrips()).filter((trip) => trip.ownerUserId === ownerUserId);
+  const pending = ownerPending.flatMap(toPendingTripSnapshot);
+  const pendingIds = new Set(pending.map((trip) => trip.id));
+  return [...pending, ...res.data.filter((trip) => !pendingIds.has(trip.id))];
+}
+
+export async function getPendingTripSnapshots(): Promise<RepTrip[]> {
+  const ownerUserId = (await getCachedAuth())?.user.id;
+  return (await getPendingTrips())
+    .filter((pending) => pending.ownerUserId === ownerUserId)
+    .flatMap(toPendingTripSnapshot);
+}
+
+function toPendingTripSnapshot(pending: import('./storage').PendingTrip): RepTrip[] {
+  const id = pending.serverId ?? pending.localId;
+  if (pending.completion) {
+    return [createCompletedLocalTrip(id, pending.start, pending.startedAt, pending.completion)];
+  }
+  if (!pending.start) return [];
+  return [createLocalTrip(id, pending.start, pending.startedAt, 'IN_PROGRESS')];
 }
 
 export async function startTrip(payload: {
@@ -621,11 +693,22 @@ export async function startTrip(payload: {
   category?: RepTripCategory;
   vehicleId?: number | null;
 }): Promise<RepTrip> {
-  const res = await api.post<RepTrip>('/api/rep-trips', {
+  const startPayload = {
     ...payload,
+    idempotencyKey: payload.idempotencyKey ?? generateIdempotencyKey(),
     distanceMethod: payload.distanceMethod ?? 'GPS',
-  });
-  return res.data;
+  };
+  const startedAt = new Date().toISOString();
+  try {
+    const res = await api.post<RepTrip>('/api/rep-trips', startPayload);
+    await queuePendingTripStart(res.data.id, startPayload, startedAt, res.data.id);
+    return res.data;
+  } catch (error) {
+    if (!isNetworkError(error)) throw error;
+    const localId = -Date.now();
+    await queuePendingTripStart(localId, startPayload, startedAt);
+    return createLocalTrip(localId, startPayload, startedAt, 'IN_PROGRESS');
+  }
 }
 
 export async function endTrip(
@@ -646,7 +729,16 @@ export async function endTrip(
     vehicleId?: number | null;
   }
 ): Promise<RepTrip> {
-  const res = await api.patch<RepTrip>(`/api/rep-trips/${id}`, {
+  const completion = {
+    endLat,
+    endLng,
+    endAddress,
+    totalKm,
+    durationMinutes,
+    waypoints,
+    extra,
+  };
+  const payload = {
     status: 'COMPLETED',
     endLat,
     endLng,
@@ -655,8 +747,206 @@ export async function endTrip(
     durationMinutes,
     waypointsJson: JSON.stringify(waypoints),
     ...(extra ?? {}),
-  });
-  return res.data;
+  };
+  if (id > 0) {
+    try {
+      const res = await api.patch<RepTrip>(`/api/rep-trips/${id}`, payload);
+      await queuePendingTripCompletion(id, completion);
+      const pending = (await getPendingTrips()).find((trip) => trip.localId === id || trip.serverId === id);
+      if (pending) await markPendingTripCompletionSynced(pending.localId);
+      return res.data;
+    } catch (error) {
+      if (!isNetworkError(error)) throw error;
+    }
+  }
+  await queuePendingTripCompletion(id, completion);
+  const pending = (await getPendingTrips()).find((trip) => trip.localId === id || trip.serverId === id);
+  return createCompletedLocalTrip(id, pending?.start, pending?.startedAt, completion);
+}
+
+export function isNetworkError(error: unknown): boolean {
+  return axios.isAxiosError(error) && !error.response;
+}
+
+function createLocalTrip(
+  id: number,
+  start: import('./storage').PendingTripStart,
+  startedAt: string,
+  status: string,
+): RepTrip {
+  return {
+    id,
+    date: localDateString(startedAt),
+    status,
+    purpose: start.purpose ?? null,
+    notes: null,
+    startAddress: start.startAddress,
+    startLat: start.startLat,
+    startLng: start.startLng,
+    endAddress: null,
+    endLat: null,
+    endLng: null,
+    totalKm: null,
+    idealKm: null,
+    actualKm: null,
+    distanceSource: null,
+    distanceMethod: start.distanceMethod ?? 'GPS',
+    createdAt: startedAt,
+    stops: [],
+    category: start.category as RepTripCategory | undefined,
+    vehicleId: start.vehicleId,
+    pendingSync: true,
+  };
+}
+
+function localDateString(value: string): string {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function createCompletedLocalTrip(
+  id: number,
+  start: import('./storage').PendingTripStart | undefined,
+  startedAt: string | undefined,
+  completion: import('./storage').PendingTripCompletion,
+): RepTrip {
+  const trip = createLocalTrip(id, start ?? {
+    startLat: completion.waypoints[0]?.[0] ?? completion.endLat,
+    startLng: completion.waypoints[0]?.[1] ?? completion.endLng,
+    startAddress: '',
+    idempotencyKey: '',
+  }, startedAt ?? new Date().toISOString(), 'COMPLETED');
+  return {
+    ...trip,
+    endAddress: completion.endAddress,
+    endLat: completion.endLat,
+    endLng: completion.endLng,
+    totalKm: completion.totalKm,
+    idealKm: completion.extra?.idealKm ?? null,
+    actualKm: completion.extra?.actualKm ?? null,
+    distanceSource: completion.extra?.distanceSource ?? 'haversine',
+  };
+}
+
+export async function syncPendingTrips(ownerUserId?: number): Promise<RepTrip[]> {
+  const resolvedOwnerUserId = ownerUserId ?? (await getCachedAuth())?.user.id;
+  if (resolvedOwnerUserId == null) return [];
+  if (pendingTripsSyncPromise) {
+    if (pendingTripsSyncOwner === resolvedOwnerUserId) return pendingTripsSyncPromise;
+    await pendingTripsSyncPromise.catch(() => []);
+  }
+  if (!pendingTripsSyncPromise) {
+    pendingTripsSyncOwner = resolvedOwnerUserId;
+    pendingTripsSyncPromise = syncPendingTripsNow(resolvedOwnerUserId).finally(() => {
+      pendingTripsSyncPromise = null;
+      pendingTripsSyncOwner = null;
+    });
+  }
+  return pendingTripsSyncPromise;
+}
+
+async function requireSyncOwner(ownerUserId: number): Promise<void> {
+  if ((await getCachedAuth())?.user.id !== ownerUserId) throw new Error('OFFLINE_SYNC_OWNER_CHANGED');
+}
+
+async function syncPendingTripsNow(ownerUserId: number): Promise<RepTrip[]> {
+  const synced: RepTrip[] = [];
+  for (const queued of (await getPendingTrips()).filter((trip) => trip.ownerUserId === ownerUserId)) {
+    const pending = { ...queued, stops: [...queued.stops], photos: [...queued.photos] };
+    try {
+      await requireSyncOwner(ownerUserId);
+      if (!pending.serverId) {
+        if (!pending.start) continue;
+        const started = await api.post<RepTrip>('/api/rep-trips', {
+          ...pending.start,
+          date: localDateString(pending.startedAt),
+        });
+        pending.serverId = started.data.id;
+        await setPendingTripServerId(pending.localId, pending.serverId);
+
+      }
+
+      if (await getActiveTripId() === pending.localId) {
+        await migrateWaypoints(pending.localId, pending.serverId);
+        await replaceActiveTripId(pending.localId, pending.serverId);
+      }
+
+      while (pending.stops.length > 0) {
+        await requireSyncOwner(ownerUserId);
+        const stop = pending.stops[0];
+        const response = await api.post<RepTripStop>(`/api/rep-trips/${pending.serverId}/stops`, {
+          clientOperationId: stop.operationId,
+          reason: stop.reason,
+          address: stop.address,
+          lat: stop.lat,
+          lng: stop.lng,
+          notes: stop.notes,
+          stoppedAt: stop.stoppedAt,
+        });
+        pending.stops.shift();
+        await acknowledgePendingTripStop(pending.localId, stop.localStopId, response.data.id);
+        pending.photos.forEach((photo) => {
+          if (photo.stopId === stop.localStopId) photo.stopId = response.data.id;
+        });
+      }
+
+      while (pending.photos.length > 0) {
+        await requireSyncOwner(ownerUserId);
+        const photo = pending.photos[0];
+        await uploadTripPhotoNow(pending.serverId, photo.uri, photo.kind, photo.stopId, photo.operationId);
+        pending.photos.shift();
+        await acknowledgePendingTripPhoto(pending.localId, photo.localPhotoId);
+      }
+
+      if (pending.completion && !pending.completionSynced) {
+        await requireSyncOwner(ownerUserId);
+        let completion = pending.completion;
+        if (pending.start?.distanceMethod === 'GOOGLE' && completion.extra?.distanceSource === 'haversine') {
+          const routeWaypoints: Waypoint[] = [
+            ...(pending.start ? [[pending.start.startLat, pending.start.startLng, completion.waypoints[0]?.[2] ?? Date.now()] as Waypoint] : []),
+            ...completion.waypoints,
+            [completion.endLat, completion.endLng, Date.now()],
+          ];
+          const route = await requestGoogleRoute(routeWaypoints).catch(() => null);
+          if (route) {
+            completion = {
+              ...completion,
+              totalKm: route.km,
+              extra: {
+                ...completion.extra,
+                idealKm: route.idealKm,
+                actualKm: route.actualKm,
+                distanceSource: route.source,
+                actualPolyline: route.polyline,
+                osrmKm: route.osrmKm,
+              },
+            };
+          }
+        }
+        const res = await api.patch<RepTrip>(`/api/rep-trips/${pending.serverId}`, {
+          status: 'COMPLETED',
+          endLat: completion.endLat,
+          endLng: completion.endLng,
+          endAddress: completion.endAddress,
+          totalKm: completion.totalKm,
+          durationMinutes: completion.durationMinutes,
+          waypointsJson: JSON.stringify(completion.waypoints),
+          ...(completion.extra ?? {}),
+        });
+        synced.push(res.data);
+        await markPendingTripCompletionSynced(pending.localId);
+      }
+      await removePendingTripIfFinished(pending.localId);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'OFFLINE_SYNC_OWNER_CHANGED') break;
+      if (!isNetworkError(error)) throw error;
+      break;
+    }
+  }
+  return synced;
 }
 
 // ─── OSRM road distance ───────────────────────────────────────────────────────
@@ -677,16 +967,22 @@ export async function osrmRouteKm(waypoints: Waypoint[]): Promise<number | null>
   if (sampled[sampled.length - 1] !== last) sampled.push(last);
 
   const coords = sampled.map(([lat, lng]) => `${lng},${lat}`).join(';');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
   try {
     const res = await fetch(
       `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`,
-      { headers: { 'User-Agent': 'EntretienBatiment/1.0' } }
+      { headers: { 'User-Agent': 'EntretienBatiment/1.0' }, signal: controller.signal }
     );
     const data: any = await res.json();
     if (data.code === 'Ok' && data.routes?.[0]) {
       return Math.round(data.routes[0].distance / 100) / 10; // metres → km (1 decimal)
     }
-  } catch {}
+  } catch {
+    // Fall back to Haversine when routing is unavailable.
+  } finally {
+    clearTimeout(timeout);
+  }
   return null;
 }
 
@@ -711,22 +1007,25 @@ export async function googleRouteKm(waypoints: Waypoint[]): Promise<RouteDistanc
   // Format: [lat, lng, timestampMs]
   const pairs = waypoints.map(([lat, lng, t]) => [lat, lng, t]);
   try {
-    const res = await api.post<{ km: number | ''; source?: string; idealKm?: number; actualKm?: number; polyline?: string; osrmKm?: number }>(
-      '/api/rep-trips/route-distance', pairs
-    );
-    const km = res.data.km;
-    if (typeof km !== 'number') return null;
-    return {
-      km,
-      source: res.data.source ?? 'unknown',
-      idealKm: res.data.idealKm,
-      actualKm: res.data.actualKm,
-      polyline: res.data.polyline,
-      osrmKm: res.data.osrmKm,
-    };
+    return await requestGoogleRoute(pairs as Waypoint[]);
   } catch {
     return null;
   }
+}
+
+async function requestGoogleRoute(waypoints: Waypoint[]): Promise<RouteDistanceResult | null> {
+  const res = await api.post<{ km: number | ''; source?: string; idealKm?: number; actualKm?: number; polyline?: string; osrmKm?: number }>(
+    '/api/rep-trips/route-distance', waypoints.map(([lat, lng, timestamp]) => [lat, lng, timestamp]),
+  );
+  if (typeof res.data.km !== 'number') return null;
+  return {
+    km: res.data.km,
+    source: res.data.source ?? 'unknown',
+    idealKm: res.data.idealKm,
+    actualKm: res.data.actualKm,
+    polyline: res.data.polyline,
+    osrmKm: res.data.osrmKm,
+  };
 }
 
 // ─── Stops ────────────────────────────────────────────────────────────────────
@@ -735,8 +1034,27 @@ export async function addStop(
   tripId: number,
   payload: { reason: RepTripStopReason; address?: string; lat?: number; lng?: number; notes?: string; stoppedAt?: string }
 ): Promise<RepTripStop> {
-  const res = await api.post<RepTripStop>(`/api/rep-trips/${tripId}/stops`, payload);
-  return res.data;
+  const operationId = generateIdempotencyKey();
+  if (tripId > 0) {
+    try {
+      const res = await api.post<RepTripStop>(`/api/rep-trips/${tripId}/stops`, { ...payload, clientOperationId: operationId });
+      return res.data;
+    } catch (error) {
+      if (!isNetworkError(error)) throw error;
+    }
+  }
+  const localStopId = generateLocalId();
+  await queuePendingTripStop(tripId, { localStopId, operationId, ...payload });
+  return {
+    id: localStopId,
+    tripId,
+    address: payload.address ?? null,
+    lat: payload.lat ?? null,
+    lng: payload.lng ?? null,
+    reason: payload.reason,
+    notes: payload.notes ?? null,
+    stoppedAt: payload.stoppedAt ?? new Date().toISOString(),
+  };
 }
 
 export async function deleteStop(tripId: number, stopId: number): Promise<void> {
@@ -760,6 +1078,26 @@ export async function uploadTripPhoto(
   kind: 'START' | 'END' | 'STOP' | 'OTHER' = 'OTHER',
   stopId?: number,
 ): Promise<{ id: number }> {
+  const operationId = generateIdempotencyKey();
+  if (tripId > 0) {
+    try {
+      return await uploadTripPhotoNow(tripId, uri, kind, stopId, operationId);
+    } catch (error) {
+      if (!isNetworkError(error)) throw error;
+    }
+  }
+  const localPhotoId = generateLocalId();
+  await queuePendingTripPhoto(tripId, { localPhotoId, operationId, uri, kind, stopId });
+  return { id: localPhotoId };
+}
+
+async function uploadTripPhotoNow(
+  tripId: number,
+  uri: string,
+  kind: 'START' | 'END' | 'STOP' | 'OTHER',
+  stopId?: number,
+  operationId?: string,
+): Promise<{ id: number }> {
   const form = new FormData();
   // RN-style FormData file part
   const filename = uri.split('/').pop() || `photo-${Date.now()}.jpg`;
@@ -768,6 +1106,7 @@ export async function uploadTripPhoto(
   form.append('file', { uri, name: filename, type: mime } as any);
   form.append('kind', kind);
   if (stopId != null) form.append('stopId', String(stopId));
+  if (operationId) form.append('clientOperationId', operationId);
   const res = await api.post(`/api/rep-trips/${tripId}/photos`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
@@ -780,6 +1119,10 @@ export async function uploadTripPhoto(
 export function generateIdempotencyKey(): string {
   const rand = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
   return `${rand()}${rand()}-${rand()}-4${rand().slice(1)}-${(8 + Math.floor(Math.random() * 4)).toString(16)}${rand().slice(1)}-${rand()}${rand()}${rand()}`;
+}
+
+function generateLocalId(): number {
+  return -(Date.now() * 1000 + Math.floor(Math.random() * 1000));
 }
 
 // ─── Expenses (Dépenses) ─────────────────────────────────────────────────────

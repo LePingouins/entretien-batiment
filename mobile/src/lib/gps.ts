@@ -231,10 +231,15 @@ export async function getCurrentLocation(): Promise<Location.LocationObject> {
 
 // Uses Nominatim for precise house-level reverse geocoding
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-      { headers: { 'User-Agent': 'EntretienBatiment/1.0', 'Accept-Language': 'fr,en' } }
+      {
+        headers: { 'User-Agent': 'EntretienBatiment/1.0', 'Accept-Language': 'fr,en' },
+        signal: controller.signal,
+      }
     );
     const data: any = await res.json();
     if (data?.address) {
@@ -248,6 +253,8 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
     }
   } catch {
     // fall through to coordinate fallback
+  } finally {
+    clearTimeout(timeout);
   }
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }

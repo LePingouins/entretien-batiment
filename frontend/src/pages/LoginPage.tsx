@@ -34,7 +34,7 @@ function LoginPage() {
     setError(null);
     try {
       const res = await api.post<AuthResponse>('/api/auth/login', data);
-      login(res.data, Boolean(data.rememberMe));
+      await login(res.data, Boolean(data.rememberMe));
       // Redirect will happen in useEffect below
     } catch (err: any) {
       const apiError: ErrorResponse = err.response?.data;

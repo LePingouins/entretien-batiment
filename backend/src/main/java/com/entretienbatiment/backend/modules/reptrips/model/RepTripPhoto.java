@@ -33,6 +33,9 @@ public class RepTripPhoto {
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt = LocalDateTime.now();
 
+    @Column(name = "client_operation_id", length = 64, unique = true)
+    private String clientOperationId;
+
     public RepTripPhoto() {}
 
     public Long getId() { return id; }
@@ -51,4 +54,6 @@ public class RepTripPhoto {
     public void setSizeBytes(Integer sizeBytes) { this.sizeBytes = sizeBytes; }
     public LocalDateTime getUploadedAt() { return uploadedAt; }
     public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
+    public String getClientOperationId() { return clientOperationId; }
+    public void setClientOperationId(String clientOperationId) { this.clientOperationId = clientOperationId; }
 }

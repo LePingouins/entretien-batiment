@@ -1,12 +1,23 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import NetInfo from '@react-native-community/netinfo';
 import {
   getCurrentUser,
   getMyPageAccess,
   login as loginRequest,
   logout as logoutRequest,
   onSessionExpired,
+  syncPendingTrips,
+  isNetworkError,
 } from '../lib/api';
-import { clearToken, getToken, saveSession } from '../lib/storage';
+import {
+  claimLegacyActiveTrip,
+  clearCachedAuthData,
+  clearToken,
+  getCachedAuth,
+  getToken,
+  saveCachedAuth,
+  saveSession,
+} from '../lib/storage';
 import type { CurrentUser, PageKey } from '../types/api';
 
 type AuthStatus = 'loading' | 'guest' | 'authenticated';
@@ -27,16 +38,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [access, setAccess] = useState<Partial<Record<PageKey, boolean>>>({});
 
-  async function loadAuthenticatedUser(): Promise<void> {
+  async function loadAuthenticatedUser(claimLegacyTrip = false): Promise<void> {
     const currentUser = await getCurrentUser();
+    if (claimLegacyTrip) await claimLegacyActiveTrip(currentUser.id);
     setUser(currentUser);
+    let nextAccess: Partial<Record<PageKey, boolean>> = {};
     try {
       const response = await getMyPageAccess();
-      setAccess(Object.fromEntries(response.pages.map((entry) => [entry.pageKey, entry.allowed])));
-    } catch {
-      setAccess({});
+      nextAccess = Object.fromEntries(response.pages.map((entry) => [entry.pageKey, entry.allowed]));
+    } catch (error) {
+      const cached = isNetworkError(error) ? await getCachedAuth() : null;
+      nextAccess = cached?.user.id === currentUser.id ? cached.access : {};
     }
+    setAccess(nextAccess);
+    await saveCachedAuth({ user: currentUser, access: nextAccess });
     setStatus('authenticated');
+    void syncPendingTrips(currentUser.id).catch(() => undefined);
   }
 
   async function reloadSession(): Promise<void> {
@@ -49,26 +66,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      await loadAuthenticatedUser();
-    } catch {
-      await clearToken();
-      setUser(null);
-      setAccess({});
-      setStatus('guest');
+      await loadAuthenticatedUser(true);
+    } catch (error) {
+      const cached = isNetworkError(error) ? await getCachedAuth() : null;
+      if (cached) {
+        setUser(cached.user);
+        setAccess(cached.access);
+        setStatus('authenticated');
+      } else {
+        setUser(null);
+        setAccess({});
+        setStatus('guest');
+      }
     }
   }
 
   useEffect(() => {
     void reloadSession();
-    return onSessionExpired(() => {
+    const removeSessionListener = onSessionExpired(() => {
       setUser(null);
       setAccess({});
       setStatus('guest');
     });
+    const removeNetworkListener = NetInfo.addEventListener((state) => {
+      if (state.isConnected && state.isInternetReachable !== false) {
+        void getCachedAuth().then((cached) => (
+          cached ? syncPendingTrips(cached.user.id) : undefined
+        )).catch(() => undefined);
+      }
+    });
+    return () => {
+      removeSessionListener();
+      removeNetworkListener();
+    };
   }, []);
 
   async function signIn(email: string, password: string, rememberMe: boolean): Promise<void> {
     const session = await loginRequest(email, password, rememberMe);
+    await clearCachedAuthData();
     await saveSession(session.accessToken, session.refreshToken);
     await loadAuthenticatedUser();
   }

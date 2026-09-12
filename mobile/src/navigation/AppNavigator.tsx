@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bell, ClipboardList, Ellipsis, House, KanbanSquare, MapPinned, ReceiptText, Siren } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import type { MainTabParamList, RootStackParamList } from './types';
@@ -81,6 +82,7 @@ export default function AppNavigator() {
 
 function MainTabs() {
   const { user, canAccess, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
   const isRepresentative = user?.role === 'REPRESENTANT';
 
   return (
@@ -92,7 +94,13 @@ function MainTabs() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, height: 64, paddingBottom: 7, paddingTop: 6 },
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          height: 57 + Math.max(insets.bottom, 7),
+          paddingBottom: Math.max(insets.bottom, 7),
+          paddingTop: 6,
+        },
       }}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Accueil', tabBarIcon: icon(House) }} />

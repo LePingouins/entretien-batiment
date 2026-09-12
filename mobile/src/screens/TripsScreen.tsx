@@ -15,10 +15,11 @@ import {
   ScrollView,
 } from 'react-native';
 import Constants from 'expo-constants';
+import NetInfo from '@react-native-community/netinfo';
 import {
   RepTrip, RepTripStop, RepTripStopReason, RepTripCategory, Vehicle,
   getMyTrips, startTrip, endTrip, osrmRouteKm, googleRouteKm, addStop,
-  getVehicles, uploadTripPhoto, generateIdempotencyKey,
+  getVehicles, uploadTripPhoto, generateIdempotencyKey, syncPendingTrips,
 } from '../lib/api';
 import {
   saveActiveTripId,
@@ -145,6 +146,7 @@ export default function TripsScreen({ onLogout }: Props) {
 
   const loadData = useCallback(async () => {
     try {
+      await syncPendingTrips().catch(() => []);
       const [storedTripId, storedStart] = await Promise.all([
         getActiveTripId(),
         getActiveTripStart(),
@@ -179,7 +181,13 @@ export default function TripsScreen({ onLogout }: Props) {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') loadData();
     });
-    return () => sub.remove();
+    const removeNetworkListener = NetInfo.addEventListener((state) => {
+      if (state.isConnected && state.isInternetReachable !== false) void loadData();
+    });
+    return () => {
+      sub.remove();
+      removeNetworkListener();
+    };
   }, [loadData]);
 
   // V38: photo picker (uses expo-image-picker if installed; otherwise inline alert)
@@ -335,6 +343,12 @@ export default function TripsScreen({ onLogout }: Props) {
       setElapsed(0);
       setWaypointCount(0);
       setTrips((prev) => [trip, ...prev]);
+      if (trip.pendingSync) {
+        Alert.alert(
+          'Trajet hors connexion',
+          'Le suivi GPS est actif. Le trajet sera envoyé automatiquement lorsque la connexion reviendra.',
+        );
+      }
     } catch (err: any) {
       const detail = err?.response?.data?.message ?? err?.message ?? String(err);
       const msg = err?.response?.status === 403
@@ -588,6 +602,9 @@ export default function TripsScreen({ onLogout }: Props) {
       setPreSubmitVisible(false);
       setPreSubmitData(null);
       setTrips((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      if (updated.pendingSync) {
+        Alert.alert('Trajet enregistré', 'Le trajet est conservé sur cet appareil et sera synchronisé automatiquement.');
+      }
     } catch {
       Alert.alert('Erreur', 'Impossible de forcer la fin du trajet. Vérifiez votre connexion.');
     } finally {
@@ -695,6 +712,9 @@ export default function TripsScreen({ onLogout }: Props) {
     setEndConfirmLoading(true);
     try {
       const p = preSubmitData;
+      if (endPhotoUri) {
+        await uploadTripPhoto(activeTripId, endPhotoUri, 'END').catch(() => undefined);
+      }
       const updated = await endTrip(
         activeTripId,
         p.endLat, p.endLng, p.endAddress,
@@ -712,11 +732,6 @@ export default function TripsScreen({ onLogout }: Props) {
         }
       );
 
-      // Upload end photo if captured
-      if (endPhotoUri) {
-        uploadTripPhoto(activeTripId, endPhotoUri, 'END').catch(() => {});
-      }
-
       await clearActiveTripId();
       await clearWaypoints(activeTripId);
 
@@ -732,6 +747,9 @@ export default function TripsScreen({ onLogout }: Props) {
       setWaypointCount(0);
       setActiveStops([]);
       setTrips((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      if (updated.pendingSync) {
+        Alert.alert('Trajet enregistré', 'Le trajet est conservé sur cet appareil et sera synchronisé automatiquement.');
+      }
     } catch {
       Alert.alert(
         'En attente de connexion',
@@ -1199,6 +1217,7 @@ function TripCard({ trip }: { trip: RepTrip }) {
       {trip.purpose ? (
         <Text style={styles.tripPurpose}>{trip.purpose}</Text>
       ) : null}
+      {trip.pendingSync ? <Text style={styles.pendingSync}>En attente de synchronisation</Text> : null}
       <Text style={styles.tripAddress} numberOfLines={1}>
         {trip.startAddress ?? '—'} → {trip.endAddress ?? '—'}
       </Text>
@@ -1389,6 +1408,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#374151',
     marginBottom: 2,
+  },
+  pendingSync: {
+    color: '#B45309',
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 3,
   },
   tripAddress: {
     fontSize: 12,

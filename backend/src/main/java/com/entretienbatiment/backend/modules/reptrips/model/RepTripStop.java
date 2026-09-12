@@ -43,6 +43,9 @@ public class RepTripStop {
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
 
+    @Column(name = "client_operation_id", length = 64, unique = true)
+    private String clientOperationId;
+
     // Expose trip id in JSON without circular reference
     @com.fasterxml.jackson.annotation.JsonProperty("tripId")
     public Long getTripId() {
@@ -84,4 +87,7 @@ public class RepTripStop {
 
     public Integer getDurationSeconds() { return durationSeconds; }
     public void setDurationSeconds(Integer durationSeconds) { this.durationSeconds = durationSeconds; }
+
+    public String getClientOperationId() { return clientOperationId; }
+    public void setClientOperationId(String clientOperationId) { this.clientOperationId = clientOperationId; }
 }

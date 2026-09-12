@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/rep-trips")
@@ -423,6 +425,11 @@ public class RepTripController {
         if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
             return ResponseEntity.status(403).build();
         }
+        if (body.getClientOperationId() != null && !body.getClientOperationId().isBlank()) {
+            Optional<RepTripStop> existing = stopRepository.findByClientOperationIdAndTrip_Id(
+                    body.getClientOperationId(), tripId);
+            if (existing.isPresent()) return ResponseEntity.ok(existing.get());
+        }
         RepTripStop stop = new RepTripStop();
         stop.setTrip(trip);
         stop.setAddress(body.getAddress());
@@ -430,8 +437,15 @@ public class RepTripController {
         stop.setLng(body.getLng());
         stop.setReason(body.getReason() != null ? body.getReason() : "OTHER");
         stop.setNotes(body.getNotes());
+        stop.setClientOperationId(body.getClientOperationId());
         if (body.getStoppedAt() != null) stop.setStoppedAt(body.getStoppedAt());
-        return ResponseEntity.ok(stopRepository.save(stop));
+        try {
+            return ResponseEntity.ok(stopRepository.saveAndFlush(stop));
+        } catch (DataIntegrityViolationException duplicate) {
+            return stopRepository.findByClientOperationIdAndTrip_Id(body.getClientOperationId(), tripId)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.status(409).build());
+        }
     }
 
     @DeleteMapping("/{tripId}/stops/{stopId}")
@@ -1089,6 +1103,7 @@ public class RepTripController {
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
             @RequestParam("kind") String kind,
             @RequestParam(value = "stopId", required = false) Long stopId,
+            @RequestParam(value = "clientOperationId", required = false) String clientOperationId,
             Authentication auth) {
         AppUser user = requireUser(auth);
         Optional<RepTrip> opt = tripRepository.findById(tripId);
@@ -1097,10 +1112,19 @@ public class RepTripController {
         if (!trip.getUserId().equals(user.getId()) && !user.getRole().isAdminLike()) {
             return ResponseEntity.status(403).build();
         }
+        if (clientOperationId != null && !clientOperationId.isBlank()) {
+            Optional<RepTripPhoto> existing = photoRepository.findByClientOperationIdAndTripId(
+                    clientOperationId, tripId);
+            if (existing.isPresent()) return ResponseEntity.ok(existing.get());
+        }
+        if (stopId != null && stopRepository.findById(stopId)
+                .filter(stop -> stop.getTripId().equals(tripId)).isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
         try {
             java.nio.file.Path dir = uploadPaths.repTrips().resolve(String.valueOf(tripId));
             java.nio.file.Files.createDirectories(dir);
-            String safeName = System.currentTimeMillis() + "_" + kind + "_" +
+                String safeName = UUID.randomUUID() + "_" + kind + "_" +
                     file.getOriginalFilename().replaceAll("[^A-Za-z0-9._-]", "_");
             java.nio.file.Path target = dir.resolve(safeName);
             file.transferTo(target.toFile());
@@ -1112,7 +1136,15 @@ public class RepTripController {
             photo.setFilePath(target.toString());
             photo.setMimeType(file.getContentType());
             photo.setSizeBytes((int) Math.min(file.getSize(), Integer.MAX_VALUE));
-            return ResponseEntity.ok(photoRepository.save(photo));
+            photo.setClientOperationId(clientOperationId);
+            try {
+                return ResponseEntity.ok(photoRepository.saveAndFlush(photo));
+            } catch (DataIntegrityViolationException duplicate) {
+                java.nio.file.Files.deleteIfExists(target);
+                return photoRepository.findByClientOperationIdAndTripId(clientOperationId, tripId)
+                        .map(ResponseEntity::ok)
+                        .orElseGet(() -> ResponseEntity.status(409).build());
+            }
         } catch (Exception e) {
             return ResponseEntity.status(500).body(null);
         }

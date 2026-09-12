@@ -51,16 +51,24 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\..*/i,
+            // Production serves the API from the same origin under /api.
+            // Exclude auth endpoints while retaining previously loaded page data offline.
+            urlPattern: ({ url, request, sameOrigin }) => (
+              sameOrigin
+              && request.method === 'GET'
+              && url.pathname.startsWith('/api/')
+              && !url.pathname.startsWith('/api/auth/')
+            ),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
+              networkTimeoutSeconds: 5,
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+                maxEntries: 300,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
               },
               cacheableResponse: {
-                statuses: [0, 200]
+                statuses: [200]
               }
             }
           }

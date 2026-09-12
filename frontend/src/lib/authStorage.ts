@@ -78,3 +78,7 @@ export function clearStoredAuth(): void {
   sessionStorage.removeItem(USER_ID_KEY);
   localStorage.removeItem(REMEMBER_ME_KEY);
 }
+
+export async function clearApiResponseCache(): Promise<void> {
+  if ('caches' in window) await window.caches.delete('api-cache');
+}
