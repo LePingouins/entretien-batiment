@@ -191,11 +191,17 @@ export function isForegroundTracking(): boolean {
 
 // ─── Location permissions ─────────────────────────────────────────────────────
 
-export async function requestLocationPermissions(): Promise<boolean> {
+export type LocationPermissionMode = 'denied' | 'foreground' | 'background';
+
+export async function requestLocationPermissions(): Promise<LocationPermissionMode> {
   const { status: fg } = await Location.requestForegroundPermissionsAsync();
-  if (fg !== 'granted') return false;
+  if (fg !== 'granted') return 'denied';
   const { status: bg } = await Location.requestBackgroundPermissionsAsync();
-  return bg === 'granted';
+  return bg === 'granted' ? 'background' : 'foreground';
+}
+
+export async function hasBackgroundLocationPermission(): Promise<boolean> {
+  return (await Location.getBackgroundPermissionsAsync()).status === 'granted';
 }
 
 export async function startLocationTracking(): Promise<void> {

@@ -39,6 +39,7 @@ import {
 } from '../lib/storage';
 import {
   requestLocationPermissions,
+  hasBackgroundLocationPermission,
   startLocationTracking,
   stopLocationTracking,
   startForegroundTracking,
@@ -50,7 +51,7 @@ import {
   detectGapIdle,
 } from '../lib/gps';
 
-// Expo Go blocks background location on Android — use foreground polling instead
+// Expo Go blocks background location — use foreground polling instead.
 const IS_EXPO_GO = Constants.appOwnership === 'expo';
 
 interface Props {
@@ -283,6 +284,16 @@ export default function TripsScreen({ onLogout }: Props) {
 
   // ─── Start trip flow ──────────────────────────────────────────────────────
 
+  async function startBestAvailableTracking(tripId: number, backgroundGranted?: boolean): Promise<boolean> {
+    const canTrackInBackground = backgroundGranted ?? await hasBackgroundLocationPermission();
+    if (!IS_EXPO_GO && canTrackInBackground) {
+      await startLocationTracking();
+      return true;
+    }
+    await startForegroundTracking(tripId);
+    return false;
+  }
+
   async function handleStartTrip(
     purpose: string,
     prefetchedLat?: number,
@@ -292,11 +303,11 @@ export default function TripsScreen({ onLogout }: Props) {
   ) {
     setStartingTrip(true);
     try {
-      const granted = await requestLocationPermissions();
-      if (!granted) {
+      const locationPermission = await requestLocationPermissions();
+      if (locationPermission === 'denied') {
         Alert.alert(
           'Permission requise',
-          'Autorisez la localisation en arrière-plan pour enregistrer votre trajet.'
+          'Autorisez la localisation pour enregistrer votre trajet.'
         );
         return;
       }
@@ -331,11 +342,10 @@ export default function TripsScreen({ onLogout }: Props) {
         uploadTripPhoto(trip.id, startPhotoUri, 'START').catch(() => {});
         setStartPhotoUri(null);
       }
-      if (IS_EXPO_GO) {
-        await startForegroundTracking(trip.id);
-      } else {
-        await startLocationTracking();
-      }
+      const tracksInBackground = await startBestAvailableTracking(
+        trip.id,
+        locationPermission === 'background',
+      );
 
       const now = Date.now();
       setActiveTripId(trip.id);
@@ -346,7 +356,12 @@ export default function TripsScreen({ onLogout }: Props) {
       if (trip.pendingSync) {
         Alert.alert(
           'Trajet hors connexion',
-          'Le suivi GPS est actif. Le trajet sera envoyé automatiquement lorsque la connexion reviendra.',
+          `Le suivi GPS est actif${tracksInBackground ? '' : ' pendant que l’application reste ouverte'}. Le trajet sera envoyé automatiquement lorsque la connexion reviendra.`,
+        );
+      } else if (!tracksInBackground) {
+        Alert.alert(
+          'Localisation en arrière-plan désactivée',
+          'Le trajet est démarré. Gardez l’application ouverte, ou autorisez la localisation « Toujours » dans Réglages pour continuer le suivi en arrière-plan.',
         );
       }
     } catch (err: any) {
@@ -454,11 +469,7 @@ export default function TripsScreen({ onLogout }: Props) {
     setPreSubmitData(null);
     if (!activeTripId) return;
     try {
-      if (IS_EXPO_GO) {
-        await startForegroundTracking(activeTripId);
-      } else {
-        await startLocationTracking();
-      }
+      await startBestAvailableTracking(activeTripId);
     } catch {
       Alert.alert('Localisation', 'Impossible de reprendre le suivi GPS. Relancez le trajet avant de continuer.');
     }

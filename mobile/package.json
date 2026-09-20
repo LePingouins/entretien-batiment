@@ -37,6 +37,10 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
+    "ios:build:simulator": "npx eas-cli@latest build --platform ios --profile ios-simulator",
+    "ios:build:preview": "npx eas-cli@latest build --platform ios --profile preview",
+    "ios:build:production": "npx eas-cli@latest build --platform ios --profile production",
+    "ios:submit": "npx eas-cli@latest submit --platform ios --profile production --latest",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor"

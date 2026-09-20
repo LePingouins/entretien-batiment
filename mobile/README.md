@@ -44,6 +44,8 @@ npx eas-cli build --profile production --platform all
 
 Les builds iOS nécessitent un compte Apple Developer; les soumissions Android nécessitent un compte Google Play Console. Les certificats et clés sont gérés par EAS, pas dans le dépôt.
 
+Pour publier sur TestFlight depuis Windows, suivre [IOS_PUBLISH.md](IOS_PUBLISH.md).
+
 ## Backend
 
 Le mobile utilise `/api/auth/mobile/login`, `/api/auth/mobile/refresh` et `/api/auth/mobile/logout`. Le portail web continue d’utiliser les endpoints à cookie existants. Tous les autres modules partagent directement les API métier et la base de données.

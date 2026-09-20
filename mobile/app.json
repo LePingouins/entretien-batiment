@@ -18,8 +18,7 @@
         "NSLocationWhenInUseUsageDescription": "Entretien Bâtiment utilise votre position pour enregistrer votre trajet.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Entretien Bâtiment utilise votre position en arrière-plan pour enregistrer votre trajet même lorsque vous utilisez d'autres applications.",
         "UIBackgroundModes": [
-          "location",
-          "fetch"
+          "location"
         ]
       }
     },
