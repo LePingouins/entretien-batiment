@@ -52,6 +52,36 @@ export const fr = {
   language: 'Langue',
   languageFrench: 'Français',
   languageEnglish: 'English',
+
+  // Shared header / navigation
+  back: 'Retour',
+  logout: 'Déconnexion',
+  myTrips: 'Mes Trajets',
+  myExpenses: 'Mes Dépenses',
+  administration: 'Administration',
+  tripsToApprove: 'Trajets à approuver',
+
+  // Trip detail (expanded card)
+  category: 'Catégorie',
+  approval: 'Approbation',
+  reimbursement: 'Remboursement',
+  distanceSource: 'Source de distance',
+  comment: 'Commentaire',
+  notes: 'Notes',
+  stops: 'Arrêts',
+  approve: 'Approuver',
+  reject: 'Refuser',
+  noPendingTrips: 'Aucun trajet en attente',
+  allTripsProcessed: 'Tous les trajets ont été traités.',
+
+  // Work order materials / delete
+  materials: 'Matériaux',
+  addMaterial: 'Ajouter un matériau',
+  materialName: 'Nom du matériau',
+  quantity: 'Qté',
+  noMaterials: 'Aucun matériau associé.',
+  deleteWorkOrder: 'Supprimer ce bon de travail ?',
+  deleteWorkOrderConfirm: 'Cette action est définitive et supprimera aussi les pièces jointes et les matériaux associés.',
 };
 
 export const en: typeof fr = {
@@ -102,4 +132,31 @@ export const en: typeof fr = {
   language: 'Language',
   languageFrench: 'Français',
   languageEnglish: 'English',
+
+  back: 'Back',
+  logout: 'Log out',
+  myTrips: 'My Trips',
+  myExpenses: 'My Expenses',
+  administration: 'Administration',
+  tripsToApprove: 'Trips to approve',
+
+  category: 'Category',
+  approval: 'Approval',
+  reimbursement: 'Reimbursement',
+  distanceSource: 'Distance source',
+  comment: 'Comment',
+  notes: 'Notes',
+  stops: 'Stops',
+  approve: 'Approve',
+  reject: 'Reject',
+  noPendingTrips: 'No pending trips',
+  allTripsProcessed: 'All trips have been processed.',
+
+  materials: 'Materials',
+  addMaterial: 'Add material',
+  materialName: 'Material name',
+  quantity: 'Qty',
+  noMaterials: 'No materials linked.',
+  deleteWorkOrder: 'Delete this work order?',
+  deleteWorkOrderConfirm: 'This action is permanent and will also delete its attachments and materials.',
 };

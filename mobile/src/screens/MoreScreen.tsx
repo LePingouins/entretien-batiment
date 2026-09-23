@@ -45,6 +45,7 @@ export default function MoreScreen() {
   const { user, canAccess, signOut } = useAuth();
   const { lang, setLang, t } = useLang();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  const isAdminOrDev = isAdmin || user?.role === 'DEVELOPPER';
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -68,8 +69,22 @@ export default function MoreScreen() {
         {canAccess('REP_EXPENSES') ? <MenuItem icon={ReceiptText} label="Dépenses et reçus" onPress={() => navigation.navigate('Expenses')} /> : null}
         {isAdmin && canAccess('USERS') ? <MenuItem icon={Users} label="Utilisateurs" onPress={() => navigation.navigate('AdminUsers')} /> : null}
         {isAdmin && canAccess('SUBSCRIPTIONS') ? <MenuItem icon={CreditCard} label="Abonnements logiciels" onPress={() => navigation.navigate('Subscriptions')} /> : null}
+        {isAdminOrDev ? <MenuItem icon={MapPinned} label={t.tripsToApprove} onPress={() => navigation.navigate('AdminTrips')} /> : null}
         <MenuItem icon={ExternalLink} label="Ouvrir le portail web" onPress={() => void Linking.openURL('https://entretien-batiment.com')} />
       </View>
+
+      {isAdminOrDev && (
+        <>
+          <Text style={styles.sectionTitle}>{t.administration}</Text>
+          <View style={styles.menu}>
+            <MenuItem icon={ExternalLink} label="Trajets et taux (portail web)" onPress={() => void Linking.openURL('https://entretien-batiment.com/admin/trip-settings')} />
+            <MenuItem icon={ExternalLink} label="Représentants (portail web)" onPress={() => void Linking.openURL('https://entretien-batiment.com/admin/representants')} />
+            {user?.role === 'DEVELOPPER' && (
+              <MenuItem icon={ExternalLink} label="Débogage et outils dev (portail web)" onPress={() => void Linking.openURL('https://entretien-batiment.com/admin/debug')} />
+            )}
+          </View>
+        </>
+      )}
 
       <Text style={styles.sectionTitle}>{t.settings}</Text>
       <View style={styles.menu}>

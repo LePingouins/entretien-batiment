@@ -9,6 +9,7 @@ import {
   syncPendingTrips,
   isNetworkError,
 } from '../lib/api';
+import { unregisterPushNotifications } from '../lib/push';
 import {
   claimLegacyActiveTrip,
   clearCachedAuthData,
@@ -149,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut(): Promise<void> {
+    await unregisterPushNotifications();
     try {
       await logoutRequest();
     } finally {

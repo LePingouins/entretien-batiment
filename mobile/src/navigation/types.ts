@@ -14,6 +14,7 @@ export type RootStackParamList = {
   InventoryCount: { sessionId: number; name: string };
   AdminUsers: undefined;
   Subscriptions: undefined;
+  AdminTrips: undefined;
 };
 
 export type MainTabParamList = {

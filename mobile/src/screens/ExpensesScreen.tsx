@@ -14,6 +14,8 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { ArrowLeft } from 'lucide-react-native';
 import {
   Expense,
   ExpenseRequest,
@@ -23,6 +25,8 @@ import {
   deleteExpense,
   uploadExpenseReceipt,
 } from '../lib/api';
+import { normalizePhotoForUpload } from '../lib/imageUtils';
+import { useLang } from '../context/LangContext';
 
 interface Props {
   onLogout: () => void;
@@ -69,6 +73,8 @@ function centsToDollarsStr(cents?: number | null): string {
 }
 
 export default function ExpensesScreen({ onLogout }: Props) {
+  const navigation = useNavigation();
+  const { t } = useLang();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -166,8 +172,11 @@ export default function ExpensesScreen({ onLogout }: Props) {
         allowsEditing: false,
       });
       if (result?.canceled) return;
-      const uri = result?.assets?.[0]?.uri ?? null;
-      if (uri) setPendingReceiptUri(uri);
+      const asset = result?.assets?.[0];
+      if (asset?.uri) {
+        const normalized = await normalizePhotoForUpload({ uri: asset.uri, name: `receipt-${Date.now()}.jpg`, mimeType: asset.mimeType });
+        setPendingReceiptUri(normalized.uri);
+      }
     } catch {
       Alert.alert('Module manquant', 'expo-image-picker n’est pas installé dans ce build.');
     }
@@ -187,8 +196,11 @@ export default function ExpensesScreen({ onLogout }: Props) {
         allowsEditing: false,
       });
       if (result?.canceled) return;
-      const uri = result?.assets?.[0]?.uri ?? null;
-      if (uri) setPendingReceiptUri(uri);
+      const asset = result?.assets?.[0];
+      if (asset?.uri) {
+        const normalized = await normalizePhotoForUpload({ uri: asset.uri, name: `receipt-${Date.now()}.jpg`, mimeType: asset.mimeType });
+        setPendingReceiptUri(normalized.uri);
+      }
     } catch {
       Alert.alert('Module manquant', 'expo-image-picker n’est pas installé dans ce build.');
     }
@@ -278,9 +290,16 @@ export default function ExpensesScreen({ onLogout }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mes Dépenses</Text>
+        <View style={styles.headerLeft}>
+          {navigation.canGoBack() && (
+            <TouchableOpacity accessibilityLabel={t.back} style={styles.backButton} onPress={() => navigation.goBack()}>
+              <ArrowLeft size={22} color="#fff" />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.headerTitle}>{t.myExpenses}</Text>
+        </View>
         <TouchableOpacity onPress={onLogout}>
-          <Text style={styles.logoutText}>Déconnexion</Text>
+          <Text style={styles.logoutText}>{t.logout}</Text>
         </TouchableOpacity>
       </View>
 
@@ -548,6 +567,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   headerTitle: { color: '#fff', fontSize: 20, fontWeight: '700' },
+  headerLeft: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  backButton: { marginRight: -4, padding: 2 },
   logoutText: { color: '#fff', fontSize: 14, opacity: 0.9 },
   newButton: {
     margin: 16,

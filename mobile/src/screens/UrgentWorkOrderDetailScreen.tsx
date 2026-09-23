@@ -10,6 +10,7 @@ import { colors } from '../theme';
 import { ErrorState, LoadingState } from '../components/ScreenState';
 import { formatAppDate, PriorityPill, StatusPill } from '../components/OrderCard';
 import OrderFormModal, { type OrderFormValue } from '../components/OrderFormModal';
+import SecureImage from '../components/SecureImage';
 import { openSecureFile } from '../lib/secureFile';
 import { useLang } from '../context/LangContext';
 
@@ -122,16 +123,32 @@ export default function UrgentWorkOrderDetailScreen({ route, navigation }: Props
       {(order.attachmentFilename || order.invoiceFilename) && (
         <Section title={t.attachments}>
           {order.attachmentFilename && (
-            <Pressable style={styles.fileRow} onPress={() => void openSecureFile(order.attachmentDownloadUrl || '', order.attachmentFilename || 'attachment')}>
-              <Paperclip size={17} color={colors.red} />
-              <Text style={styles.fileRowText} numberOfLines={1}>{order.attachmentFilename}</Text>
-            </Pressable>
+            <View style={{ marginBottom: 10 }}>
+              <SecureImage
+                downloadUrl={order.attachmentDownloadUrl || ''}
+                filename={order.attachmentFilename}
+                contentType={order.attachmentContentType}
+                onOpenFallback={() => void openSecureFile(order.attachmentDownloadUrl || '', order.attachmentFilename || 'attachment')}
+              />
+              <Pressable style={styles.fileRow} onPress={() => void openSecureFile(order.attachmentDownloadUrl || '', order.attachmentFilename || 'attachment')}>
+                <Paperclip size={17} color={colors.red} />
+                <Text style={styles.fileRowText} numberOfLines={1}>{order.attachmentFilename}</Text>
+              </Pressable>
+            </View>
           )}
           {order.invoiceFilename && (
-            <Pressable style={styles.fileRow} onPress={() => void openSecureFile(order.invoiceDownloadUrl || '', order.invoiceFilename || 'invoice')}>
-              <ReceiptText size={17} color={colors.red} />
-              <Text style={styles.fileRowText} numberOfLines={1}>{order.invoiceFilename}</Text>
-            </Pressable>
+            <View>
+              <SecureImage
+                downloadUrl={order.invoiceDownloadUrl || ''}
+                filename={order.invoiceFilename}
+                contentType={order.invoiceContentType}
+                onOpenFallback={() => void openSecureFile(order.invoiceDownloadUrl || '', order.invoiceFilename || 'invoice')}
+              />
+              <Pressable style={styles.fileRow} onPress={() => void openSecureFile(order.invoiceDownloadUrl || '', order.invoiceFilename || 'invoice')}>
+                <ReceiptText size={17} color={colors.red} />
+                <Text style={styles.fileRowText} numberOfLines={1}>{order.invoiceFilename}</Text>
+              </Pressable>
+            </View>
           )}
         </Section>
       )}

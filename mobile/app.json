@@ -78,6 +78,13 @@
           "isAndroidForegroundServiceEnabled": true
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1D4ED8"
+        }
+      ],
       "@react-native-community/datetimepicker"
     ],
     "extra": {

@@ -60,11 +60,31 @@ export interface WorkOrder {
   updatedAt: string;
   attachmentFilename?: string | null;
   attachmentDownloadUrl?: string | null;
+  attachmentContentType?: string | null;
   invoiceFilename?: string | null;
   invoiceDownloadUrl?: string | null;
+  invoiceContentType?: string | null;
   materialsCount?: number;
   materialsPreview?: string[];
   archived: boolean;
+}
+
+export interface Material {
+  id: number;
+  name: string;
+  quantity?: number | null;
+  bought: boolean;
+  supplier?: string | null;
+  url?: string | null;
+  description?: string | null;
+}
+
+export interface MaterialInput {
+  name: string;
+  quantity?: number | null;
+  supplier?: string | null;
+  url?: string | null;
+  description?: string | null;
 }
 
 export interface WorkOrderInput {
@@ -103,8 +123,10 @@ export interface UrgentWorkOrder {
   completedAt?: string | null;
   attachmentFilename?: string | null;
   attachmentDownloadUrl?: string | null;
+  attachmentContentType?: string | null;
   invoiceFilename?: string | null;
   invoiceDownloadUrl?: string | null;
+  invoiceContentType?: string | null;
   materialsCount?: number;
   materialsPreview?: string[] | string;
   archived: boolean;

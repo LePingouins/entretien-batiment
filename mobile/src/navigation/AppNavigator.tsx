@@ -26,6 +26,7 @@ import InventoryScreen from '../screens/InventoryScreen';
 import InventoryCountScreen from '../screens/InventoryCountScreen';
 import AdminUsersScreen from '../screens/AdminUsersScreen';
 import SubscriptionsScreen from '../screens/SubscriptionsScreen';
+import AdminTripsScreen from '../screens/AdminTripsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -69,6 +70,7 @@ export default function AppNavigator() {
         <Stack.Screen name="InventoryCount" component={InventoryCountScreen} options={({ route }) => ({ title: route.params.name })} />
         <Stack.Screen name="AdminUsers" component={AdminUsersScreen} options={{ title: 'Utilisateurs' }} />
         <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} options={{ title: 'Abonnements' }} />
+        <Stack.Screen name="AdminTrips" component={AdminTripsScreen} options={{ title: 'Trajets à approuver' }} />
         <Stack.Screen name="Trips" options={{ headerShown: false }}>
           {() => <TripsScreen onLogout={signOut} />}
         </Stack.Screen>

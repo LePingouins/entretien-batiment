@@ -18,6 +18,7 @@ import { Calendar, Check, File as FileIcon, Image as ImageIcon, Trash2, X } from
 import type { WorkOrderPriority } from '../types/api';
 import type { PickedFile } from '../lib/api';
 import { openSecureFile } from '../lib/secureFile';
+import { normalizePhotoForUpload } from '../lib/imageUtils';
 import { useLang } from '../context/LangContext';
 import { colors } from '../theme';
 import { formatAppDate } from './OrderCard';
@@ -97,7 +98,9 @@ export default function OrderFormModal({ visible, urgent = false, mode = 'create
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
     if (result.canceled || !result.assets?.length) return;
     const asset = result.assets[0];
-    setPhotos((prev) => [...prev, { uri: asset.uri, name: asset.fileName || `photo-${Date.now()}.jpg`, mimeType: asset.mimeType || 'image/jpeg' }]);
+    const picked: PickedFile = { uri: asset.uri, name: asset.fileName || `photo-${Date.now()}.jpg`, mimeType: asset.mimeType || 'image/jpeg' };
+    const normalized = await normalizePhotoForUpload(picked);
+    setPhotos((prev) => [...prev, normalized]);
   }
 
   async function addFile() {

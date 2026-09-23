@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import Constants from 'expo-constants';
 import NetInfo from '@react-native-community/netinfo';
+import { useNavigation } from '@react-navigation/native';
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
 import {
   RepTrip, RepTripStop, RepTripStopReason, RepTripCategory, Vehicle,
   getMyTrips, startTrip, endTrip, osrmRouteKm, googleRouteKm, addStop,
@@ -50,6 +52,8 @@ import {
   detectCurrentIdle,
   detectGapIdle,
 } from '../lib/gps';
+import { normalizePhotoForUpload } from '../lib/imageUtils';
+import { useLang } from '../context/LangContext';
 
 // Expo Go blocks background location — use foreground polling instead.
 const IS_EXPO_GO = Constants.appOwnership === 'expo';
@@ -73,6 +77,8 @@ function formatDate(dateStr: string): string {
 }
 
 export default function TripsScreen({ onLogout }: Props) {
+  const navigation = useNavigation();
+  const { t } = useLang();
   const [trips, setTrips] = useState<RepTrip[]>([]);
   const [activeTripId, setActiveTripId] = useState<number | null>(null);
   const [activeTripStart, setActiveTripStart] = useState<number | null>(null);
@@ -207,8 +213,10 @@ export default function TripsScreen({ onLogout }: Props) {
         allowsEditing: false,
       });
       if (result?.canceled) return null;
-      const uri = result?.assets?.[0]?.uri ?? null;
-      return uri;
+      const asset = result?.assets?.[0];
+      if (!asset?.uri) return null;
+      const normalized = await normalizePhotoForUpload({ uri: asset.uri, name: `photo-${Date.now()}.jpg`, mimeType: asset.mimeType });
+      return normalized.uri;
     } catch (e: any) {
       Alert.alert('Module manquant', 'expo-image-picker n’est pas installé dans ce build. Lancez `npx expo install expo-image-picker` puis reconstruisez l’APK.');
       return null;
@@ -785,9 +793,16 @@ export default function TripsScreen({ onLogout }: Props) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mes Trajets</Text>
+        <View style={styles.headerLeft}>
+          {navigation.canGoBack() && (
+            <TouchableOpacity accessibilityLabel={t.back} style={styles.backButton} onPress={() => navigation.goBack()}>
+              <ArrowLeft size={22} color="#fff" />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.headerTitle}>{t.myTrips}</Text>
+        </View>
         <TouchableOpacity onPress={onLogout}>
-          <Text style={styles.logoutText}>Déconnexion</Text>
+          <Text style={styles.logoutText}>{t.logout}</Text>
         </TouchableOpacity>
       </View>
 
@@ -1216,22 +1231,101 @@ export default function TripsScreen({ onLogout }: Props) {
   );
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  CLIENT: '🤝 Client', PICKUP: '📦 Cueillette', TRAINING: '🎓 Formation', PERSONAL: '👤 Personnel', OTHER: '📍 Autre',
+};
+const APPROVAL_LABELS: Record<string, string> = {
+  PENDING: '⏳ En attente d’approbation', APPROVED: '✅ Approuvé', REJECTED: '✗ Refusé', AUTO_APPROVED: '✅ Auto-approuvé',
+};
+const STOP_REASON_LABELS: Record<string, string> = {
+  CLIENT: 'Client', RESTAURANT: 'Resto', GAS: 'Essence', OFFICE: 'Bureau', OTHER: 'Autre',
+};
+
+function formatMoney(cents?: number | null): string | null {
+  if (cents == null) return null;
+  return `${(cents / 100).toFixed(2)} $`;
+}
+
 function TripCard({ trip }: { trip: RepTrip }) {
+  const [expanded, setExpanded] = useState(false);
+  const reimbursement = formatMoney(trip.reimbursementCents);
+
   return (
-    <View style={styles.tripCard}>
+    <TouchableOpacity activeOpacity={0.8} style={styles.tripCard} onPress={() => setExpanded((v) => !v)}>
       <View style={styles.tripCardRow}>
         <Text style={styles.tripDate}>{formatDate(trip.date)}</Text>
-        <Text style={styles.tripKm}>
-          {trip.totalKm != null ? `${trip.totalKm} km` : '—'}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.tripKm}>
+            {trip.totalKm != null ? `${trip.totalKm} km` : '—'}
+          </Text>
+          {expanded ? <ChevronUp size={18} color="#6B7280" /> : <ChevronDown size={18} color="#6B7280" />}
+        </View>
       </View>
       {trip.purpose ? (
         <Text style={styles.tripPurpose}>{trip.purpose}</Text>
       ) : null}
       {trip.pendingSync ? <Text style={styles.pendingSync}>En attente de synchronisation</Text> : null}
-      <Text style={styles.tripAddress} numberOfLines={1}>
+      <Text style={styles.tripAddress} numberOfLines={expanded ? undefined : 1}>
         {trip.startAddress ?? '—'} → {trip.endAddress ?? '—'}
       </Text>
+
+      {expanded && (
+        <View style={styles.tripDetails}>
+          {trip.category && (
+            <DetailRow label="Catégorie" value={CATEGORY_LABELS[trip.category] ?? trip.category} />
+          )}
+          {trip.approvalStatus && (
+            <DetailRow label="Approbation" value={APPROVAL_LABELS[trip.approvalStatus] ?? trip.approvalStatus} />
+          )}
+          {reimbursement && (
+            <DetailRow label="Remboursement" value={reimbursement} />
+          )}
+          {trip.distanceSource && (
+            <DetailRow label="Source de distance" value={trip.distanceSource} />
+          )}
+          {(trip.idealKm != null || trip.actualKm != null || trip.osrmKm != null) && (
+            <View style={styles.distanceRow}>
+              {trip.idealKm != null && <DistanceChip label="Idéal" value={`${trip.idealKm.toFixed(1)} km`} />}
+              {trip.actualKm != null && <DistanceChip label="Réel GPS" value={`${trip.actualKm.toFixed(1)} km`} />}
+              {trip.osrmKm != null && <DistanceChip label="OSRM" value={`${trip.osrmKm.toFixed(1)} km`} />}
+            </View>
+          )}
+          {trip.driverNote && (
+            <DetailRow label="Commentaire" value={trip.driverNote} />
+          )}
+          {trip.notes && (
+            <DetailRow label="Notes" value={trip.notes} />
+          )}
+          {trip.stops && trip.stops.length > 0 && (
+            <View style={{ marginTop: 8 }}>
+              <Text style={styles.detailLabel}>Arrêts ({trip.stops.length})</Text>
+              {trip.stops.map((stop) => (
+                <Text key={stop.id} style={styles.stopLine}>
+                  • {STOP_REASON_LABELS[stop.reason] ?? stop.reason}{stop.address ? ` — ${stop.address}` : ''}
+                </Text>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+}
+
+function DistanceChip({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.distanceChip}>
+      <Text style={styles.distanceChipLabel}>{label}</Text>
+      <Text style={styles.distanceChipValue}>{value}</Text>
     </View>
   );
 }
@@ -1259,6 +1353,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#fff',
+  },
+  headerLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  backButton: {
+    marginRight: -4,
+    padding: 2,
   },
   logoutText: {
     color: '#BFDBFE',
@@ -1429,6 +1532,53 @@ const styles = StyleSheet.create({
   tripAddress: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  tripDetails: {
+    borderTopColor: '#E5E7EB',
+    borderTopWidth: 1,
+    marginTop: 10,
+    paddingTop: 10,
+  },
+  detailRow: {
+    marginBottom: 7,
+  },
+  detailLabel: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  detailValue: {
+    color: '#111827',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  stopLine: {
+    color: '#374151',
+    fontSize: 13,
+    marginTop: 3,
+  },
+  distanceRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 7,
+  },
+  distanceChip: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    flex: 1,
+    padding: 8,
+  },
+  distanceChipLabel: {
+    color: '#6B7280',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  distanceChipValue: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
   },
   // Modal
   modalOverlay: {

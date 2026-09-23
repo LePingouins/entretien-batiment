@@ -7,6 +7,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LangProvider } from './src/context/LangContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import { registerForPushNotifications } from './src/lib/push';
 import { colors } from './src/theme';
 
 export default function App() {
@@ -38,6 +39,10 @@ export default function App() {
 
 function AppContent() {
   const { status, signIn } = useAuth();
+
+  useEffect(() => {
+    if (status === 'authenticated') void registerForPushNotifications();
+  }, [status]);
 
   if (status === 'loading') {
     return (

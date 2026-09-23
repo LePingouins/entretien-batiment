@@ -48,17 +48,20 @@ public class NotificationService {
     private final NotificationRecipientRuleRepository recipientRuleRepository;
     private final AppUserRepository userRepository;
     private final NotificationWebSocketSender webSocketSender;
+    private final ExpoPushService expoPushService;
 
     public NotificationService(
             NotificationRepository notificationRepository,
             NotificationRecipientRuleRepository recipientRuleRepository,
             AppUserRepository userRepository,
-            NotificationWebSocketSender webSocketSender
+            NotificationWebSocketSender webSocketSender,
+            ExpoPushService expoPushService
     ) {
         this.notificationRepository = notificationRepository;
         this.recipientRuleRepository = recipientRuleRepository;
         this.userRepository = userRepository;
         this.webSocketSender = webSocketSender;
+        this.expoPushService = expoPushService;
     }
 
     public List<Notification> getUserNotifications(Long userId) {
@@ -182,6 +185,7 @@ public class NotificationService {
             n.setSource(source);
             notificationRepository.save(n);
             webSocketSender.sendNotificationUpdate(dev.getId());
+            expoPushService.sendToUser(dev.getId(), title, message, href);
         }
     }
 
@@ -208,6 +212,7 @@ public class NotificationService {
             n.setBugReportId(bugReportId);
             notificationRepository.save(n);
             webSocketSender.sendNotificationUpdate(admin.getId());
+            expoPushService.sendToUser(admin.getId(), title, message, href);
         }
     }
 
@@ -238,6 +243,7 @@ public class NotificationService {
         n.setBugReportId(bugReportId);
         notificationRepository.save(n);
         webSocketSender.sendNotificationUpdate(targetUserId);
+        expoPushService.sendToUser(targetUserId, title, message, href);
     }
 
     @Transactional(readOnly = true)

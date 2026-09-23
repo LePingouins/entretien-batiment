@@ -37,6 +37,8 @@ import type {
   InventoryProduct,
   InventoryProductInput,
   InventorySession,
+  Material,
+  MaterialInput,
   MileageEntry,
   MileageEntryInput,
   MobileTokenResponse,
@@ -239,6 +241,7 @@ export interface RepTrip {
   vehicleId?: number | null;
   locked?: boolean;
   pendingSync?: boolean;
+  userEmail?: string | null;
 }
 
 export interface Vehicle {
@@ -360,6 +363,34 @@ export async function updateWorkOrder(
   }
   const res = await api.put<WorkOrder>(`/api/admin/work-orders/${id}`, input);
   return res.data;
+}
+
+export async function deleteWorkOrder(id: number): Promise<void> {
+  await api.delete(`/api/admin/work-orders/${id}`);
+}
+
+export async function getWorkOrderMaterials(workOrderId: number): Promise<Material[]> {
+  const res = await api.get<Material[]>(`/api/work-orders/${workOrderId}/materials`);
+  return res.data;
+}
+
+export async function addWorkOrderMaterial(workOrderId: number, input: MaterialInput): Promise<Material> {
+  const res = await api.post<Material>(`/api/work-orders/${workOrderId}/materials`, input);
+  return res.data;
+}
+
+export async function updateWorkOrderMaterial(workOrderId: number, materialId: number, input: MaterialInput): Promise<Material> {
+  const res = await api.patch<Material>(`/api/work-orders/${workOrderId}/materials/${materialId}`, input);
+  return res.data;
+}
+
+export async function toggleWorkOrderMaterialBought(workOrderId: number, materialId: number, bought: boolean): Promise<Material> {
+  const res = await api.patch<Material>(`/api/work-orders/${workOrderId}/materials/${materialId}/bought`, { bought });
+  return res.data;
+}
+
+export async function deleteWorkOrderMaterial(workOrderId: number, materialId: number): Promise<void> {
+  await api.delete(`/api/work-orders/${workOrderId}/materials/${materialId}`);
 }
 
 export async function getUrgentWorkOrders(params?: {
@@ -1081,6 +1112,23 @@ export async function getVehicles(): Promise<Vehicle[]> {
   return res.data;
 }
 
+// ─── Admin: trip approval (ADMIN / DEVELOPPER) ───────────────────────────────
+
+export async function getPendingApprovalTrips(): Promise<RepTrip[]> {
+  const res = await api.get<RepTrip[]>('/api/rep-trips/pending');
+  return res.data;
+}
+
+export async function approveTrip(id: number, note?: string): Promise<RepTrip> {
+  const res = await api.post<RepTrip>(`/api/rep-trips/${id}/approve`, note ? { note } : {});
+  return res.data;
+}
+
+export async function rejectTrip(id: number, note?: string): Promise<RepTrip> {
+  const res = await api.post<RepTrip>(`/api/rep-trips/${id}/reject`, { note });
+  return res.data;
+}
+
 // ─── V38: Photos ──────────────────────────────────────────────────────────────
 // Uploads a photo (start/end/stop/other) for a trip via multipart form.
 // `uri` is the local file URI from expo-image-picker / Camera.
@@ -1226,4 +1274,14 @@ export async function uploadExpenseReceipt(id: number, uri: string): Promise<Exp
 
 export function expenseReceiptUrl(expenseId: number, receiptId: number): string {
   return `${BASE_URL}/api/expenses/${expenseId}/receipts/${receiptId}`;
+}
+
+// ─── Push notifications ──────────────────────────────────────────────────────
+
+export async function registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void> {
+  await api.post('/api/push-tokens', { token, platform });
+}
+
+export async function unregisterPushToken(token: string): Promise<void> {
+  await api.delete('/api/push-tokens', { data: { token } });
 }

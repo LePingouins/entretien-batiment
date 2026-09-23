@@ -96,8 +96,13 @@ export interface PendingTrip {
 // ─── JWT Token ────────────────────────────────────────────────────────────────
 
 export async function saveToken(token: string): Promise<void> {
+  // AFTER_FIRST_UNLOCK (not WHEN_UNLOCKED) so the token stays readable while the
+  // phone is locked — needed since trip GPS tracking and auto-refresh happen
+  // in the background, often while the device is locked in a pocket. Reading
+  // under WHEN_UNLOCKED could fail with the device locked and look like a
+  // logged-out session even though the refresh token was still valid.
   await SecureStore.setItemAsync(TOKEN_KEY, token, {
-    keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
   });
 }
 
@@ -105,7 +110,7 @@ export async function saveSession(accessToken: string, refreshToken: string): Pr
   await Promise.all([
     saveToken(accessToken),
     SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken, {
-      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
     }),
   ]);
 }
