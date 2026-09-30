@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
+import { colors } from '../theme';
 import {
   Expense,
   ExpenseRequest,
@@ -282,7 +283,7 @@ export default function ExpensesScreen({ onLogout }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1D4ED8" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -561,7 +562,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1D4ED8',
+    backgroundColor: colors.primary,
     paddingTop: Platform.OS === 'ios' ? 56 : 40,
     paddingBottom: 16,
     paddingHorizontal: 20,
@@ -572,7 +573,7 @@ const styles = StyleSheet.create({
   logoutText: { color: '#fff', fontSize: 14, opacity: 0.9 },
   newButton: {
     margin: 16,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#0F172A' },
   modalCancel: { fontSize: 16, color: '#475569' },
-  modalSave: { fontSize: 16, color: '#1D4ED8', fontWeight: '700' },
+  modalSave: { fontSize: 16, color: colors.primary, fontWeight: '700' },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 4 },
   input: {
     backgroundColor: '#fff',
@@ -654,7 +655,7 @@ const styles = StyleSheet.create({
   existingReceiptsHint: { color: '#64748B', fontSize: 13, marginTop: 4 },
   photoBtn: {
     flex: 1,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',

@@ -11,6 +11,7 @@ import { NotificationsContext, NotificationsContextType } from '../context/Notif
 import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { usePageAccess } from '../context/PageAccessContext';
 import { getRolePagePath } from '../lib/pageAccess';
+import DashboardCalendar from '../components/DashboardCalendar';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -118,9 +119,9 @@ export default function DashboardPage() {
         
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
         {/* Quick Actions Panel */}
-        <div className={`rounded-xl shadow-md border p-6 ${isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-slate-100'}`}>
+        <div className={`lg:col-span-2 rounded-xl shadow-md border p-6 ${isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-slate-100'}`}>
           <div className="flex items-center justify-between mb-4">
             <h2 className={`text-xl font-bold flex items-center gap-2 ${isDark ? 'text-surface-100' : 'text-slate-900'}`}>
               <QuickActionIcon className="h-5 w-5 text-yellow-500" />
@@ -165,22 +166,26 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* System Status / Info Panel */}
-        <div className={`rounded-xl shadow-md border p-6 relative overflow-hidden ${isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-slate-100'}`}>
-          
-          <h2 className={`text-xl font-bold mb-2 relative z-10 ${isDark ? 'text-surface-100' : 'text-slate-800'}`}>{t.dashboardSystemStatus}</h2>
-          <p className={`mb-6 relative z-10 ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardSystemStatusDesc}</p>
-          
-          <div className={`flex items-center justify-between relative z-10 rounded-lg p-4 border ${isDark ? 'bg-surface-900 border-surface-700' : 'bg-slate-50 border-slate-100'}`}>
-            <div>
-              <p className={`text-xs uppercase tracking-wider font-semibold ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardCurrentDate}</p>
-              <p className={`text-lg font-mono font-bold ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{new Date().toLocaleDateString()}</p>
-            </div>
-            <div className="text-right">
-               <p className={`text-xs uppercase tracking-wider font-semibold ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardActiveUsers}</p>
-               <p className={`text-lg font-mono font-bold ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>--</p>
+        {/* Right column: System Status + Calendar */}
+        <div className="flex flex-col gap-8">
+          <div className={`rounded-xl shadow-md border p-6 relative overflow-hidden ${isDark ? 'bg-surface-800 border-surface-700' : 'bg-white border-slate-100'}`}>
+
+            <h2 className={`text-xl font-bold mb-2 relative z-10 ${isDark ? 'text-surface-100' : 'text-slate-800'}`}>{t.dashboardSystemStatus}</h2>
+            <p className={`mb-6 relative z-10 ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardSystemStatusDesc}</p>
+
+            <div className={`flex items-center justify-between relative z-10 rounded-lg p-4 border ${isDark ? 'bg-surface-900 border-surface-700' : 'bg-slate-50 border-slate-100'}`}>
+              <div>
+                <p className={`text-xs uppercase tracking-wider font-semibold ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardCurrentDate}</p>
+                <p className={`text-lg font-mono font-bold ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>{new Date().toLocaleDateString()}</p>
+              </div>
+              <div className="text-right">
+                 <p className={`text-xs uppercase tracking-wider font-semibold ${isDark ? 'text-surface-400' : 'text-slate-500'}`}>{t.dashboardActiveUsers}</p>
+                 <p className={`text-lg font-mono font-bold ${isDark ? 'text-surface-200' : 'text-slate-700'}`}>--</p>
+              </div>
             </div>
           </div>
+
+          <DashboardCalendar />
         </div>
       </div>
 

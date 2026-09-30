@@ -85,19 +85,24 @@ define(['./workbox-970124e6'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.4m9f0njg8j8"
+    "revision": "0.ebsiqdn3oc4"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
     allowlist: [/^\/$/]
   }));
-  workbox.registerRoute(/^https:\/\/api\..*/i, new workbox.NetworkFirst({
+  workbox.registerRoute(({
+    url,
+    request,
+    sameOrigin
+  }) => sameOrigin && request.method === "GET" && url.pathname.startsWith("/api/") && !url.pathname.startsWith("/api/auth/"), new workbox.NetworkFirst({
     "cacheName": "api-cache",
+    "networkTimeoutSeconds": 5,
     plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 100,
-      maxAgeSeconds: 86400
+      maxEntries: 300,
+      maxAgeSeconds: 604800
     }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
+      statuses: [200]
     })]
   }), 'GET');
 

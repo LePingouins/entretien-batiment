@@ -13,6 +13,7 @@ import NavDropdown from './NavDropdown';
 import NavSearch, { NavSearchItem } from './NavSearch';
 
 const COLOR_SCHEME_OPTIONS: Array<{ value: ColorSchemeType; label: string; icon: string }> = [
+  { value: 'green', label: 'Default', icon: '🌿' },
   { value: 'default', label: 'Light', icon: '☀️' },
   { value: 'dark', label: 'Dark', icon: '🌙' },
 ];
@@ -51,26 +52,23 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
 
   const [colorScheme, setColorSchemeState] = React.useState<ColorSchemeType>(() => {
     const stored = localStorage.getItem('colorScheme');
-    if (stored === 'dark' || stored === 'default') {
+    if (stored === 'dark' || stored === 'default' || stored === 'green') {
       return stored;
     }
     if (stored) {
-      localStorage.setItem('colorScheme', 'default');
+      localStorage.setItem('colorScheme', 'green');
     }
-    return 'default';
+    return 'green';
   });
   const setColorScheme = React.useCallback((scheme: ColorSchemeType) => {
-    const normalized = scheme === 'dark' ? 'dark' : 'default';
+    const normalized = scheme === 'dark' || scheme === 'green' ? scheme : 'default';
     setColorSchemeState(normalized);
     localStorage.setItem('colorScheme', normalized);
   }, []);
 
   React.useEffect(() => {
-    if (colorScheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', colorScheme === 'dark');
+    document.documentElement.classList.toggle('theme-green', colorScheme === 'green');
   }, [colorScheme]);
 
   const langToggleRef = React.useRef<HTMLInputElement | null>(null);
@@ -181,7 +179,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
 
   return (
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
-    <div className={`min-h-screen flex flex-col justify-between transition-colors ${colorScheme === 'dark' ? 'dark bg-surface-950' : 'bg-slate-100'}`}>
+    <div className={`min-h-screen flex flex-col justify-between transition-colors ${colorScheme === 'dark' ? 'dark bg-surface-950' : colorScheme === 'green' ? 'bg-[#F4F7F5]' : 'bg-slate-100'}`}>
       <header
         className={`sticky top-0 z-40 backdrop-blur-xl border-b ${colorScheme === 'dark' ? 'bg-surface-900/90 text-surface-100 border-surface-700' : 'bg-white text-slate-800 border-slate-200 shadow-sm'}`}
       >
@@ -430,7 +428,7 @@ const TechLayout: React.FC<TechLayoutProps> = ({ basePath = '/tech' }) => {
         </div>
       )}
 
-      <main className={`flex-1 transition-colors ${colorScheme === 'dark' ? 'bg-surface-950' : 'bg-surface-50'}`}>
+      <main className={`flex-1 transition-colors ${colorScheme === 'dark' ? 'bg-surface-950' : colorScheme === 'green' ? 'bg-[#F4F7F5]' : 'bg-surface-50'}`}>
         <Outlet context={{ colorScheme }} />
       </main>
       

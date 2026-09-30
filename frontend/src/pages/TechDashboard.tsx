@@ -6,6 +6,7 @@ import { ColorSchemeContext } from '../context/ColorSchemeContext';
 import { usePageAccess } from '../context/PageAccessContext';
 import { useAuth } from '../context/AuthContext';
 import { getRolePagePath } from '../lib/pageAccess';
+import DashboardCalendar from '../components/DashboardCalendar';
 import type { PageKey } from '../types/api';
 
 // ---- Page tile icons ----
@@ -131,20 +132,23 @@ const TechDashboard: React.FC = () => {
           </p>
         </section>
 
-        {/* Stats bar */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className={`p-5 rounded-2xl border ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-surface-200 shadow-card'}`}>
-            <div className="text-3xl font-bold text-brand-600 mb-1">{unreadCount}</div>
-            <div className={`text-sm font-medium ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>{t.notificationsHeader}</div>
+        {/* Stats bar + Calendar */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`p-5 rounded-2xl border ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-surface-200 shadow-card'}`}>
+              <div className="text-3xl font-bold text-brand-600 mb-1">{unreadCount}</div>
+              <div className={`text-sm font-medium ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>{t.notificationsHeader}</div>
+            </div>
+            <div className={`p-5 rounded-2xl border ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-surface-200 shadow-card'}`}>
+              <div className="text-3xl font-bold text-indigo-500 mb-1">{reminders.length}</div>
+              <div className={`text-sm font-medium ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>{t.remindersSectionTitle || 'Reminders'}</div>
+            </div>
+            <div className={`p-5 rounded-2xl border ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-surface-200 shadow-card'}`}>
+              <div className="text-3xl font-bold text-teal-500 mb-1">{accessiblePages.length}</div>
+              <div className={`text-sm font-medium ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>{t.dashboardYourPages}</div>
+            </div>
           </div>
-          <div className={`p-5 rounded-2xl border ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-surface-200 shadow-card'}`}>
-            <div className="text-3xl font-bold text-indigo-500 mb-1">{reminders.length}</div>
-            <div className={`text-sm font-medium ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>{t.remindersSectionTitle || 'Reminders'}</div>
-          </div>
-          <div className={`p-5 rounded-2xl border ${isDark ? 'bg-surface-900 border-surface-800' : 'bg-white border-surface-200 shadow-card'}`}>
-            <div className="text-3xl font-bold text-teal-500 mb-1">{accessiblePages.length}</div>
-            <div className={`text-sm font-medium ${isDark ? 'text-surface-400' : 'text-surface-500'}`}>{t.dashboardYourPages}</div>
-          </div>
+          <DashboardCalendar />
         </section>
 
         {/* Dynamic page access tiles */}

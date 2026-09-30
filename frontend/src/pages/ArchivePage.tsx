@@ -84,7 +84,8 @@ function getPageBackground(colorScheme: ColorSchemeType) {
     case 'dark': return 'bg-surface-950';
     case 'current': return 'bg-gradient-to-br from-brand-50 to-purple-100';
     case 'performance': return 'bg-surface-100';
-    case 'default': return 'bg-surface-50';
+    case 'default':
+    case 'green': return 'bg-surface-50';
     default: return 'bg-surface-50';
   }
 }
@@ -95,7 +96,8 @@ function getCardStyles(colorScheme: ColorSchemeType) {
     case 'dark': return 'bg-surface-800 border border-surface-700';
     case 'current': return 'bg-white/80 backdrop-blur border border-brand-200 shadow-card';
     case 'performance': return 'bg-white border border-surface-200 shadow-card';
-    case 'default': return 'bg-white border border-surface-200 shadow-card';
+    case 'default':
+    case 'green': return 'bg-white border border-surface-200 shadow-card';
     default: return 'bg-white shadow-card';
   }
 }
@@ -106,7 +108,8 @@ function getFilterBarStyles(colorScheme: ColorSchemeType) {
     case 'dark': return 'bg-surface-800 border border-surface-700';
     case 'current': return 'bg-white/60 backdrop-blur border border-brand-200 shadow-card';
     case 'performance': return 'bg-white border border-surface-200 shadow-card';
-    case 'default': return 'bg-white border border-surface-200 shadow-card';
+    case 'default':
+    case 'green': return 'bg-white border border-surface-200 shadow-card';
     default: return 'bg-white shadow-card';
   }
 }
@@ -117,7 +120,8 @@ function getInputStyles(colorScheme: ColorSchemeType) {
     case 'dark': return 'bg-surface-700 border-surface-600 text-surface-100';
     case 'current': return 'bg-white/80 border-brand-300 text-surface-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-200';
     case 'performance': return 'bg-white border-surface-300 text-surface-800';
-    case 'default': return 'bg-white border-surface-300 text-surface-800';
+    case 'default':
+    case 'green': return 'bg-white border-surface-300 text-surface-800';
     default: return 'border-surface-300';
   }
 }
@@ -147,7 +151,8 @@ function getButtonStyles(colorScheme: ColorSchemeType) {
     case 'dark': return 'bg-brand-600 text-white hover:bg-brand-700';
     case 'current': return 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm';
     case 'performance': return 'bg-brand-600 text-white hover:bg-brand-700';
-    case 'default': return 'bg-brand-600 text-white hover:bg-brand-700';
+    case 'default':
+    case 'green': return 'bg-brand-600 text-white hover:bg-brand-700';
     default: return 'bg-brand-600 text-white hover:bg-brand-700';
   }
 }
@@ -158,7 +163,8 @@ function getPaginationStyles(colorScheme: ColorSchemeType) {
     case 'dark': return 'bg-surface-700 text-surface-100 border border-surface-600 hover:bg-surface-600 disabled:opacity-50';
     case 'current': return 'bg-white/80 text-brand-800 border border-brand-300 hover:bg-brand-50 disabled:opacity-50 shadow-sm';
     case 'performance': return 'bg-white border border-surface-300 hover:bg-surface-50 disabled:opacity-50';
-    case 'default': return 'bg-white border border-surface-300 hover:bg-surface-50 disabled:opacity-50';
+    case 'default':
+    case 'green': return 'bg-white border border-surface-300 hover:bg-surface-50 disabled:opacity-50';
     default: return 'bg-white border border-surface-300 hover:bg-surface-50 disabled:opacity-50';
   }
 }

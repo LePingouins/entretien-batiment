@@ -12,20 +12,26 @@ const RepLayout: React.FC = () => {
 
   const [colorScheme, setColorSchemeState] = React.useState<ColorSchemeType>(() => {
     const stored = localStorage.getItem('colorScheme');
-    return stored === 'dark' ? 'dark' : 'default';
+    if (stored === 'dark' || stored === 'default' || stored === 'green') {
+      return stored;
+    }
+    return 'green';
   });
   const setColorScheme = React.useCallback((scheme: ColorSchemeType) => {
-    const normalized = scheme === 'dark' ? 'dark' : 'default';
+    const normalized = scheme === 'dark' || scheme === 'green' ? scheme : 'default';
     setColorSchemeState(normalized);
     localStorage.setItem('colorScheme', normalized);
   }, []);
+  // Cycle: green (Default) -> Light -> Dark -> green
+  const cycleColorScheme = React.useCallback(() => {
+    const next = colorScheme === 'green' ? 'default' : colorScheme === 'default' ? 'dark' : 'green';
+    setColorScheme(next);
+  }, [colorScheme, setColorScheme]);
+  const colorSchemeIcon = colorScheme === 'dark' ? '🌙' : colorScheme === 'default' ? '☀️' : '🌿';
 
   React.useEffect(() => {
-    if (colorScheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', colorScheme === 'dark');
+    document.documentElement.classList.toggle('theme-green', colorScheme === 'green');
   }, [colorScheme]);
 
   const handleLogout = () => {
@@ -53,7 +59,7 @@ const RepLayout: React.FC = () => {
     <ColorSchemeContext.Provider value={{ colorScheme, setColorScheme }}>
       <div
         className={`min-h-screen flex flex-col justify-between transition-colors ${
-          colorScheme === 'dark' ? 'dark bg-surface-950' : 'bg-slate-100'
+          colorScheme === 'dark' ? 'dark bg-surface-950' : colorScheme === 'green' ? 'bg-[#F4F7F5]' : 'bg-slate-100'
         }`}
       >
         <header
@@ -108,7 +114,7 @@ const RepLayout: React.FC = () => {
                 {lang === 'fr' ? 'EN' : 'FR'}
               </button>
               <button
-                onClick={() => setColorScheme(colorScheme === 'dark' ? 'default' : 'dark')}
+                onClick={cycleColorScheme}
                 className={`px-2 py-1.5 rounded-lg text-xs font-medium ${
                   colorScheme === 'dark'
                     ? 'text-surface-300 hover:bg-surface-800'
@@ -116,7 +122,7 @@ const RepLayout: React.FC = () => {
                 }`}
                 aria-label="Toggle theme"
               >
-                {colorScheme === 'dark' ? '☀️' : '🌙'}
+                {colorSchemeIcon}
               </button>
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorScheme === 'dark' ? 'bg-surface-800 text-surface-400' : 'bg-surface-100 text-surface-500'}`}>{roleLabel}</span>
               <button
@@ -141,11 +147,11 @@ const RepLayout: React.FC = () => {
                 {lang === 'fr' ? 'EN' : 'FR'}
               </button>
               <button
-                onClick={() => setColorScheme(colorScheme === 'dark' ? 'default' : 'dark')}
+                onClick={cycleColorScheme}
                 className={`px-2 py-1.5 rounded-lg text-xs font-medium ${colorScheme === 'dark' ? 'text-surface-300 hover:bg-surface-800' : 'text-surface-600 hover:bg-surface-100'}`}
                 aria-label="Toggle theme"
               >
-                {colorScheme === 'dark' ? '☀️' : '🌙'}
+                {colorSchemeIcon}
               </button>
             </div>
           </div>

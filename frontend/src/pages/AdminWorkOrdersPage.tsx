@@ -132,7 +132,7 @@ const DroppableColumnComponent = ({ status, children, colorScheme }: DroppableCo
       className={
         colorScheme === 'dark'
           ? `w-full h-full bg-surface-800 rounded-xl shadow-card p-4 flex flex-col border border-surface-700 transition-all duration-200 ${isOver ? 'ring-2 ring-brand-500' : ''}`
-          : (colorScheme === 'default' || colorScheme === 'performance')
+          : (colorScheme === 'default' || colorScheme === 'performance' || colorScheme === 'green')
             ? `w-full h-full bg-white rounded-xl shadow p-4 flex flex-col border border-gray-200 transition-all duration-200 ${isOver ? 'ring-2 ring-gray-400' : ''}`
             : `w-full h-full bg-gradient-to-br from-blue-200/80 to-purple-100/40 rounded-xl shadow-card p-4 flex flex-col border-2 border-blue-300/40 transition-all duration-200 backdrop-blur-md ${isOver ? 'ring-4 ring-blue-400/60' : ''}`
       }
@@ -141,7 +141,7 @@ const DroppableColumnComponent = ({ status, children, colorScheme }: DroppableCo
       <div className={
         colorScheme === 'dark'
           ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-surface-700 text-surface-100 flex items-center gap-2 border-b border-surface-700 shadow'
-          : colorScheme === 'default'
+          : (colorScheme === 'default' || colorScheme === 'green')
             ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-white text-gray-800 flex items-center gap-2 border-b border-gray-200 shadow'
             : colorScheme === 'performance'
               ? 'font-bold text-sm mb-3 px-2 py-2 rounded-lg bg-gray-100 text-gray-800 flex items-center gap-2 border-b border-gray-200'
@@ -1146,7 +1146,7 @@ function AdminWorkOrdersPage() {
                 className={
                   colorScheme === 'dark'
                     ? 'bg-brand-600 text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-card hover:bg-brand-700 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
-                    : (colorScheme === 'performance' || colorScheme === 'default')
+                    : (colorScheme === 'performance' || colorScheme === 'default' || colorScheme === 'green')
                       ? 'bg-white text-gray-800 border border-gray-300 border-b-0 px-3 sm:px-4 py-1 rounded-t-lg shadow hover:bg-gray-100 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
                       : 'bg-brand-600 text-white px-3 sm:px-4 py-1 rounded-t-lg shadow-card transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center whitespace-nowrap flex-1'
                 }
@@ -1159,7 +1159,7 @@ function AdminWorkOrdersPage() {
                 className={
                   colorScheme === 'dark'
                     ? 'bg-surface-700 text-surface-100 border border-brand-500 px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-surface-600 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
-                    : (colorScheme === 'performance' || colorScheme === 'default')
+                    : (colorScheme === 'performance' || colorScheme === 'default' || colorScheme === 'green')
                       ? 'bg-gray-100 text-gray-700 border border-gray-300 px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-gray-200 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
                       : 'bg-white/80 text-purple-700 border border-purple-300 px-3 sm:px-4 py-1 rounded-b-lg shadow hover:bg-purple-50 transition-all duration-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 whitespace-nowrap disabled:opacity-50 flex-1'
                 }

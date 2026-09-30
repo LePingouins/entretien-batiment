@@ -23,6 +23,49 @@
 }
 
 /* ============================================
+   BRAND COLOR VARIABLES
+   Used by tailwind.config.js `brand.*` palette (rgb(var(--brand-N) / a)).
+   Light/Dark schemes use these default (blue) values unchanged.
+   The "default" (green) color scheme overrides them below to re-theme
+   every brand-colored element app-wide (buttons, links, focus rings, etc.)
+   without needing per-component changes.
+   ============================================ */
+:root {
+  --brand-50: 240 247 255;
+  --brand-100: 224 239 254;
+  --brand-200: 186 224 253;
+  --brand-300: 124 200 251;
+  --brand-400: 54 170 245;
+  --brand-500: 12 142 230;
+  --brand-600: 0 112 196;
+  --brand-700: 1 89 159;
+  --brand-800: 6 76 131;
+  --brand-900: 11 64 109;
+  --brand-950: 7 40 73;
+}
+
+/* "Default" color scheme — green, mobile-app style (see mobile/src/theme.ts) */
+.theme-green {
+  --brand-50: 239 249 244;
+  --brand-100: 219 241 229;
+  --brand-200: 184 227 204;
+  --brand-300: 140 207 171;
+  --brand-400: 92 181 137;
+  --brand-500: 53 152 108;
+  --brand-600: 23 107 77;
+  --brand-700: 16 84 59;
+  --brand-800: 13 67 49;
+  --brand-900: 10 53 39;
+  --brand-950: 5 30 22;
+}
+
+.theme-green body,
+body.theme-green {
+  background-color: #f4f7f5;
+}
+
+
+/* ============================================
    PWA & MOBILE APP OPTIMIZATIONS
    ============================================ */
 

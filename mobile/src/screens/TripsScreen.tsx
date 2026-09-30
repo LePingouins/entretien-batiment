@@ -18,6 +18,7 @@ import Constants from 'expo-constants';
 import NetInfo from '@react-native-community/netinfo';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { colors } from '../theme';
 import {
   RepTrip, RepTripStop, RepTripStopReason, RepTripCategory, Vehicle,
   getMyTrips, startTrip, endTrip, osrmRouteKm, googleRouteKm, addStop,
@@ -784,7 +785,7 @@ export default function TripsScreen({ onLogout }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1D4ED8" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -970,7 +971,7 @@ export default function TripsScreen({ onLogout }: Props) {
               style={[styles.modalInput, { marginTop: 12, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 8 }]}
               onPress={async () => { const uri = await pickPhoto(); if (uri) setStartPhotoUri(uri); }}
             >
-              <Text style={{ color: startPhotoUri ? '#16A34A' : '#1D4ED8', fontWeight: '600' }}>
+              <Text style={{ color: startPhotoUri ? '#16A34A' : colors.primary, fontWeight: '600' }}>
                 {startPhotoUri ? '✓ Photo départ ajoutée — Reprendre' : '📷 Ajouter photo départ (optionnel)'}
               </Text>
             </TouchableOpacity>
@@ -1068,9 +1069,9 @@ export default function TripsScreen({ onLogout }: Props) {
                   {(preSubmitData.idealKm != null || preSubmitData.osrmKm != null) && (
                     <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                       {preSubmitData.idealKm != null && (
-                        <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 8, padding: 10 }}>
-                          <Text style={{ fontSize: 10, color: '#1D4ED8', fontWeight: '600' }}>IDÉAL</Text>
-                          <Text style={{ fontSize: 16, fontWeight: '700', color: '#1D4ED8' }}>{preSubmitData.idealKm.toFixed(1)} km</Text>
+                        <View style={{ flex: 1, backgroundColor: colors.surfaceMuted, borderRadius: 8, padding: 10 }}>
+                          <Text style={{ fontSize: 10, color: colors.primary, fontWeight: '600' }}>IDÉAL</Text>
+                          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.primary }}>{preSubmitData.idealKm.toFixed(1)} km</Text>
                         </View>
                       )}
                       {preSubmitData.actualKm != null && (
@@ -1122,7 +1123,7 @@ export default function TripsScreen({ onLogout }: Props) {
                 style={[styles.modalInput, { marginTop: 10, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 8 }]}
                 onPress={async () => { const uri = await pickPhoto(); if (uri) setEndPhotoUri(uri); }}
               >
-                <Text style={{ color: endPhotoUri ? '#16A34A' : '#1D4ED8', fontWeight: '600' }}>
+                <Text style={{ color: endPhotoUri ? '#16A34A' : colors.primary, fontWeight: '600' }}>
                   {endPhotoUri ? '✓ Photo arrivée ajoutée — Reprendre' : '📷 Ajouter photo arrivée (optionnel)'}
                 </Text>
               </TouchableOpacity>
@@ -1344,7 +1345,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1D4ED8',
+    backgroundColor: colors.primary,
     paddingTop: Platform.OS === 'ios' ? 56 : 40,
     paddingBottom: 16,
     paddingHorizontal: 20,
@@ -1364,7 +1365,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   logoutText: {
-    color: '#BFDBFE',
+    color: '#BBE8CF',
     fontSize: 14,
   },
   activeBanner: {
@@ -1424,14 +1425,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#1D4ED8',
+    borderColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     minWidth: 90,
     alignItems: 'center',
   },
   addStopButtonText: {
-    color: '#1D4ED8',
+    color: colors.primary,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -1450,8 +1451,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   reasonChipActive: {
-    borderColor: '#1D4ED8',
-    backgroundColor: '#EFF6FF',
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceMuted,
   },
   reasonChipText: {
     fontSize: 13,
@@ -1459,16 +1460,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   reasonChipTextActive: {
-    color: '#1D4ED8',
+    color: colors.primary,
     fontWeight: '600',
   },
   startButton: {
-    backgroundColor: '#1D4ED8',
+    backgroundColor: colors.primary,
     margin: 16,
     borderRadius: 14,
     paddingVertical: 18,
     alignItems: 'center',
-    shadowColor: '#1D4ED8',
+    shadowColor: colors.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -1516,7 +1517,7 @@ const styles = StyleSheet.create({
   tripKm: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1D4ED8',
+    color: colors.primary,
   },
   tripPurpose: {
     fontSize: 13,
@@ -1632,7 +1633,7 @@ const styles = StyleSheet.create({
   },
   modalConfirm: {
     flex: 1,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',
@@ -1657,8 +1658,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   methodCardActive: {
-    borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceMuted,
   },
   methodCardDisabled: {
     opacity: 0.45,
@@ -1675,7 +1676,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   methodNameActive: {
-    color: '#2563EB',
+    color: colors.primary,
   },
   methodNameDisabled: {
     color: '#9CA3AF',
