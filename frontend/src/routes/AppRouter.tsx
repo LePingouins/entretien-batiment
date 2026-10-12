@@ -17,6 +17,7 @@ import RepLayout from '../components/RepLayout';
 // a chunk when the user actually navigates to that route, which reduces the
 // initial bundle size significantly.
 const LoginPage              = lazy(() => import('../pages/LoginPage'));
+const PrivacyPage            = lazy(() => import('../pages/PrivacyPage'));
 const DashboardPage          = lazy(() => import('../pages/DashboardPage'));
 const TechDashboard          = lazy(() => import('../pages/TechDashboard'));
 const WorkerDashboard        = lazy(() => import('../pages/WorkerDashboard'));
@@ -65,6 +66,10 @@ const router = createBrowserRouter([
       {
         path: 'login',
         element: <LoginPage />,
+      },
+      {
+        path: 'privacy',
+        element: <PrivacyPage />,
       },
       {
         path: 'no-access',

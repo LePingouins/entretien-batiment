@@ -89,6 +89,7 @@
     ],
     "extra": {
       "apiUrl": "https://entretien-batiment.com",
+      "privacyPolicyUrl": "https://entretien-batiment.com/privacy",
       "eas": {
         "projectId": "800c51cd-503c-47cc-8a39-bfa69a4094d0"
       }
