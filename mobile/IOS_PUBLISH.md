@@ -7,7 +7,8 @@ Le projet est déjà configuré pour iOS:
 - Version: `2.0.0`
 - Localisation en arrière-plan, caméra, photothèque et stockage sécurisé configurés
 - Icône Apple valide de 1024 x 1024 pixels
-- EAS augmente automatiquement le numéro de build en production
+- Configuration iPhone uniquement (`supportsTablet: false`)
+- EAS gère à distance et augmente automatiquement le numéro de build en production
 
 ## 1. Créer les comptes Apple
 
@@ -37,7 +38,19 @@ npx.cmd eas-cli@latest login
 npx.cmd eas-cli@latest whoami
 ```
 
-## 4. Créer le build TestFlight
+## 4. Vérifier le numéro de build et créer le build TestFlight
+
+Vérifier le dernier numéro iOS enregistré à distance. Le prochain build de
+production l'augmentera automatiquement; il doit être supérieur au dernier
+numéro utilisé dans App Store Connect:
+
+```powershell
+npx.cmd eas-cli@latest build:version:get --platform ios --profile production
+```
+
+Si le numéro distant est inférieur au dernier numéro utilisé dans App Store
+Connect, le synchroniser avec `npx.cmd eas-cli@latest build:version:set --platform ios --profile production`
+avant de lancer le build.
 
 ```powershell
 npm.cmd run ios:build:production
